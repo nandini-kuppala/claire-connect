@@ -1,0 +1,126 @@
+{
+ "voice": "en-IN-NeerjaNeural",
+ "rate": "-4%",
+ "segments": [
+  {
+   "id": "i1",
+   "file": "voice/i1.mp3",
+   "seconds": 13.9
+  },
+  {
+   "id": "i2",
+   "file": "voice/i2.mp3",
+   "seconds": 13.56
+  },
+  {
+   "id": "i3",
+   "file": "voice/i3.mp3",
+   "seconds": 17.88
+  },
+  {
+   "id": "i4",
+   "file": "voice/i4.mp3",
+   "seconds": 27.29
+  },
+  {
+   "id": "i5",
+   "file": "voice/i5.mp3",
+   "seconds": 24.26
+  },
+  {
+   "id": "d1",
+   "file": "voice/d1.mp3",
+   "seconds": 11.11
+  },
+  {
+   "id": "d2",
+   "file": "voice/d2.mp3",
+   "seconds": 16.78
+  },
+  {
+   "id": "d3",
+   "file": "voice/d3.mp3",
+   "seconds": 16.68
+  },
+  {
+   "id": "d4",
+   "file": "voice/d4.mp3",
+   "seconds": 16.27
+  },
+  {
+   "id": "d5",
+   "file": "voice/d5.mp3",
+   "seconds": 16.39
+  },
+  {
+   "id": "d6",
+   "file": "voice/d6.mp3",
+   "seconds": 8.42
+  },
+  {
+   "id": "d7",
+   "file": "voice/d7.mp3",
+   "seconds": 14.04
+  },
+  {
+   "id": "d8",
+   "file": "voice/d8.mp3",
+   "seconds": 18.72
+  },
+  {
+   "id": "d9",
+   "file": "voice/d9.mp3",
+   "seconds": 12.74
+  },
+  {
+   "id": "d10",
+   "file": "voice/d10.mp3",
+   "seconds": 13.82
+  },
+  {
+   "id": "d11",
+   "file": "voice/d11.mp3",
+   "seconds": 14.95
+  },
+  {
+   "id": "d12",
+   "file": "voice/d12.mp3",
+   "seconds": 17.59
+  },
+  {
+   "id": "d13",
+   "file": "voice/d13.mp3",
+   "seconds": 10.25
+  },
+  {
+   "id": "d14",
+   "file": "voice/d14.mp3",
+   "seconds": 23.3
+  },
+  {
+   "id": "m1",
+   "file": "voice/m1.mp3",
+   "seconds": 12.5
+  },
+  {
+   "id": "m2",
+   "file": "voice/m2.mp3",
+   "seconds": 13.94
+  },
+  {
+   "id": "m3",
+   "file": "voice/m3.mp3",
+   "seconds": 8.98
+  },
+  {
+   "id": "m4",
+   "file": "voice/m4.mp3",
+   "seconds": 10.78
+  },
+  {
+   "id": "o1",
+   "file": "voice/o1.mp3",
+   "seconds": 12.79
+  }
+ ]
+}
