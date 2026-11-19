@@ -1,0 +1,98 @@
+[
+ {
+  "id": "i1",
+  "text": "This is CLAIRE Connect. It's a chat app that helps garment buyers and sellers across India find each other, agree on a price, and trade with trust, each in their own language."
+ },
+ {
+  "id": "i2",
+  "text": "Tiruppur, in Tamil Nadu, is India's knitwear capital. About twenty thousand units knit, dye, print and stitch nearly ninety percent of the country's cotton knitwear exports."
+ },
+ {
+  "id": "i3",
+  "text": "But the trade still runs on phone calls and WhatsApp. Buyers in the north speak Hindi or Bengali, while most makers speak Tamil. One order can pass through eight different vendors. And nobody really knows who pays on time."
+ },
+ {
+  "id": "i4",
+  "text": "CLAIRE Connect fixes this with an AI trade assistant called Claire. You tell her what you need, in any language, by text or voice. She finds the right suppliers, and even splits a big order across two or three of them. Then you negotiate in a chat where every message is translated. And a human Trade Desk steps in when something goes wrong."
+ },
+ {
+  "id": "i5",
+  "text": "Every conversation runs on the Nexconn Chat SDK. Deal rooms are Nexconn group channels. Offers, orders and ratings are custom message cards. Claire's private tips are targeted messages that only one person can see. And order updates come through a system channel. Let's see it working."
+ },
+ {
+  "id": "d1",
+  "text": "Here's the sign in screen. For this demo, we'll sign in as Amit, a hosiery buyer from Kolkata, using one of the demo accounts."
+ },
+ {
+  "id": "d2",
+  "text": "This is home. Claire greets Amit. He can type, speak, browse the catalogue, or start from a template. There are example requests too, so a first time user knows exactly what to ask."
+ },
+ {
+  "id": "d3",
+  "text": "Amit taps, five hundred cotton T-shirts under a hundred and twenty rupees. Claire picks out the quantity, the budget and his city, asks just one question, when he needs it, and comes back with matching suppliers, and her own pick."
+ },
+ {
+  "id": "d4",
+  "text": "Tap see all, and here's the full list. Claire recommends Murugan Fashions, the lowest price with the fastest delivery. Every supplier shows a trust score, ratings, stock, and how soon they can ship."
+ },
+ {
+  "id": "d5",
+  "text": "The compare tab puts suppliers side by side. Price, total, stock, delivery, trust and rating. The best value in each row is highlighted, and Claire explains which one to choose, and why."
+ },
+ {
+  "id": "d6",
+  "text": "Insights shows the market price band for this product, where Amit's budget sits in it, and the freight cost to Kolkata."
+ },
+ {
+  "id": "d7",
+  "text": "Amit wants to talk to Lakshmi Garments, a manufacturer in Tiruppur. One tap opens a deal room. His requirement is pinned at the top, and quick replies are ready below."
+ },
+ {
+  "id": "d8",
+  "text": "He asks, can you do ninety rupees for five hundred pieces. Claire spots the price and gives him a private tip, with the listed price and where sellers usually settle. Only Amit can see this. One tap turns it into a formal offer."
+ },
+ {
+  "id": "d9",
+  "text": "Lakshmi answers with a counter offer of ninety four rupees. It arrives as a clear card with accept and counter buttons, and smart replies suggest the next move."
+ },
+ {
+  "id": "d10",
+  "text": "Amit accepts. The deal becomes an order card, with GST worked out, and a progress bar that runs from confirmed to paid. Every step is one tap, for both sides."
+ },
+ {
+  "id": "d11",
+  "text": "The messages tab shows every deal with its latest status, here, an order that needs payment. Claire is always pinned at the top. And the orders tab tracks every order at a glance."
+ },
+ {
+  "id": "d12",
+  "text": "Trust works both ways. Amit's profile shows his trust score, built from verification, ratings, paying on time, reply speed and a clean record. Sellers can see that he paid on time in twelve of his thirteen orders."
+ },
+ {
+  "id": "d13",
+  "text": "Every seller gets a storefront, with trust badges, vouches from other businesses, and products with prices and minimum order quantities."
+ },
+ {
+  "id": "d14",
+  "text": "When a payment is late or a deal goes wrong, the Trade Desk takes over. This is the human agent dispatch centre. Tickets are queued by priority and matched to agents who speak the right language, with an AI summary and the full order history. The agent joins the deal room in one click, and resolves it."
+ },
+ {
+  "id": "m1",
+  "text": "Now, the part that makes CLAIRE Connect different. This is Lakshmi, the seller in Tiruppur. Her whole app is in Tamil, from home to her messages."
+ },
+ {
+  "id": "m2",
+  "text": "In her deal room, Amit's English message appears in Tamil. Claire's private tip to her is in Tamil too. She replies in Tamil, and Amit will read it in his own language."
+ },
+ {
+  "id": "m3",
+  "text": "Amit can switch his app to Hindi in one tap. Home, Claire, and the supplier results all change to Hindi."
+ },
+ {
+  "id": "m4",
+  "text": "And Lakshmi's Tamil reply now shows up in Hindi. Two people who don't share a language just closed a deal, without a single phone call."
+ },
+ {
+  "id": "o1",
+  "text": "That's CLAIRE Connect. Find suppliers, negotiate, order, and build trust, all in your own language, on Nexconn chat. Thank you for watching."
+ }
+]
