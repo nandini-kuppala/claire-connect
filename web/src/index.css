@@ -1,0 +1,228 @@
+@import 'tailwindcss';
+
+/* ── Design tokens (BUILD_CONTRACT) ───────────────────────────────────────
+   Exposed both as Tailwind theme colours (bg-primary, text-ink, border-line …)
+   and as plain CSS variables (var(--color-primary)) for inline styles. */
+@theme {
+  /* Clean white base (as in the reference screens) with loom green, marigold and madder clay accents.
+     Flat colour only: no gradients, no default blue. */
+  --color-primary: #1f8c73; /* logo teal-green (deepened for AA on white text) */
+  --color-primary-hover: #19775f;
+  --color-primary-press: #14614e;
+  --color-primary-tint: #e6f6f1;
+  --color-primary-soft: #bfe7da;
+  --color-accent: #e9a23b; /* marigold */
+  --color-accent-tint: #fdf4e3;
+  --color-accent-ink: #8a5a12;
+  --color-clay: #b9502f; /* madder clay: prices, offers, alerts */
+  --color-clay-tint: #f7e4db;
+  --color-plum: #6d4466; /* Claire AI identity */
+  --color-plum-tint: #f1e8ef;
+  --color-bubble-own: #dff3ec;
+  --color-bubble-other: #f3f4f6;
+  --color-surface: #ffffff;
+  --color-sunken: #f3f4f6;
+  --color-page: #ffffff;
+  --color-ink: #13203b; /* logo navy */
+  --color-ink-2: #3a465c;
+  --color-meta: #667085;
+  --color-faint: #a2a8ae;
+  --color-line: #e7e9ec;
+  --color-line-strong: #d3d7dc;
+  --color-chip-border: #b5e0d2;
+  --color-success: #2f7a47;
+  --color-success-tint: #e2f0e5;
+  --color-danger: #b43a2e;
+  --color-danger-tint: #f8e2de;
+  --color-warning: #a8650f;
+  --color-note: #fdf4e3;
+  --color-marigold: #e9a23b;
+  --color-teal: #3db394;
+  --color-brand: #3db394; /* logo teal */
+  --color-navy: #13203b;
+  --color-claire-row: #f1e8ef;
+
+  --font-sans: 'Figtree', 'Hind Madurai', 'Hind', 'Noto Sans Bengali', 'Noto Sans Telugu', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-head: 'Bricolage Grotesque', 'Hind Madurai', 'Hind', 'Noto Sans Bengali', 'Noto Sans Telugu', system-ui, sans-serif;
+
+  /* No sharp corners anywhere. */
+  --radius-xs: 8px;
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 18px;
+  --radius-xl: 22px;
+  --radius-2xl: 26px;
+
+  /* Soft, warm, barely-there depth; borders carry the structure. */
+  --shadow-card: 0 1px 2px rgb(20 25 30 / 0.04), 0 4px 14px rgb(20 25 30 / 0.04);
+  --shadow-float: 0 10px 32px rgb(20 25 30 / 0.14);
+
+  --animate-shimmer: shimmer 1.6s linear infinite;
+  --animate-typing: typing 1.2s ease-in-out infinite;
+  --animate-fade-up: fade-up 0.22s ease-out both;
+  --animate-pulse-ring: pulse-ring 1.4s ease-out infinite;
+
+  @keyframes shimmer {
+    0% {
+      background-position: -200% 0;
+    }
+    100% {
+      background-position: 200% 0;
+    }
+  }
+  @keyframes typing {
+    0%,
+    60%,
+    100% {
+      transform: translateY(0);
+      opacity: 0.45;
+    }
+    30% {
+      transform: translateY(-3px);
+      opacity: 1;
+    }
+  }
+  @keyframes fade-up {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @keyframes pulse-ring {
+    0% {
+      transform: scale(0.9);
+      opacity: 0.6;
+    }
+    100% {
+      transform: scale(1.6);
+      opacity: 0;
+    }
+  }
+}
+
+:root {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --app-max: 480px;
+  color-scheme: light;
+}
+
+/* Base styles live in the base layer so Tailwind utilities (outline-none, fonts…) can override them. */
+@layer base {
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-page);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  text-rendering: optimizeLegibility;
+}
+
+#root {
+  min-height: 100dvh;
+}
+
+h1,
+h2,
+h3,
+.font-head {
+  font-family: var(--font-head);
+}
+
+button {
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+button:disabled {
+  cursor: not-allowed;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+input,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+/* Tailwind v4 borders default to currentColor; keep unstyled borders and divide-y on the line token. */
+*,
+::before,
+::after,
+::backdrop {
+  border-color: var(--color-line);
+}
+
+/* The inbox search draws its own clear button. */
+input[type='search']::-webkit-search-cancel-button,
+input[type='search']::-webkit-search-decoration {
+  -webkit-appearance: none;
+  appearance: none;
+  display: none;
+}
+
+}
+
+/* Thin, unobtrusive scrollbars on desktop. */
+.scroll-thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-line-strong) transparent;
+}
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* "Claire is thinking…" and skeletons: a flat opacity pulse, no gradients. */
+.shimmer-text {
+  color: var(--color-meta);
+  animation: soft-pulse 1.4s ease-in-out infinite;
+}
+.shimmer-block {
+  background: var(--color-sunken);
+  animation: soft-pulse 1.4s ease-in-out infinite;
+}
+@keyframes soft-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+.pb-safe {
+  padding-bottom: max(var(--safe-bottom), 0px);
+}
+.pt-safe {
+  padding-top: var(--safe-top);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
