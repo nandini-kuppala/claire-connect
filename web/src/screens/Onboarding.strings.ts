@@ -1,0 +1,43 @@
+import { defineStrings } from '../lib/localStrings';
+
+export const OnboardingStrings = defineStrings({
+  en: {
+    step_of: 'Step {n} of {total}',
+    s_intro: 'About you',
+    s_business: 'Your business',
+    s_location: 'Location',
+    s_gst: 'GST',
+    s_confirm: 'Check and finish',
+    listen: 'Listen',
+    you_said: 'You said',
+    answers_here: 'Your answers will show here',
+    tap_to_speak: 'Tap to speak',
+    tap_to_send: 'Tap to send',
+  },
+  ta: {
+    step_of: 'படி {n} / {total}',
+    s_intro: 'உங்களைப் பற்றி',
+    s_business: 'உங்கள் வியாபாரம்',
+    s_location: 'இடம்',
+    s_gst: 'GST',
+    s_confirm: 'சரிபார்த்து முடியுங்கள்',
+    listen: 'கேளுங்கள்',
+    you_said: 'நீங்கள் சொன்னது',
+    answers_here: 'உங்கள் பதில்கள் இங்கே தெரியும்',
+    tap_to_speak: 'பேசத் தொடுங்கள்',
+    tap_to_send: 'அனுப்பத் தொடுங்கள்',
+  },
+  hi: {
+    step_of: 'चरण {n} / {total}',
+    s_intro: 'आपके बारे में',
+    s_business: 'आपका बिज़नेस',
+    s_location: 'जगह',
+    s_gst: 'GST',
+    s_confirm: 'जांचें और पूरा करें',
+    listen: 'सुनें',
+    you_said: 'आपने कहा',
+    answers_here: 'आपके जवाब यहाँ दिखेंगे',
+    tap_to_speak: 'बोलने के लिए दबाएं',
+    tap_to_send: 'भेजने के लिए दबाएं',
+  },
+});
