@@ -1,0 +1,27 @@
+# Dependencies and builds
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Secrets: never commit real keys (copy server/.env.example to server/.env)
+.env
+.env.*
+!.env.example
+*.local
+secrets/
+
+# Runtime data
+server/data/
+server/uploads/
+
+# Demo video working files (scripts, voice, stages and the final render are kept)
+demo-video/raw/
+demo-video/scenes/
+demo-video/voice_sample/
+demo-video/sample.json
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
+*.log
