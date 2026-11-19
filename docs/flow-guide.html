@@ -1,0 +1,685 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>CLAIRE Connect Flows</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Noto+Sans+Tamil:wght@400;500&family=Noto+Sans+Devanagari:wght@400;500&display=swap">
+<style>
+/* Layout: editorial single column (max 1120px), journeys alternate text + phone mockups; CLAIRE brand tokens */
+:root{
+  --bg:#EEEBDD; --surface:#FBFAF5; --surface-2:#E5E0CE; --ink:#12182B; --ink-soft:#4B5163; --line:#D8D2C0;
+  --teal:#0D9488; --teal-deep:#0A6E64; --gold:#C89B3C; --rust:#B4552F; --on-accent:#FFFFFF;
+  --phone:#F7F5EE; --bubble-me:#D5EEE8; --bubble-them:#FFFFFF; --chip:#E3F1EE; --hint:#F3EBD6;
+  --display:'Fraunces', Georgia, 'Times New Roman', serif;
+  --body:'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --mono:'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  --indic:'Noto Sans Tamil','Noto Sans Devanagari', 'Inter', system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0E1320; --surface:#161C2B; --surface-2:#1E2536; --ink:#ECE8DA; --ink-soft:#A7ABBA; --line:#2B3347;
+    --teal:#2DB5A6; --teal-deep:#62D2C5; --gold:#D8B25F; --rust:#DE8159; --on-accent:#06201D;
+    --phone:#111827; --bubble-me:#123A37; --bubble-them:#1E2536; --chip:#15302D; --hint:#2B2618; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0E1320; --surface:#161C2B; --surface-2:#1E2536; --ink:#ECE8DA; --ink-soft:#A7ABBA; --line:#2B3347;
+  --teal:#2DB5A6; --teal-deep:#62D2C5; --gold:#D8B25F; --rust:#DE8159; --on-accent:#06201D;
+  --phone:#111827; --bubble-me:#123A37; --bubble-them:#1E2536; --chip:#15302D; --hint:#2B2618; color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.6;margin:0;
+  padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));-webkit-font-smoothing:antialiased}
+.wrap{max-width:1120px;margin:0 auto;padding-block:40px 80px;display:flex;flex-direction:column;gap:72px}
+h1,h2,h3{font-family:var(--display);font-weight:600;letter-spacing:-0.01em;margin:0;text-wrap:balance;color:var(--ink)}
+h1{font-size:clamp(2rem, 4.6vw, 3.4rem);line-height:1.08}
+h2{font-size:clamp(1.5rem, 3vw, 2.1rem);line-height:1.15}
+h3{font-size:1.15rem;line-height:1.3}
+p{margin:0}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:var(--teal-deep);font-weight:600;display:flex;align-items:center;gap:10px}
+.eyebrow::before{content:"";width:18px;height:1px;background:var(--teal-deep)}
+.lede{font-size:1.1rem;color:var(--ink-soft);max-width:68ch}
+.muted{color:var(--ink-soft)}
+.mono{font-family:var(--mono)}
+.indic{font-family:var(--indic)}
+section{display:flex;flex-direction:column;gap:24px}
+.head{display:flex;flex-direction:column;gap:10px;max-width:72ch}
+
+/* hero */
+.hero{display:flex;flex-direction:column;gap:22px;padding-top:8px}
+.brand{display:flex;align-items:center;gap:10px;font-family:var(--display);font-weight:700;font-size:20px}
+.tag-mark{width:26px;height:22px;background:var(--teal);clip-path:polygon(0 0,78% 0,100% 50%,78% 100%,0 100%);position:relative;flex-shrink:0}
+.tag-mark::after{content:"";position:absolute;left:6px;top:50%;transform:translateY(-50%);width:5px;height:5px;border-radius:50%;background:var(--bg)}
+.facts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border:1px solid var(--line);background:var(--surface)}
+.facts > div{padding:14px 16px;border-right:1px solid var(--line);display:flex;flex-direction:column;gap:4px;min-width:0}
+.facts > div:last-child{border-right:none}
+.facts .k{font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-soft)}
+.facts .v{font-weight:600;font-size:15px}
+.facts .v.alert{color:var(--rust)}
+
+/* three-up */
+.three{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px}
+.panel{background:var(--surface);border:1px solid var(--line);padding:20px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.panel ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px}
+.panel .label{font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--teal-deep);font-weight:600}
+
+/* supply chain */
+.chain{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;counter-reset:node}
+.node{position:relative;background:var(--surface);border:1px solid var(--line);padding:14px 14px 12px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.node .n{font-family:var(--mono);font-size:11px;color:var(--ink-soft)}
+.node .t{font-weight:600}
+.node .u{font-family:var(--mono);font-size:12px;color:var(--teal-deep)}
+.node .who{font-size:13px;color:var(--ink-soft)}
+.node::after{content:"→";position:absolute;right:-12px;top:50%;transform:translateY(-50%);color:var(--gold);font-weight:700;z-index:1}
+.node:nth-child(4n)::after,.node:last-child::after{content:none}
+.note{border-left:3px solid var(--gold);background:var(--hint);padding:12px 16px;font-size:15px}
+.people{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.person{display:flex;gap:12px;align-items:flex-start;background:var(--surface);border:1px solid var(--line);padding:12px;min-width:0}
+.av{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:14px;flex-shrink:0;background:var(--chip);color:var(--teal-deep)}
+.av.gold{background:var(--hint);color:var(--gold)}
+.av.rust{color:var(--rust)}
+.person .nm{font-weight:600}
+.person .ds{font-size:13px;color:var(--ink-soft)}
+.lang{font-family:var(--mono);font-size:11px;border:1px solid var(--line);padding:1px 6px;border-radius:999px;color:var(--ink-soft);white-space:nowrap}
+
+/* journey layout */
+.journey{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:36px;align-items:start}
+.journey.rev{grid-template-columns:auto minmax(0,1fr)}
+.journey.rev .phones{order:-1}
+.steps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:14px;counter-reset:s}
+.steps li{counter-increment:s;display:grid;grid-template-columns:30px minmax(0,1fr);gap:12px}
+.steps li::before{content:counter(s);font-family:var(--mono);font-size:12px;font-weight:600;width:26px;height:26px;border:1px solid var(--teal);color:var(--teal-deep);display:grid;place-items:center;border-radius:50%}
+.steps b{font-weight:600}
+.steps .sub{display:block;font-size:14px;color:var(--ink-soft)}
+.callout{background:var(--surface);border:1px dashed var(--teal);padding:14px 16px;font-size:15px}
+.callout .label{font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--teal-deep);font-weight:600;display:block;margin-bottom:4px}
+
+/* phone */
+.phones{display:flex;gap:20px;flex-wrap:wrap;justify-content:center}
+.phone-wrap{display:flex;flex-direction:column;gap:8px;align-items:center;max-width:100%}
+.phone-cap{font-family:var(--mono);font-size:12px;color:var(--ink-soft);text-align:center}
+.phone{width:300px;max-width:100%;background:var(--phone);border:1px solid var(--line);border-radius:30px;padding:10px;box-shadow:0 22px 40px -26px rgba(18,24,43,.35)}
+.screen{border-radius:22px;overflow:hidden;background:var(--bg);border:1px solid var(--line);display:flex;flex-direction:column}
+.pbar{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface);border-bottom:1px solid var(--line)}
+.pbar .av{width:30px;height:30px;font-size:12px}
+.pbar .nm{font-weight:600;font-size:14px;line-height:1.2}
+.pbar .st{font-size:11px;color:var(--ink-soft)}
+.pbar .grow{flex:1;min-width:0}
+.chat{display:flex;flex-direction:column;gap:8px;padding:12px 10px 14px;font-size:13px;line-height:1.45}
+.msg{max-width:86%;padding:8px 10px;border-radius:14px;border:1px solid var(--line);background:var(--bubble-them);align-self:flex-start;min-width:0}
+.msg.me{align-self:flex-end;background:var(--bubble-me);border-color:transparent}
+.msg .tr{display:block;font-size:11px;color:var(--ink-soft);margin-top:4px}
+.msg .orig{display:block;font-size:11px;color:var(--ink-soft);margin-top:2px;font-style:italic}
+.sys{align-self:center;font-family:var(--mono);font-size:10.5px;color:var(--ink-soft);background:var(--surface-2);padding:3px 8px;border-radius:999px;text-align:center}
+.chips{display:flex;flex-wrap:wrap;gap:6px;align-self:flex-start;max-width:100%}
+.chip{font-size:12px;padding:5px 10px;border-radius:999px;background:var(--chip);color:var(--teal-deep);border:1px solid transparent;font-weight:500}
+.chip.on{background:var(--teal);color:var(--on-accent)}
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;align-self:stretch}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 4px;text-align:center;font-size:11px;font-weight:500}
+.tile .sw{height:28px;border-radius:6px;margin-bottom:5px;background:linear-gradient(135deg,var(--surface-2),var(--chip))}
+.tile.on{border-color:var(--teal);box-shadow:0 0 0 1px var(--teal) inset}
+.carousel{display:flex;gap:6px;overflow:hidden;align-self:stretch}
+.prod{flex:0 0 31%;background:var(--surface);border:1px solid var(--line);border-radius:10px;overflow:hidden;font-size:10.5px}
+.prod .img{height:52px}
+.prod .meta{padding:5px 6px;display:flex;justify-content:space-between;gap:4px}
+.prod .heart{color:var(--rust);font-weight:700}
+.img.a{background:repeating-linear-gradient(90deg,#2c3a55 0 10px,#33425f 10px 12px)}
+.img.b{background:repeating-linear-gradient(90deg,#6b6f7a 0 10px,#757984 10px 12px)}
+.img.c{background:repeating-linear-gradient(90deg,#1f5d57 0 10px,#24685f 10px 12px)}
+.img.d{background:repeating-linear-gradient(90deg,#8a3c26 0 10px,#94452e 10px 12px)}
+.ccard{align-self:stretch;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:6px;font-size:12px}
+.ccard .label{font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--teal-deep);font-weight:600}
+.ccard .row{display:flex;justify-content:space-between;gap:8px}
+.ccard .big{font-weight:700;font-size:13px}
+.ccard .btns{display:flex;gap:6px;flex-wrap:wrap}
+.btn{font-size:11px;font-weight:600;padding:5px 9px;border-radius:8px;border:1px solid var(--teal);color:var(--teal-deep);background:transparent}
+.btn.fill{background:var(--teal);color:var(--on-accent)}
+.ccard.combo{border-color:var(--gold)}
+.ccard.combo .label{color:var(--gold)}
+.badge{font-family:var(--mono);font-size:10px;padding:1px 6px;border-radius:999px;background:var(--chip);color:var(--teal-deep);white-space:nowrap}
+.badge.gold{background:var(--hint);color:var(--gold)}
+.voice{display:flex;align-items:center;gap:6px}
+.play{width:22px;height:22px;border-radius:50%;background:var(--teal);display:grid;place-items:center;flex-shrink:0}
+.play::before{content:"";border-left:7px solid var(--on-accent);border-top:4px solid transparent;border-bottom:4px solid transparent;margin-left:2px}
+.wave{display:flex;align-items:center;gap:2px;height:20px;flex:1}
+.wave i{display:block;width:2px;background:var(--teal-deep);border-radius:1px;opacity:.75}
+.listen{font-size:11px;color:var(--teal-deep);font-weight:600;margin-top:4px;display:block}
+.compose{display:flex;align-items:center;gap:8px;padding:8px 10px;border-top:1px solid var(--line);background:var(--surface)}
+.compose .field{flex:1;font-size:12px;color:var(--ink-soft);border:1px solid var(--line);border-radius:999px;padding:6px 10px;background:var(--bg)}
+.mic{width:34px;height:34px;border-radius:50%;background:var(--teal);display:grid;place-items:center;flex-shrink:0}
+.mic svg{width:16px;height:16px;fill:var(--on-accent)}
+.hintcard{align-self:stretch;background:var(--hint);border:1px solid transparent;border-radius:10px;padding:8px 10px;font-size:11.5px}
+.hintcard b{color:var(--gold)}
+.profile{align-self:stretch;background:var(--surface);border:1px solid var(--teal);border-radius:12px;padding:10px;font-size:12px;display:grid;grid-template-columns:auto 1fr;gap:3px 10px}
+.profile .k{color:var(--ink-soft)}
+.profile .live{grid-column:1/-1;font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--teal-deep);font-weight:600;display:flex;align-items:center;gap:6px}
+.profile .live::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--rust)}
+.profile .pending{color:var(--ink-soft);font-style:italic}
+
+/* timeline / lifecycle */
+.scroll-x{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.life{display:grid;grid-template-columns:repeat(7,minmax(130px,1fr));gap:0;min-width:900px}
+.stage{position:relative;padding:16px 14px 14px;border-top:3px solid var(--teal);background:var(--surface);border-right:1px solid var(--line);display:flex;flex-direction:column;gap:6px}
+.stage:last-child{border-right:none}
+.stage .n{font-family:var(--mono);font-size:11px;color:var(--teal-deep);font-weight:600}
+.stage .t{font-weight:600;font-size:14px}
+.stage .d{font-size:12.5px;color:var(--ink-soft)}
+.stage.warn{border-top-color:var(--gold)}
+.stage.end{border-top-color:var(--rust)}
+.two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
+
+/* trust */
+.tbar{display:flex;height:34px;border:1px solid var(--line);overflow:hidden}
+.tbar span{display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:11px;color:var(--on-accent);white-space:nowrap;overflow:hidden;padding:0 4px}
+.legend{display:flex;flex-wrap:wrap;gap:8px 18px;font-size:13px;color:var(--ink-soft)}
+.legend i{display:inline-block;width:10px;height:10px;margin-right:6px;vertical-align:middle}
+.rate{display:flex;flex-direction:column;gap:8px}
+.rate .q{display:flex;justify-content:space-between;gap:10px;font-size:14px;border-bottom:1px dashed var(--line);padding-bottom:6px}
+.stars{color:var(--gold);letter-spacing:2px;white-space:nowrap}
+.stars .off{color:var(--line)}
+.auto{font-family:var(--mono);font-size:10px;color:var(--teal-deep);margin-left:6px}
+
+/* split bar */
+.split{display:flex;height:46px;border:1px solid var(--line)}
+.split div{display:flex;flex-direction:column;justify-content:center;padding:0 10px;color:var(--on-accent);font-size:12px;line-height:1.25;min-width:0;overflow:hidden}
+.split b{font-size:13px}
+
+/* desk */
+.flow{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+.fbox{background:var(--surface);border:1px solid var(--line);padding:14px;display:flex;flex-direction:column;gap:8px;position:relative;min-width:0}
+.fbox .label{font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--teal-deep);font-weight:600}
+.fbox ul{margin:0;padding-left:16px;font-size:14px;display:flex;flex-direction:column;gap:3px}
+.fbox::after{content:"→";position:absolute;right:-12px;top:22px;color:var(--gold);font-weight:700}
+.fbox:last-child::after{content:none}
+.console{border:1px solid var(--line);background:var(--surface);display:grid;grid-template-columns:1fr 1.4fr 0.9fr;font-size:13px}
+.console > div{padding:14px;border-right:1px solid var(--line);display:flex;flex-direction:column;gap:8px;min-width:0}
+.console > div:last-child{border-right:none}
+.console .label{font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-soft);font-weight:600}
+.console .act{border:1px solid var(--line);padding:6px 8px;font-size:12.5px;background:var(--bg)}
+.console .act.p{border-color:var(--teal);color:var(--teal-deep);font-weight:600}
+.sla{font-family:var(--mono);font-size:11px;color:var(--rust)}
+
+/* tables */
+.tbl{width:100%;border-collapse:collapse;font-size:14px;background:var(--surface);min-width:640px}
+.tbl th,.tbl td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+.tbl th{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft);font-weight:600;background:var(--surface-2)}
+.tbl code{font-family:var(--mono);font-size:12px;color:var(--teal-deep)}
+
+/* days */
+.days{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}
+.day{background:var(--surface);border:1px solid var(--line);padding:14px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.day .d{font-family:var(--mono);font-size:11px;color:var(--teal-deep);font-weight:600;letter-spacing:.08em;text-transform:uppercase}
+.day .t{font-weight:600}
+.day ul{margin:0;padding-left:16px;font-size:13.5px;color:var(--ink-soft);display:flex;flex-direction:column;gap:3px}
+.day.last{border-color:var(--rust)}
+.day.last .d{color:var(--rust)}
+.wins{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 28px;margin:0;padding:0;list-style:none}
+.wins li{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:baseline}
+.wins li::before{content:"";width:8px;height:8px;background:var(--teal);transform:rotate(45deg);display:block}
+footer{border-top:1px solid var(--line);padding-top:20px;font-size:14px;color:var(--ink-soft);display:flex;flex-direction:column;gap:6px}
+footer code{font-family:var(--mono);font-size:13px;color:var(--ink)}
+
+@media (max-width: 920px){
+  .journey,.journey.rev{grid-template-columns:minmax(0,1fr)}
+  .journey.rev .phones{order:0}
+  .chain{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .node:nth-child(4n)::after{content:"→"}
+  .node:nth-child(2n)::after{content:none}
+  .people,.three{grid-template-columns:minmax(0,1fr)}
+  .flow{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .fbox:nth-child(2n)::after{content:none}
+  .days{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .console{grid-template-columns:minmax(0,1fr)}
+  .console > div{border-right:none;border-bottom:1px solid var(--line)}
+  .facts{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .facts > div:nth-child(2){border-right:none}
+  .facts > div:nth-child(-n+2){border-bottom:1px solid var(--line)}
+}
+@media (max-width: 560px){
+  .two,.wins,.flow,.days{grid-template-columns:minmax(0,1fr)}
+  .fbox::after{content:none}
+  .chain{grid-template-columns:minmax(0,1fr)}
+  .node::after,.node:nth-child(4n)::after{content:"↓";right:auto;left:50%;top:auto;bottom:-15px;transform:translateX(-50%)}
+  .node:last-child::after{content:none}
+  .facts{grid-template-columns:minmax(0,1fr)}
+  .facts > div{border-right:none;border-bottom:1px solid var(--line)}
+  .facts > div:last-child{border-bottom:none}
+}
+@media (prefers-reduced-motion: reduce){ *{scroll-behavior:auto!important} }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+<!-- ═════════ HERO ═════════ -->
+<header class="hero">
+  <div class="brand"><span class="tag-mark" aria-hidden="true"></span>CLAIRE Connect</div>
+  <div class="eyebrow">Flow guide · Nexconn Build Challenge 2026 · Marketplace &amp; Support</div>
+  <h1>Tiruppur's whole supply chain, in one voice chat.</h1>
+  <p class="lede">Every business in the chain can buy and sell, by voice, in its own language. Claire, the AI assistant, does the typing, matching and translating. A human Trade Desk steps in when trust is on the line. This page walks through each flow in the order a user meets it.</p>
+  <div class="facts" role="list">
+    <div role="listitem"><span class="k">Submission closes</span><span class="v alert">Sun 22 Nov, 11:59 PM IST</span></div>
+    <div role="listitem"><span class="k">Judging</span><span class="v">UX 50 · Innovation 30 · Business 20</span></div>
+    <div role="listitem"><span class="k">Bonus</span><span class="v">Real active users on our App Key</span></div>
+    <div role="listitem"><span class="k">We build</span><span class="v">Web PWA on Nexconn Chat SDK</span></div>
+  </div>
+</header>
+
+<!-- ═════════ IDEA ═════════ -->
+<section aria-labelledby="idea">
+  <div class="head"><div class="eyebrow">The idea in one minute</div><h2 id="idea">Why this, why now</h2></div>
+  <div class="three">
+    <div class="panel"><span class="label">The problem</span>
+      <ul>
+        <li>~₹35,000 cr of domestic trade a year runs on WhatsApp photo floods and phone calls.</li>
+        <li>Makers speak Tamil; buyers speak Hindi, Bengali, Telugu. Traders in the middle handle ~75 % of volume.</li>
+        <li>One order passes through ~8 job-work units, tracked on paper challans.</li>
+        <li>Payments slip; there's no shared record of who pays on time.</li>
+      </ul>
+    </div>
+    <div class="panel"><span class="label">What we build</span>
+      <ul>
+        <li>A WhatsApp-style chat app where Claire turns speech into searches, quotes and orders.</li>
+        <li>Translated text <em>and</em> voice notes between any two businesses.</li>
+        <li>Matching that combines 2–3 sellers when no one has the full quantity.</li>
+        <li>Two-way ratings, a Trade Desk, and job-work splitting on the same rails.</li>
+      </ul>
+    </div>
+    <div class="panel"><span class="label">Why it can win</span>
+      <ul>
+        <li>Hits all three track ideas: 1-on-1 deal chat, agent dispatch, translated chat.</li>
+        <li>A real problem with real pilot partners (SS Garments, Barath Garments, Janshi Text).</li>
+        <li>Demo moment judges remember: Hindi voice in, Tamil voice out.</li>
+        <li>Real users onboarded this weekend count toward the traction bonus.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ═════════ CHAIN ═════════ -->
+<section aria-labelledby="chain">
+  <div class="head"><div class="eyebrow">Who uses it</div><h2 id="chain">Everyone buys, everyone sells</h2>
+    <p class="muted">There is no "buyer or seller" choice at signup. A business says what it makes, sells and buys. The same chat, matching and trust layer work at every hop.</p></div>
+  <div class="chain">
+    <div class="node"><span class="n">01</span><span class="t">Yarn</span><span class="u">₹ per kg</span><span class="who">Spinning mills, yarn agents</span></div>
+    <div class="node"><span class="n">02</span><span class="t">Knitting</span><span class="u">₹ per kg</span><span class="who">2,500 units · fabric or job work</span></div>
+    <div class="node"><span class="n">03</span><span class="t">Dyeing &amp; compacting</span><span class="u">₹ per kg by shade</span><span class="who">360 dyers, 790 compactors</span></div>
+    <div class="node"><span class="n">04</span><span class="t">Printing &amp; embroidery</span><span class="u">₹ per piece</span><span class="who">1,000 units</span></div>
+    <div class="node"><span class="n">05</span><span class="t">Stitching job work</span><span class="u">₹ per piece</span><span class="who">1,700 units, many migrant-run</span></div>
+    <div class="node"><span class="n">06</span><span class="t">Garment owner / brand</span><span class="u">₹ per piece</span><span class="who">Buys inputs, outsources stages</span></div>
+    <div class="node"><span class="n">07</span><span class="t">Wholesaler</span><span class="u">₹ per piece · sets</span><span class="who">Khaderpet shops</span></div>
+    <div class="node"><span class="n">08</span><span class="t">Reseller / retailer</span><span class="u">buys from many</span><span class="who">Kolkata, Delhi, Patna, Hyderabad…</span></div>
+  </div>
+  <div class="people">
+    <div class="person"><span class="av">L</span><div><div class="nm">Lakshmi <span class="lang">TA</span></div><div class="ds">20-machine stitching unit. Buys fabric, sells stitching and plain garments.</div></div></div>
+    <div class="person"><span class="av">R</span><div><div class="nm">Ravi <span class="lang">TA</span></div><div class="ds">Garment owner. Splits stitching across units, prints, sells to wholesalers and resellers.</div></div></div>
+    <div class="person"><span class="av">S</span><div><div class="nm">Sadhasivam <span class="lang">TA</span></div><div class="ds">Wholesaler. Many buyers, no time; lets Claire answer first.</div></div></div>
+    <div class="person"><span class="av gold">A</span><div><div class="nm">Amit <span class="lang">HI</span></div><div class="ds">Reseller in Kolkata. Buys from several wholesalers; wants samples and reorders.</div></div></div>
+    <div class="person"><span class="av">Se</span><div><div class="nm">Senthil <span class="lang">TA</span></div><div class="ds">Yarn agent. Sells by the kg to knitting units.</div></div></div>
+    <div class="person"><span class="av rust">M</span><div><div class="nm">Meena <span class="lang">TA HI EN</span></div><div class="ds">Trade Desk agent. Resolves disputes, chases payments, helps onboard.</div></div></div>
+  </div>
+</section>
+
+<!-- ═════════ J1 ONBOARDING ═════════ -->
+<section aria-labelledby="j1">
+  <div class="head"><div class="eyebrow">Journey 1 · Onboarding</div><h2 id="j1">Two minutes, one typed field</h2>
+    <p class="muted">Lakshmi only types her phone number. Everything else she says out loud, and her profile fills in on screen while she talks.</p></div>
+  <div class="journey">
+    <div style="display:flex;flex-direction:column;gap:20px;min-width:0">
+      <ol class="steps">
+        <li><div><b>Phone + OTP</b><span class="sub">OTP auto-reads on Android. Nexconn chat token is issued in the background.</span></div></li>
+        <li><div><b>Tap your language</b><span class="sub">Big script tiles: தமிழ் · हिन्दी · English · తెలుగు … or just speak and we detect it.</span></div></li>
+        <li><div><b>Talk to Claire (≤ 4 questions)</b><span class="sub">Name and business · what you make, sell and buy · where you are · GST (optional, skip in one tap).</span></div></li>
+        <li><div><b>Confirm the profile card</b><span class="sub">"Yes, correct", or say what to fix.</span></div></li>
+        <li><div><b>Sellers: share photos</b><span class="sub">Pick WhatsApp photos or use Share → CLAIRE. Claire groups them into products. Say "All 180, minimum 500, M to XXL" once.</span></div></li>
+        <li><div><b>Land in the inbox</b><span class="sub">Claire pinned on top. Sellers get a storefront link to share on WhatsApp; buyers see matching sellers.</span></div></li>
+      </ol>
+      <div class="callout"><span class="label">Fallback</span>Silent for 8 seconds, or Claire misunderstands twice? Claire offers "Shall someone from our team call you?" and a Trade Desk agent finishes onboarding on a call.</div>
+    </div>
+    <div class="phones">
+      <div class="phone-wrap">
+        <div class="phone"><div class="screen">
+          <div class="pbar"><span class="av">C</span><div class="grow"><div class="nm">Claire</div><div class="st">Setting up your business · Tamil</div></div></div>
+          <div class="chat">
+            <div class="msg"><span class="indic">வணக்கம்! உங்க தொழில் என்ன? என்ன செய்றீங்க, என்ன வாங்குறீங்க?</span><span class="tr">What does your business do? What do you make and buy?</span></div>
+            <div class="msg me"><div class="voice"><span class="play" aria-hidden="true"></span><span class="wave" aria-hidden="true"><i style="height:6px"></i><i style="height:12px"></i><i style="height:16px"></i><i style="height:9px"></i><i style="height:18px"></i><i style="height:11px"></i><i style="height:7px"></i><i style="height:14px"></i><i style="height:19px"></i><i style="height:10px"></i><i style="height:6px"></i><i style="height:13px"></i><i style="height:17px"></i><i style="height:8px"></i><i style="height:12px"></i><i style="height:5px"></i></span><span class="mono" style="font-size:10px">0:09</span></div>
+              <span class="indic" style="display:block;margin-top:4px">20 மெஷின் வச்சு டிராக் பேண்ட், டி-ஷர்ட் ஜாப் வொர்க் பண்றோம். ஃபேப்ரிக் வாங்குவோம்.</span><span class="tr">"20 machines, track pants and T-shirt job work. We buy fabric."</span></div>
+            <div class="profile">
+              <span class="live">Building your profile</span>
+              <span class="k">Name</span><span>Lakshmi</span>
+              <span class="k">Business</span><span>Lakshmi Garments</span>
+              <span class="k">Sells</span><span>Stitching job work · track pants, T-shirts</span>
+              <span class="k">Buys</span><span>Knitted fabric</span>
+              <span class="k">Capacity</span><span>20 machines ≈ 1,200 pcs/day?</span>
+              <span class="k">Location</span><span class="pending">asking next…</span>
+            </div>
+          </div>
+          <div class="compose"><span class="field">Hold the mic and speak</span><span class="mic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.9V21h2v-2.1A7 7 0 0 0 19 12h-2z"/></svg></span></div>
+        </div></div>
+        <span class="phone-cap">Lakshmi's screen, step 3</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═════════ J2 CLAIRE BUYER FLOW ═════════ -->
+<section aria-labelledby="j2">
+  <div class="head"><div class="eyebrow">Journey 2 · Buyer asks Claire</div><h2 id="j2">One question at a time, with the answers ready</h2>
+    <p class="muted">Claire asks only for what's missing, always with tap-able answers and the mic. Amit sees all of this in Hindi; it's shown in English here.</p></div>
+  <div class="journey rev">
+    <div class="phones">
+      <div class="phone-wrap">
+        <div class="phone"><div class="screen">
+          <div class="pbar"><span class="av">C</span><div class="grow"><div class="nm">Claire</div><div class="st">Amit Hosiery · Kolkata · Hindi</div></div></div>
+          <div class="chat">
+            <div class="msg"><span class="indic">नमस्ते अमित जी! आज क्या चाहिए?</span><span class="tr">Hello Amit ji! What do you need today?</span></div>
+            <div class="tiles">
+              <div class="tile"><div class="sw"></div>T-shirts</div>
+              <div class="tile on"><div class="sw"></div>Track pants</div>
+              <div class="tile"><div class="sw"></div>Innerwear</div>
+            </div>
+            <div class="msg">Cotton track pants on CLAIRE. Tap ♥ on styles you like.</div>
+            <div class="carousel">
+              <div class="prod"><div class="img a"></div><div class="meta"><span>₹150–175</span><span class="heart">♥</span></div></div>
+              <div class="prod"><div class="img b"></div><div class="meta"><span>₹160–190</span><span class="heart">♥</span></div></div>
+              <div class="prod"><div class="img c"></div><div class="meta"><span>₹180–210</span><span>♡</span></div></div>
+            </div>
+            <div class="msg">How many pieces? <span class="tr">Packed in sets S·M·L·XL·XXL, one each ✓</span></div>
+            <div class="chips"><span class="chip">500</span><span class="chip on">1,000</span><span class="chip">2,000</span><span class="chip">5,000+</span></div>
+            <div class="msg">Budget per piece? <span class="tr">Most sellers for these styles: ₹150–₹210</span></div>
+            <div class="chips"><span class="chip">₹150</span><span class="chip on">₹170</span><span class="chip">₹190</span><span class="chip">No limit</span></div>
+            <div class="chips"><span class="chip">This week</span><span class="chip on">2 weeks</span><span class="chip">Flexible</span></div>
+            <div class="sys">1,000 cotton track pants · ≤ ₹170 · Kolkata · by 2 Dec</div>
+            <div class="ccard">
+              <span class="label">Ready from one seller</span>
+              <div class="row"><span class="big">Sree Textiles</span><span class="badge">Trust 86</span></div>
+              <div class="row muted"><span>₹168/pc · 1,200 in stock</span><span>ships in 3 d</span></div>
+              <div class="row muted"><span>Est. ₹1,68,000 + GST + freight</span></div>
+              <div class="btns"><span class="btn fill">Chat</span><span class="btn">Sample</span><span class="btn">View</span></div>
+            </div>
+            <div class="ccard combo">
+              <span class="label">Combine 2 sellers · same fabric</span>
+              <div class="row"><span>Kavin Knits 600 × ₹165</span></div>
+              <div class="row"><span>RS Garments 400 × ₹172</span></div>
+              <div class="row"><span class="big">Avg ₹167.8 · ready in 5 d</span></div>
+              <div class="btns"><span class="btn">View combo</span><span class="btn">Both samples</span></div>
+            </div>
+          </div>
+          <div class="compose"><span class="field">Type or hold the mic</span><span class="mic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.9V21h2v-2.1A7 7 0 0 0 19 12h-2z"/></svg></span></div>
+        </div></div>
+        <span class="phone-cap">Amit's Claire chat, start to results</span>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:20px;min-width:0">
+      <ol class="steps">
+        <li><div><b>What?</b><span class="sub">Category tiles with photos, ordered by what this business usually buys.</span></div></li>
+        <li><div><b>Which style?</b><span class="sub">A carousel from different sellers. Tap ♥, pick "any style", or upload a photo of what you want.</span></div></li>
+        <li><div><b>How many?</b><span class="sub">Quantity chips plus the size set (or dozens for innerwear, kg for fabric).</span></div></li>
+        <li><div><b>What budget?</b><span class="sub">Three chips built from the live market band, so the buyer anchors on real prices.</span></div></li>
+        <li><div><b>When and where?</b><span class="sub">Optional. City comes from the profile.</span></div></li>
+        <li><div><b>Results</b><span class="sub">Ready from one seller · combine 2–3 sellers · cheaper if made to order · or "ask all matching sellers for quotes".</span></div></li>
+        <li><div><b>Pick a seller</b><span class="sub">Storefront with other products, ratings and badges. Actions: Chat &amp; negotiate · Request sample · Order now · Need more volume? · Save as partner · Visit website.</span></div></li>
+      </ol>
+      <div class="callout"><span class="label">One-sentence shortcut</span><span class="indic">"1000 cotton track pant chahiye, 170 tak, Kolkata, do hafte mein"</span> fills every slot at once, and Claire jumps straight to step 6.</div>
+      <div class="callout"><span class="label">How combos are built</span>Only sellers with compatible specs (same fabric, GSM within 10, overlapping colours) and similar trust are combined. Each seller's share respects their minimum order. Sellers never see each other's prices.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ═════════ SELLER ASSIST ═════════ -->
+<section aria-labelledby="j2b">
+  <div class="head"><div class="eyebrow">Journey 2b · The seller's side</div><h2 id="j2b">Buyers get an answer in minutes, even when the owner is on the floor</h2></div>
+  <div class="three">
+    <div class="panel"><span class="label">A lead arrives</span>
+      <p>Push + card: <b>Amit Hosiery, Kolkata · Trust 78 · paid on time 9 of 10 · 1,000 track pants · budget ₹170</b>.</p>
+      <div class="chips"><span class="chip">Quote ₹172</span><span class="chip">Send catalog</span><span class="chip">Can't do</span><span class="chip">Let Claire handle</span></div>
+      <p class="muted" style="font-size:14px">Or quote by voice: "172, four days, 30 percent advance" becomes an offer card.</p>
+    </div>
+    <div class="panel"><span class="label">Auto-reply modes</span>
+      <ul>
+        <li><b>Off</b> · nothing automatic.</li>
+        <li><b>Suggest</b> (default) · Claire drafts, seller taps Send.</li>
+        <li><b>Auto</b> · after 2 min of silence Claire answers from the seller's own catalog and stock, labelled "Auto-reply by Claire".</li>
+      </ul>
+      <p class="muted" style="font-size:14px">Never automatic: accepting an order, credit terms, or going below the floor price.</p>
+    </div>
+    <div class="panel"><span class="label">Keep data fresh by voice</span>
+      <ul>
+        <li>"2,000 track pants ready" updates stock.</li>
+        <li>"Machines free for 3,000 pieces this week" updates capacity.</li>
+        <li>"All track pants +5 % from Monday" revises rates and notifies open quotes.</li>
+        <li>Morning digest: new enquiries, offers waiting, payments overdue.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ═════════ J3 DEAL CHAT ═════════ -->
+<section aria-labelledby="j3">
+  <div class="head"><div class="eyebrow">Journey 3 · Deal chat</div><h2 id="j3">Hindi in, Tamil out — the same conversation on two phones</h2>
+    <p class="muted">Every message arrives in the reader's language; "Show original" is one tap away. Voice notes carry a transcript, a translation and a "Listen in my language" button. Numbers and trade terms never change in translation.</p></div>
+  <div class="phones">
+    <div class="phone-wrap">
+      <div class="phone"><div class="screen">
+        <div class="pbar"><span class="av">L</span><div class="grow"><div class="nm">Lakshmi Garments</div><div class="st">Tiruppur · replies in ~6 min · Trust 81</div></div><span class="badge">Hindi</span></div>
+        <div class="chat">
+          <div class="ccard"><span class="label">Your requirement</span><div class="row"><span>1,000 cotton track pants</span><span>≤ ₹170</span></div><div class="row muted"><span>Kolkata · by 2 Dec</span></div></div>
+          <div class="msg me"><div class="voice"><span class="play" aria-hidden="true"></span><span class="wave" aria-hidden="true"><i style="height:8px"></i><i style="height:15px"></i><i style="height:11px"></i><i style="height:18px"></i><i style="height:7px"></i><i style="height:13px"></i><i style="height:16px"></i><i style="height:9px"></i><i style="height:12px"></i><i style="height:6px"></i><i style="height:14px"></i><i style="height:10px"></i></span><span class="mono" style="font-size:10px">0:05</span></div>
+            <span class="indic" style="display:block;margin-top:4px">भैया, 165 में दे दो, 1000 पीस पक्का लेंगे।</span><span class="tr">"Give it at 165, we'll definitely take 1,000."</span></div>
+          <div class="hintcard"><b>Only you see this:</b> Make this a counter-offer at ₹165? <span class="btn" style="margin-left:4px">Yes</span></div>
+          <div class="msg"><div class="voice"><span class="play" aria-hidden="true"></span><span class="wave" aria-hidden="true"><i style="height:10px"></i><i style="height:6px"></i><i style="height:14px"></i><i style="height:18px"></i><i style="height:12px"></i><i style="height:8px"></i><i style="height:16px"></i><i style="height:11px"></i><i style="height:5px"></i><i style="height:13px"></i><i style="height:9px"></i><i style="height:15px"></i></span><span class="mono" style="font-size:10px">0:06</span></div>
+            <span class="indic" style="display:block;margin-top:4px">168 में दूँगी, 4 दिन में भेज दूँगी। 30% एडवांस चाहिए।</span><span class="orig">Translated from Tamil · Show original</span><span class="listen">▶ Listen in Hindi</span></div>
+          <div class="ccard"><span class="label">Offer from Lakshmi Garments</span>
+            <div class="row"><span class="big">₹168/pc × 1,000</span><span>₹1,68,000</span></div>
+            <div class="row muted"><span>Dispatch 4 days · 30 % advance</span><span>Freight to-pay</span></div>
+            <div class="btns"><span class="btn fill">Accept</span><span class="btn">Counter</span><span class="btn">Chat</span></div></div>
+        </div>
+      </div></div>
+      <span class="phone-cap">Amit sees Hindi</span>
+    </div>
+    <div class="phone-wrap">
+      <div class="phone"><div class="screen">
+        <div class="pbar"><span class="av gold">A</span><div class="grow"><div class="nm">Amit Hosiery</div><div class="st">Kolkata · pays on time 9/10 · Trust 78</div></div><span class="badge">Tamil</span></div>
+        <div class="chat">
+          <div class="ccard"><span class="label">New enquiry</span><div class="row"><span>1,000 cotton track pants</span><span>≤ ₹170</span></div><div class="row muted"><span>Kolkata · by 2 Dec</span></div></div>
+          <div class="msg"><div class="voice"><span class="play" aria-hidden="true"></span><span class="wave" aria-hidden="true"><i style="height:8px"></i><i style="height:15px"></i><i style="height:11px"></i><i style="height:18px"></i><i style="height:7px"></i><i style="height:13px"></i><i style="height:16px"></i><i style="height:9px"></i><i style="height:12px"></i><i style="height:6px"></i><i style="height:14px"></i><i style="height:10px"></i></span><span class="mono" style="font-size:10px">0:05</span></div>
+            <span class="indic" style="display:block;margin-top:4px">அண்ணா, 165க்கு கொடுங்க, 1000 பீஸ் கண்டிப்பா எடுப்போம்.</span><span class="orig">Translated from Hindi · Show original</span><span class="listen">▶ Listen in Tamil</span></div>
+          <div class="hintcard"><b>Only you see this:</b> Market median for this spec is ₹168. Your floor is ₹164.</div>
+          <div class="msg me"><div class="voice"><span class="play" aria-hidden="true"></span><span class="wave" aria-hidden="true"><i style="height:10px"></i><i style="height:6px"></i><i style="height:14px"></i><i style="height:18px"></i><i style="height:12px"></i><i style="height:8px"></i><i style="height:16px"></i><i style="height:11px"></i><i style="height:5px"></i><i style="height:13px"></i><i style="height:9px"></i><i style="height:15px"></i></span><span class="mono" style="font-size:10px">0:06</span></div>
+            <span class="indic" style="display:block;margin-top:4px">168க்கு தரேன், 4 நாள்ல அனுப்பிடுறேன். 30% அட்வான்ஸ் வேணும்.</span><span class="tr">"I'll give it at 168, dispatch in 4 days, need 30 % advance."</span></div>
+          <div class="sys">Claire turned your voice note into an offer · sent</div>
+          <div class="sys">✓✓ Seen by Amit</div>
+        </div>
+      </div></div>
+      <span class="phone-cap">Lakshmi sees Tamil</span>
+    </div>
+  </div>
+  <div class="two">
+    <div class="callout"><span class="label">Other cards in the deal chat</span><b>Sample request</b> (sizes, sample price, courier, tracking → "Approve &amp; order bulk") · <b>More volume?</b> ("3,000 more by 15 Dec" → capacity reply) · <b>Catalog cards</b> · <b>📞 call</b> with a translated summary afterwards.</div>
+    <div class="callout"><span class="label">Under the hood</span>Each deal chat is a Nexconn group shown as 1-on-1, so Claire can send private hints to one side and a Trade Desk agent can join later without starting a new chat.</div>
+  </div>
+</section>
+
+<!-- ═════════ J4 ORDER ═════════ -->
+<section aria-labelledby="j4">
+  <div class="head"><div class="eyebrow">Journey 4 · Order to payment</div><h2 id="j4">One order card that updates itself</h2>
+    <p class="muted">The card lives at the bottom of the deal chat. Each change also posts a short notice in "CLAIRE Updates" in both languages.</p></div>
+  <div class="scroll-x" tabindex="0" aria-label="Order lifecycle, scroll sideways on small screens">
+    <div class="life">
+      <div class="stage"><span class="n">1</span><span class="t">Confirmed</span><span class="d">Offer accepted. Code CC-24-00123.</span></div>
+      <div class="stage"><span class="n">2</span><span class="t">Advance paid</span><span class="d">Buyer adds UPI/NEFT ref; seller confirms in one tap.</span></div>
+      <div class="stage"><span class="n">3</span><span class="t">In production</span><span class="d">Optional voice updates: "600 done today".</span></div>
+      <div class="stage"><span class="n">4</span><span class="t">Dispatched</span><span class="d">"Sent by KPN, LR 55821, 12 bundles" + LR photo.</span></div>
+      <div class="stage"><span class="n">5</span><span class="t">Delivered</span><span class="d">Buyer confirms or taps "Report a problem".</span></div>
+      <div class="stage warn"><span class="n">6</span><span class="t">Balance paid</span><span class="d">Due = delivery + credit days. Nudges at +3 and +7 days; ticket at +15.</span></div>
+      <div class="stage end"><span class="n">7</span><span class="t">Rate each other</span><span class="d">Both sides rate; scores reveal together.</span></div>
+    </div>
+  </div>
+  <div class="three">
+    <div class="panel"><span class="label">Credit ladder</span><p>First order: 50–100 % advance. After 3 clean orders Claire asks the seller: "Amit has paid on time 3 times. Offer 15 days credit?" Partners can go to 30 days. CLAIRE never lends money.</p></div>
+    <div class="panel"><span class="label">45-day alert</span><p>If the seller is a registered micro/small manufacturer or job worker, the buyer sees "Pay within 45 days to claim this as an expense" (Section 43B(h)) and the seller sees days outstanding.</p></div>
+    <div class="panel"><span class="label">Paperwork hints</span><p>GST at 5 % for garments up to ₹2,500 a piece. "E-way bill needed" for inter-state loads over ₹50,000. The LR + invoice photo is what buyers release payment against.</p></div>
+  </div>
+</section>
+
+<!-- ═════════ J5 TRUST ═════════ -->
+<section aria-labelledby="j5">
+  <div class="head"><div class="eyebrow">Journey 5 · Trust both ways</div><h2 id="j5">Sellers are rated on quality, buyers on paying on time</h2></div>
+  <div class="two">
+    <div class="panel rate"><span class="label">Amit rates Lakshmi Garments</span>
+      <div class="q"><span>Quality matches sample</span><span class="stars">★★★★★</span></div>
+      <div class="q"><span>Value for money</span><span class="stars">★★★★<span class="off">★</span></span></div>
+      <div class="q"><span>Delivered on time <span class="auto">from records</span></span><span class="stars">★★★★★</span></div>
+      <div class="q"><span>Communication</span><span class="stars">★★★★<span class="off">★</span></span></div>
+      <div class="q" style="border:none"><span>Would reorder?</span><b>Yes</b></div>
+    </div>
+    <div class="panel rate"><span class="label">Lakshmi rates Amit Hosiery</span>
+      <div class="q"><span>Paid on time <span class="auto">from records</span></span><span class="stars">★★★★★</span></div>
+      <div class="q"><span>Clear requirements</span><span class="stars">★★★★<span class="off">★</span></span></div>
+      <div class="q"><span>Fair on returns, no cancellations</span><span class="stars">★★★★★</span></div>
+      <div class="q" style="border:none"><span>Would sell again?</span><b>Yes</b></div>
+    </div>
+  </div>
+  <div class="panel" style="gap:14px">
+    <span class="label">Trust score example · Sree Textiles · 86 / 100</span>
+    <div class="tbar" role="img" aria-label="Trust score breakdown: verification 17 of 20, ratings 35 of 40, reliability 22 of 25, responsiveness 8 of 10, disputes 4 of 5, total 86">
+      <span style="width:17%;background:var(--teal-deep)">Verify 17</span>
+      <span style="width:35%;background:var(--teal)">Ratings 35</span>
+      <span style="width:22%;background:var(--gold)">Reliability 22</span>
+      <span style="width:8%;background:var(--rust)">8</span>
+      <span style="width:4%;background:var(--ink-soft)">4</span>
+      <span style="width:14%;background:var(--surface-2);color:var(--ink-soft)">gap 14</span>
+    </div>
+    <div class="legend">
+      <span><i style="background:var(--teal-deep)"></i>Verification (phone, GST, Udyam, unit visit) · max 20</span>
+      <span><i style="background:var(--teal)"></i>Ratings received · max 40</span>
+      <span><i style="background:var(--gold)"></i>Reliability from records · max 25</span>
+      <span><i style="background:var(--rust)"></i>Responsiveness · max 10</span>
+      <span><i style="background:var(--ink-soft)"></i>No disputes · max 5</span>
+    </div>
+    <div class="chips"><span class="badge">GST verified</span><span class="badge">Manufacturer</span><span class="badge">Unit visited</span><span class="badge">Replies in &lt; 10 min</span><span class="badge gold">Top quality</span><span class="badge gold">34 repeat buyers</span><span class="badge">Vouched by SS Garments, Ravi Knit Fashions</span></div>
+  </div>
+</section>
+
+<!-- ═════════ J6 REORDER ═════════ -->
+<section aria-labelledby="j6">
+  <div class="head"><div class="eyebrow">Journey 6 · Reorder and partners</div><h2 id="j6">Good trades turn into standing relationships</h2></div>
+  <div class="three">
+    <div class="panel"><span class="label">One-tap reorder</span><p>Orders → Reorder, or say "same as last time from Sree". The seller gets a reorder card: Accept at ₹168 or quote a new price.</p></div>
+    <div class="panel"><span class="label">Smart reminder</span><p>Amit reordered about every 30 days twice. On day 28 Claire asks: "Time to reorder 1,000 track pants from Sree Textiles?"</p></div>
+    <div class="panel"><span class="label">Partner</span><p>After 2 good orders, Claire suggests a partnership: pinned chat with a standing price card, priority in matching, optional credit days, early access to new stock.</p></div>
+  </div>
+</section>
+
+<!-- ═════════ J7 JOB WORK ═════════ -->
+<section aria-labelledby="j7">
+  <div class="head"><div class="eyebrow">Journey 7 · Whole supply chain</div><h2 id="j7">Ravi splits a 5,000-piece stitching job across three units</h2>
+    <p class="muted">The same matcher works on capacity instead of stock. Each accepted line becomes a work order that doubles as a digital delivery challan.</p></div>
+  <div class="callout"><span class="label">Ravi says, in Tamil</span>"Need stitching for 5,000 track pants, fabric cut and ready, in 10 days, around 22 rupees a piece."</div>
+  <div class="split" role="img" aria-label="Split of 5,000 pieces: Lakshmi Garments 2,000 at 22 rupees, Raju Stitching Works 1,800 at 21 rupees, Sri Velan Stitching 1,200 at 23 rupees">
+    <div style="flex:2000;background:var(--teal-deep)"><b>Lakshmi Garments</b>2,000 · ₹22</div>
+    <div style="flex:1800;background:var(--teal)"><b>Raju Stitching (Hindi)</b>1,800 · ₹21</div>
+    <div style="flex:1200;background:var(--gold)"><b>Sri Velan</b>1,200 · ₹23</div>
+  </div>
+  <p class="muted mono" style="font-size:13px">Total 5,000 pcs · avg ₹21.9/pc · ready in 9 days</p>
+  <div class="three">
+    <div class="panel"><span class="label">Job offers go out</span><p>Each unit gets a card: garment, quantity, rate, deadline, "material supplied", a photo of the style. Accept, counter or decline. A decline triggers a replacement suggestion.</p></div>
+    <div class="panel"><span class="label">Progress by voice</span><p>Lakshmi says "Today 600 done" and Ravi's progress bar moves to 600 / 2,000. Claire asks once a day if no update came in.</p></div>
+    <div class="panel"><span class="label">Return, pay, rate</span><p>"Returned 1,980, rejected 20" closes the challan. Payment due = pieces × rate. Both rate each other. Ravi (Tamil) and Raju (Hindi) never needed a common language.</p></div>
+  </div>
+  <div class="note">The same flow covers raw material: Lakshmi says "Need 300 kg single jersey, 180 GSM, white, this week" and gets fabric sellers by the kg. Job workers with idle machines can post capacity and get pinged when someone searches.</div>
+</section>
+
+<!-- ═════════ J8 TRADE DESK ═════════ -->
+<section aria-labelledby="j8">
+  <div class="head"><div class="eyebrow">Journey 8 · Trade Desk (human agent dispatch)</div><h2 id="j8">The right person, in the right language, inside the same chat</h2>
+    <p class="muted">Nexconn has no built-in agent routing, so we build it from groups, presence, targeted messages and webhooks. That is itself a strong story for the judges.</p></div>
+  <div class="flow">
+    <div class="fbox"><span class="label">1 · Trigger</span><ul><li>"Talk to a person"</li><li>Claire fails twice</li><li>Angry or fraud words</li><li>Report a problem</li><li>Balance 15 days late</li><li>Order over ₹5 lakh</li><li>"Call me" in onboarding</li></ul></div>
+    <div class="fbox"><span class="label">2 · Triage</span><ul><li>Type and priority (P1–P3)</li><li>Languages needed: Hindi + Tamil</li><li>AI summary in the agent's language</li><li>Suggested next step</li></ul></div>
+    <div class="fbox"><span class="label">3 · Dispatch</span><ul><li>Online agents only</li><li>Speaks both languages → else one + auto-translate</li><li>Has the skill</li><li>Lowest load, longest idle</li><li>SLA: P1 5 min · P2 15 min · P3 1 h</li></ul></div>
+    <div class="fbox"><span class="label">4 · Join &amp; resolve</span><ul><li>Agent joins the existing deal chat</li><li>Claire's auto-replies pause</li><li>Call buyer or seller in-app</li><li>Resolve → outcome posted in both languages</li></ul></div>
+  </div>
+  <div class="console" aria-label="Trade Desk console example">
+    <div>
+      <span class="label">Ticket TD-00042 · P2 · payment follow-up</span>
+      <div><b>Amit Hosiery</b> (buyer, HI) ↔ <b>Sree Textiles</b> (seller, TA)</div>
+      <div class="sla">First response due in 11:40</div>
+      <div class="muted">Order CC-24-00123 · ₹1,17,600 balance · 15 days overdue</div>
+    </div>
+    <div>
+      <span class="label">AI summary (shown to Meena in Tamil or English)</span>
+      <p>Balance due 2 Dec, unpaid 15 days. Buyer says goods arrived 40 pieces short. Seller says 1,000 were dispatched, LR 55821, 12 bundles.</p>
+      <p class="muted"><b>Suggested:</b> ask the transporter for the weight slip; propose part payment of ₹1,12,900 pending recount.</p>
+    </div>
+    <div>
+      <span class="label">Actions</span>
+      <span class="act p">Join chat</span><span class="act">Call buyer</span><span class="act">Call seller</span><span class="act">Mark payment received</span><span class="act">Resolve with outcome</span>
+    </div>
+  </div>
+</section>
+
+<!-- ═════════ NEXCONN ═════════ -->
+<section aria-labelledby="nx">
+  <div class="head"><div class="eyebrow">Built on Nexconn</div><h2 id="nx">Which Nexconn feature powers which moment</h2>
+    <p class="muted">This list also goes into the submission form's "SDK features you used" field.</p></div>
+  <div class="scroll-x" tabindex="0" aria-label="Nexconn feature table">
+    <table class="tbl">
+      <thead><tr><th>Nexconn feature</th><th>Where users meet it</th></tr></thead>
+      <tbody>
+        <tr><td>Chat SDK connect, token issue</td><td>Login; every business and bot is a Nexconn user</td></tr>
+        <tr><td>Direct channel</td><td>Each user's chat with Claire</td></tr>
+        <tr><td>Group channel + targeted messages <code>directedUserIds</code></td><td>Deal, combo, partner and support chats; private hints; agent joins</td></tr>
+        <tr><td>Custom messages</td><td>Every card: category tiles, results, offers, orders, samples, job offers, ratings</td></tr>
+        <tr><td>Built-in translation</td><td>Every text message and voice transcript, in 10 Indian languages</td></tr>
+        <tr><td>Server send as bot + streaming messages</td><td>Claire's replies, streamed like typing for longer answers</td></tr>
+        <tr><td>System channel</td><td>"CLAIRE Updates": order, payment and dispatch notices</td></tr>
+        <tr><td>Typing, read receipts, presence</td><td>"recording a voice note…", ✓✓ seen on offers, agents online for dispatch</td></tr>
+        <tr><td>Webhooks (message, presence, pre-messaging)</td><td>Routing to Claire, auto-reply timers, ticket triggers, scam guard</td></tr>
+        <tr><td>Call SDK (stretch)</td><td>Buyer–seller calls and Trade Desk calls</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="note">Not in Nexconn, added by us: speech-to-text and text-to-speech (Sarvam AI, Indian languages), and Claude for understanding speech, cataloguing photos, drafting replies and summarising tickets.</div>
+</section>
+
+<!-- ═════════ PLAN ═════════ -->
+<section aria-labelledby="plan">
+  <div class="head"><div class="eyebrow">Four days to submit</div><h2 id="plan">The sprint</h2>
+    <p class="muted">Completeness and smooth UX are half the score, so the plan protects one polished end-to-end story before adding extras.</p></div>
+  <div class="days">
+    <div class="day"><span class="d">Wed 18 · tonight</span><span class="t">Set up</span><ul><li>Nexconn app (Singapore), translation on, growth credit</li><li>Keys: Claude, Sarvam</li><li>Repo, hosting, Nexconn skill</li><li>Book pilot partners for Saturday</li></ul></div>
+    <div class="day"><span class="d">Thu 19</span><span class="t">Hello chat</span><ul><li>Login, inbox, chat screen</li><li>Webhook loop: Claire replies with chips</li><li>DB + seed, matcher, voice endpoints</li></ul></div>
+    <div class="day"><span class="d">Fri 20</span><span class="t">Core flows</span><ul><li>Onboarding by voice, photo catalog</li><li>Claire search → results → deal chat</li><li>Translation, offers, orders</li><li>Trade Desk; first deploy</li></ul></div>
+    <div class="day"><span class="d">Sat 21</span><span class="t">Finish + real users</span><ul><li>Bug bash on real phones</li><li>Job-work split, auto-reply, calls</li><li>Onboard pilot partners and their buyers</li><li>Draft submission by 9 PM; freeze 11 PM</li></ul></div>
+    <div class="day last"><span class="d">Sun 22</span><span class="t">Ship</span><ul><li>Fixes only</li><li>Record demo video, write PDF</li><li>Final submit by 8 PM IST</li><li>Hard deadline 11:59 PM</li></ul></div>
+  </div>
+</section>
+
+<!-- ═════════ WINS ═════════ -->
+<section aria-labelledby="win">
+  <div class="head"><div class="eyebrow">What makes it stand out</div><h2 id="win">Seven things judges should remember</h2></div>
+  <ul class="wins">
+    <li><span><b>Onboarding by conversation.</b> A live profile fills in while you talk; a catalog from photos already on your phone.</span></li>
+    <li><span><b>Hindi voice in, Tamil voice out.</b> Two people with no shared language close a ₹1.68 lakh order.</span></li>
+    <li><span><b>Combo orders.</b> No one has 1,000? Two sellers with the same fabric do, together.</span></li>
+    <li><span><b>The whole chain.</b> Yarn, fabric, job work and finished goods on the same rails, with digital challans.</span></li>
+    <li><span><b>Trust from records.</b> Buyers earn "pays on time" from real payment dates; references replace brokers.</span></li>
+    <li><span><b>A dispatch center built on Nexconn.</b> Language-skill routing, agent joins the same chat with a summary.</span></li>
+    <li><span><b>Seller auto-reply.</b> Buyers hear back in minutes while the owner is on the factory floor.</span></li>
+  </ul>
+</section>
+
+<footer>
+  <div>Full detail lives in the docs folder: <code>00-README.md</code> · <code>01-research-brief.md</code> · <code>02-product-spec.md</code> · <code>03-technical-design.md</code> · <code>04-build-plan.md</code></div>
+  <div>Prices and rates in examples come from public 2025–26 listings and trade press; confirm with pilot partners before the pitch.</div>
+</footer>
+
+</div>
+</body>
+</html>
