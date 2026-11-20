@@ -9,6 +9,8 @@ Built on CLAIRE's WholeSale Connect idea, for the Nexconn Build Challenge (Marke
 
 Tiruppur makes ~90 % of India's cotton knitwear exports and sells ~₹35,000 crore a year inside India, but that domestic trade runs on WhatsApp photo floods, phone calls and traders who sit in the middle because Tamil-speaking makers and Hindi/Bengali/Telugu-speaking buyers can't talk to each other. **CLAIRE Connect** puts every business in the chain — yarn agents, knitting and stitching units, garment makers, wholesalers and resellers — in one chat app where they buy and sell **by voice, in their own language**. Claire, the AI assistant, onboards a business from a 2-minute spoken conversation, turns WhatsApp photos into a catalog, and turns a buyer's one sentence ("1,000 cotton track pants under ₹170, Kolkata, 2 weeks") into matched sellers — combining 2–3 sellers when none can fill the order alone. Buyers and sellers negotiate with translated voice notes and offer cards, rate each other on quality and on paying on time, and reorder in one tap. When things go wrong, a Trade Desk agent who speaks both languages is dispatched into the same chat.
 
+> **New here? Start with `HANDOVER.md` §0** (current status, priorities and next steps).
+
 ## Documents
 
 | File | For | What's inside |

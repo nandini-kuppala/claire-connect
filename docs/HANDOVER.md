@@ -1,9 +1,33 @@
 # CLAIRE Connect — Handover
 
 Everything a new developer (or the submitting team) needs to run, change, deploy and submit CLAIRE Connect.
-Status on 19 Nov 2026: feature-complete for the Nexconn Build Challenge; runs live on Nexconn, MongoDB Atlas, OpenRouter and Sarvam. Submission deadline **Sun 22 Nov 2026, 11:59 PM IST**.
+Status on 20 Nov 2026: the web app is feature-complete for the Nexconn Build Challenge and runs live at https://claire-connect.onrender.com on Nexconn, MongoDB Atlas, OpenRouter and Sarvam. Submission deadline **Sun 22 Nov 2026, 11:59 PM IST**.
 
 ---
+
+## 0. Where things stand (read this first)
+
+**Done and deployed (web + server):**
+- Full buy/sell flow: Claire chat, results and combos, deal chats with offers and counter-offers, orders, ratings, samples, storefront, Trade Desk.
+- All 10 languages (en, ta, hi, te, kn, ml, bn, or, mr, gu) on every trader screen and in Claire's replies. `npm run i18n:check -- all` is 100% (§12).
+- Nexconn voice and video calls in deal chats and the Trade Desk (§13). Built, but **not yet seen connecting**: the Call service is off in the console (error 80006).
+- Live smoke test: `python3 demo-video/smoke_live.py <url>` (25 checks).
+
+**In progress, priority 2: Flutter mobile app** in `mobile/` (§14). Code complete for the core flow and pushed; no Android or iOS build produced yet.
+
+**Next steps, in order:**
+1. **Feature development** (priority 1): new work starts here. Read §1–§3, §12 and `docs/DESIGN_SYSTEM.md` before changing UI; every new string needs en/ta/hi inline and the other seven in the overlay files.
+2. **Submission** (§8): PDF write-up, video upload, form. Add the Flutter plugin and Call SDK to the "features used" list.
+3. **Mobile app** (§14): build the APK and iOS app, then device testing.
+4. **Testing, deferred** (do in one pass later):
+   - Calls: once the owner enables Audio/Video Calling in the console, run the two-browser test (Amit + Lakshmi, same deal): connected voice call, voice ↔ video switch, `CC:Call` line arriving on the other side.
+   - Mobile: on a device or simulator, send text to Claire, tap a chip, Accept / Counter an offer, an order step, a deal chat in Tamil and Telugu.
+
+**Working notes for whoever picks this up:**
+- **Git:** push as `nandini-kuppala` (repo owner). If `git push` returns 403 for `Nandini-FH`, run `gh auth switch --user nandini-kuppala`. Short commit messages, one change per commit.
+- **Disk:** the build Mac was at ~2 GB free. Mobile builds need ~4 GB free (§14).
+- **Shared database:** production and local dev use the same Atlas db; create only demo data. QA runs leave demo requests and offers in the Amit ↔ Sree deal; decline stale pending offers if the smoke test fails on them. Demo users' languages: Amit en, Lakshmi ta, Sree ta, Ravi ta, Meena en.
+- **Secrets:** only in `server/.env` and the Render dashboard. Never in `web/` or `mobile/`.
 
 ## 1. Repository layout
 
@@ -31,6 +55,7 @@ claire-connect/
 │   ├── src/icons/     custom icon set (no third-party icon library)
 │   ├── src/locales/   overlay translations of every screen (te kn ml bn or mr gu), lazy-loaded
 │   └── src/components Button, Avatar/logo, TrustBadge, BottomNav, Sheet, CatalogSheet, GarmentArt
+├── mobile/            Flutter app (Android + iOS) on the Nexconn Flutter Chat SDK, same server API (§14)
 ├── shared/            types shared by server and web (card payloads, category taxonomy)
 ├── scripts/           i18n-extract.mjs / i18n-check.mjs (language files)
 ├── demo-video/        scripts that record and narrate the demo video + the final render
@@ -67,6 +92,7 @@ claire-connect/
 | History query, typing status, read receipts, unread | `web/src/chat/engine.ts`, `ChatView.tsx` |
 | Server API: access-token issue, direct/group/system send, group create/join, stream send | `server/src/nexconn.ts` |
 | Webhook receiver with signature check | `server/src/routes/webhooks.ts` |
+| **Flutter Chat SDK** `ai_nexconn_chat_plugin` 26.2.11: init (SG), connect, custom messages, direct / group / system channels, history, unread, typing, read receipts | `mobile/lib/chat/chat_engine.dart` (table in `mobile/README.md`) |
 | **Call SDK** `@nexconn/call` 26.2.1: 1:1 voice + video calls (deal chat header, Trade Desk "Call buyer / seller"), incoming / in-call screens, mute, camera, flip, voice ↔ video switch, `CC:Call` summary in the chat | `web/src/call/*`, init in `web/src/chat/engine.ts` |
 
 App Key: shown in the Nexconn console (Key Management). Put it in the PDF write-up and the submission form; do not post it in public issues.
@@ -132,7 +158,7 @@ Railway or Fly.io work the same way (Node 24, same build/start commands, same en
 ## 8. Hackathon submission checklist (reskilll.com/hack/nexconn)
 
 - [ ] Title + summary
-- [ ] Nexconn packages (`@nexconn/engine`, `@nexconn/chat`, Server API), **App Key**, and "SDK features used and where" (table in §3)
+- [ ] Nexconn packages (`@nexconn/engine`, `@nexconn/chat`, `@nexconn/call`, Server API, Flutter `ai_nexconn_chat_plugin`), **App Key**, and "SDK features used and where" (table in §3)
 - [ ] Live app link (Render URL)
 - [ ] Public GitHub repo: https://github.com/nandini-kuppala/claire-connect
 - [ ] Demo video link: upload `demo-video/renders/CLAIRE-Connect-demo.mp4` to YouTube (unlisted) / Drive / Loom / Vimeo
@@ -163,6 +189,11 @@ python3 compose.py          # composites → renders/CLAIRE-Connect-demo.mp4
 - Renaming a user does not update their Nexconn profile name.
 - Planning docs 03/04 describe Postgres/Anthropic; the build uses MongoDB/OpenRouter (see notes at the top of those files).
 - The SDK's log upload to `logcollection.ronghub.com` is blocked by CORS on localhost; harmless console noise.
+- Product and offer titles ("Cotton t-shirts", "Job work · … · material provided" in `server/src/deals.ts`) stay English: one stored title is shared by a buyer and seller who may read different languages. Fixing it needs a per-viewer title.
+- Older chat notices stay in the language the reader had when they were sent.
+- The rule-based fallbacks in `server/src/ai.ts` (used only when the daily AI budget is spent) understand English, Hindi and Tamil words only.
+- Small "…" cut-offs on a few long header subtitles (e.g. Tamil Claire subtitle, the language pair + status line in the deal header).
+- One deal conversation per buyer–seller pair, so repeated test offers pile into the same chat.
 
 ## 11. Security
 
@@ -194,3 +225,26 @@ All ten languages (ta, hi, en, te, kn, ml, bn, or, mr, gu) are full app language
 - Browser needs https (or localhost) and microphone / camera permission; the app explains each case instead of failing.
 
 **Enable calling (owner, once):** console.nexconn.ai → your app (the same environment as the App Key in `server/.env`, development or production) → **Audio/Video Calling** (Call) → enable the service (accept the plan / add a payment card if the console asks; free minutes apply). It can take up to 15 minutes to take effect; then clear the site's local storage (or use a fresh browser profile) and reload, because the SDK caches the old "service off" navigation data. Test: two browsers, Amit and Lakshmi in the same deal, tap the phone icon.
+
+## 14. Mobile app (Flutter) — priority 2, in progress
+
+Full developer guide: `mobile/README.md` (run, build, SDK call table, machine notes).
+
+**Done (pushed):**
+- Flutter 3.50.1 app in `mobile/` on `ai_nexconn_chat_plugin` 26.2.11. Talks to the same server (`--dart-define=API_BASE`, default the Render URL); gets the App Key and Nexconn token from `/api/me`, so no secrets ship in the app.
+- Screens: Login (logo, phone + OTP, demo accounts), Language, Onboarding (form, no voice), Home, Claire chat (chips, tiles, results, summary, notice, orders, requirement, carousel cards), Results (+ combos), Inbox (Claire pinned, CLAIRE Updates, All/Buying/Selling), Deal chat (translation with "Show original", offer Accept/Counter/Decline, order actions, Claire's private tips, quick replies), Orders, Profile (trust ring, badges, language, log out). Bottom nav Home · Chats · Orders · Profile.
+- Strings in all 10 languages (`mobile/assets/i18n/*.json`, 273 keys each); `test/i18n_locales_test.dart` fails on any missing key or placeholder mismatch.
+- `flutter analyze` clean; `flutter test` 46 passing. `integration_test/live_smoke_test.dart` (read-only, live server) passed on the iOS simulator: demo login → Nexconn connected (SG) → Claire history → inbox unread → every screen opens.
+- Offscreen renders of the screens in 10 languages: `mobile/screenshots/render/` (bold weights draw as blocks there; that is the test font, not the app).
+
+**Not done:**
+1. **No APK or iOS build yet.** Both stopped when the disk filled. Free ~4 GB first, then `flutter build apk --debug --target-platform android-arm64` and `flutter build ios --simulator --no-codesign`. Android is set to AGP 9.1.1 / Gradle 9.3.1 / NDK 27.1 (pinned in `android/build.gradle.kts` so the `jni` plugin doesn't pull NDK 28.2). An empty `~/Library/Android/sdk/ndk/28.2.13676358` folder from an aborted download can be deleted.
+2. **Device testing (deferred, see §0):** sending text, chip taps (`CC:Reply`), Accept/Counter, order steps and translation have not been tapped through on a device.
+3. **Not ported from web:** voice notes (CC:Voice shows the transcript only), voice onboarding, rating / sample / support sheets, storefront and compare screens, calls (the Flutter Call plugin is not added), app icon and splash.
+
+**Gotchas:**
+- iOS simulator must be an x86_64 (Rosetta) simulator: the RongCloud wrapper under the Nexconn plugin has no arm64-simulator slice. Real devices are fine.
+- Run `pod install` with `LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8` (Ruby 4 / CocoaPods 1.16 fails otherwise); run it directly before `flutter build ios` if the build stalls unzipping RongCloudIM.
+- History `pageSize` must be ≤ 20 (the SDK returns -101 above that).
+- `CC:Card` content arrives as maps on iOS; the parser also accepts stringified JSON in case Android differs.
+- `mobile/build-artifacts/` is git-ignored; run `flutter clean` after builds to give the disk back.
