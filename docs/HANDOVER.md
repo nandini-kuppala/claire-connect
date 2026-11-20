@@ -22,14 +22,17 @@ claire-connect/
 │   ├── src/voice.ts   Sarvam speech-to-text / text-to-speech
 │   ├── src/nexconn.ts Nexconn Server API client (signed REST)
 │   ├── src/chat.ts    chat facade (Nexconn, or a local relay when Nexconn keys are missing)
+│   ├── src/locales/   overlay translations of Claire's replies and notices (te kn ml bn or mr gu)
 │   └── src/db/        MongoDB helpers + demo seed (25 businesses, 38 listings, 88 past orders, 3 agents)
 ├── web/               React 19 + Vite + Tailwind v4 app (mobile-first, desk is desktop)
 │   ├── src/chat/      engine.ts (Nexconn Web SDK), translate.ts, ChatView, Composer, voice
 │   ├── src/cards/     custom message cards (results, offer, order, rating, hint …)
 │   ├── src/screens/   Login, Home, Claire, Results, Compare, Deal, Inbox, Orders, Profile, Storefront, Desk …
 │   ├── src/icons/     custom icon set (no third-party icon library)
+│   ├── src/locales/   overlay translations of every screen (te kn ml bn or mr gu), lazy-loaded
 │   └── src/components Button, Avatar/logo, TrustBadge, BottomNav, Sheet, CatalogSheet, GarmentArt
 ├── shared/            types shared by server and web (card payloads, category taxonomy)
+├── scripts/           i18n-extract.mjs / i18n-check.mjs (language files)
 ├── demo-video/        scripts that record and narrate the demo video + the final render
 ├── docs/              research, spec, design, contracts, this handover
 └── render.yaml        one-click Render deployment (secrets entered in the dashboard)
@@ -64,6 +67,7 @@ claire-connect/
 | History query, typing status, read receipts, unread | `web/src/chat/engine.ts`, `ChatView.tsx` |
 | Server API: access-token issue, direct/group/system send, group create/join, stream send | `server/src/nexconn.ts` |
 | Webhook receiver with signature check | `server/src/routes/webhooks.ts` |
+| **Call SDK** `@nexconn/call` 26.2.1: 1:1 voice + video calls (deal chat header, Trade Desk "Call buyer / seller"), incoming / in-call screens, mute, camera, flip, voice ↔ video switch, `CC:Call` summary in the chat | `web/src/call/*`, init in `web/src/chat/engine.ts` |
 
 App Key: shown in the Nexconn console (Key Management). Put it in the PDF write-up and the submission form; do not post it in public issues.
 
@@ -81,7 +85,7 @@ Secrets live only in `server/.env` (git-ignored) locally and in the hosting dash
 | `PUBLIC_WEB_URL`, `PUBLIC_SERVER_URL` | your public https URL in production (same value for the single-service deploy) |
 | `DEMO_OTP` | demo OTP for every phone (default `123456`; there is no SMS provider) |
 
-**Nexconn console settings to keep on:** translation (otherwise SDK translation returns 28400 and the server fallback is used), **Targeted Group cloud retention** (so private tips and rating cards survive a reload), Chat Growth Credit (Pro features free up to 10K MAU), and the webhook URL after deploying.
+**Nexconn console settings to keep on:** **Audio/Video Calling** (Call service; without it every call shows "Calling isn't switched on for this workspace yet" and the console logs `80006 VOIP_SERVICE_UNAVAILABLE`, see §13), translation (otherwise SDK translation returns 28400 and the server fallback is used), **Targeted Group cloud retention** (so private tips and rating cards survive a reload), Chat Growth Credit (Pro features free up to 10K MAU), and the webhook URL after deploying.
 
 **OpenRouter:** the account's guardrail currently blocks the free Nemotron endpoints, so the chain falls back to other free models. To use Nemotron Ultra (preferred), allow free models at openrouter.ai/workspaces/default/guardrails.
 
@@ -155,7 +159,7 @@ python3 compose.py          # composites → renders/CLAIRE-Connect-demo.mp4
 
 - Matching ignores colour preference (a "white" request can rank a green T-shirt first).
 - Nexconn `translateTexts` (free text, e.g. voice transcripts) accepts requests but never returns results; the server translates those.
-- The Call SDK is not integrated yet (call buttons are hidden).
+- Calls need the Call service enabled in the Nexconn console (§13). Group calls are not used (deals are 1:1 business ↔ business).
 - Renaming a user does not update their Nexconn profile name.
 - Planning docs 03/04 describe Postgres/Anthropic; the build uses MongoDB/OpenRouter (see notes at the top of those files).
 - The SDK's log upload to `logcollection.ronghub.com` is blocked by CORS on localhost; harmless console noise.
@@ -165,3 +169,28 @@ python3 compose.py          # composites → renders/CLAIRE-Connect-demo.mp4
 - Never commit `server/.env`; rotate any key that leaks (Nexconn secret, Atlas password, OpenRouter, Sarvam).
 - The Nexconn App **Secret** is server-only; the App **Key** is public by design (the browser uses it).
 - Demo OTP login is for the hackathon; add a real SMS provider before real users rely on it.
+
+## 12. Adding or editing a language
+
+All ten languages (ta, hi, en, te, kn, ml, bn, or, mr, gu) are full app languages: the Language screen and the sign-in pill offer every one.
+
+- **English, Tamil, Hindi** live inline in the code: `web/src/i18n.ts` (namespace `app`), `web/src/cards/strings.ts` (`cards`), the co-located `*.strings.ts` files (`defineStrings('<namespace>', { en, ta, hi })`), `server/src/i18n.ts` (`claire`, `units`), `server/src/deals.ts` (`deals`, `deal_units`), `server/src/desk.ts` (`desk`), `server/src/routes/requirements.ts` (`reasons`) and `shared/taxonomy.ts` (category names, `taxonomy`).
+- **Telugu, Kannada, Malayalam, Bengali, Odia, Marathi, Gujarati** come from overlay JSON: `web/src/locales/<lang>.json` (screens) and `server/src/locales/<lang>.json` (Claire's replies, deal notices, reasons). Shape: `{ "<namespace>": { "<key>": "<text>" } }`.
+- Every lookup goes: inline table for the language → overlay JSON → English → key. A missing key shows English, never a blank.
+- `en.json` (web and server) is generated. After changing any English string, run `npm run i18n:extract`. Never edit `en.json` by hand.
+- Check a language: `npm run i18n:check -- te` (or `all`). It lists missing and extra keys, placeholder mismatches, empty strings and likely untranslated text, and exits non-zero until the language is complete.
+- New screen copy: add it to a `defineStrings('<namespace>', …)` table (en + ta + hi), run `npm run i18n:extract`, then translators fill the other seven.
+- Web overlay files are loaded lazily (one small chunk per language); the server reads its JSON at start-up, so restart the server after editing it.
+- Translator rules (what stays in English, placeholders, tone): `docs/TRANSLATING.md`.
+- Fonts: Noto Sans Telugu, Kannada, Malayalam, Bengali, Oriya and Gujarati load from Google Fonts in `web/index.html` (Devanagari, so Hindi and Marathi, uses Hind; Tamil uses Hind Madurai). Voice: Sarvam STT/TTS covers all ten (`server/src/voice.ts`; Odia is `od-IN` there).
+
+## 13. Voice and video calls (Nexconn Call SDK)
+
+- Package `@nexconn/call` 26.2.1 (web). It declares peer `@nexconn/chat`/`engine` 26.2.0; the app uses 26.5.1 (the APIs it needs are unchanged), so the repo root `.npmrc` sets `legacy-peer-deps=true`. Keep that file, or `npm ci` on Render fails with ERESOLVE.
+- Order (in `web/src/chat/engine.ts`): `NCEngine.initialize` → `initCallEngine()` (lazy chunk, `NCCallEngine.initialize` + `setCallEventHandler`) → `NCEngine.connect`. The call chunk is awaited for at most 6 s before connecting.
+- `web/src/call/service.ts`: zustand store + actions (`startCall`, `acceptCall`, `hangUp`, `toggleMic`, `toggleCamera`, `flipCamera`, `cycleSpeaker`, `switchMedia`, `answerVideoRequest`). The callee learns the caller's name, trust and deal from `extra`. The caller posts one `CC:Call` message (`shared/cards.ts`) into the deal group when the call ends: "Voice call · 2:31", "Missed video call", "Call declined".
+- `web/src/call/CallLayer.tsx` (mounted in `App.tsx`) draws every phase; `CallButtons.tsx` has the header buttons and the chat line. Strings: `web/src/call/call.strings.ts`, namespace `call`, all ten languages inline (the i18n check counts inline tables).
+- Trade Desk: ticket parties now carry `userIds` (`server/src/desk.ts`), so agents can call the buyer or seller from the context panel; the summary goes into the deal chat once the agent has joined it.
+- Browser needs https (or localhost) and microphone / camera permission; the app explains each case instead of failing.
+
+**Enable calling (owner, once):** console.nexconn.ai → your app (the same environment as the App Key in `server/.env`, development or production) → **Audio/Video Calling** (Call) → enable the service (accept the plan / add a payment card if the console asks; free minutes apply). It can take up to 15 minutes to take effect; then clear the site's local storage (or use a fresh browser profile) and reload, because the SDK caches the old "service off" navigation data. Test: two browsers, Amit and Lakshmi in the same deal, tap the phone icon.

@@ -48,7 +48,7 @@ Open them with the Read tool and study the layout, hierarchy and spacing.
 If you need something they lack, compose locally in your file and mention it in your report.
 
 ## 6. Copy & languages
-- Every visible string must exist in en, ta and hi. Do not edit `src/i18n.ts` (shared) — add new strings with `defineStrings` from `lib/localStrings.ts` in a co-located `*.strings.ts` file, or reuse existing keys via `useT()` / `cards/strings.ts` `useCardT`.
+- Every visible string must exist in en, ta and hi. Do not edit `src/i18n.ts` (shared) — add new strings with `defineStrings('<namespace>', { en, ta, hi })` from `lib/localStrings.ts` in a co-located `*.strings.ts` file, or reuse existing keys via `useT()` / `cards/strings.ts`. Then run `npm run i18n:extract`; te, kn, ml, bn, or, mr, gu are filled in `src/locales/<lang>.json` (see `docs/TRANSLATING.md`).
 - Tone: short, warm, plain trade language. "Find suppliers", not "Leverage our AI-powered matching".
 
 ## 7. Density — "not clumsy, not too much info"
