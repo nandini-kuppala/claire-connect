@@ -569,7 +569,7 @@ const ta: Partial<Record<TKey, string>> = {
   status_order: 'ஆர்டர்',
   status_support: 'டிரேட் டெஸ்க்',
   chat_placeholder: 'செய்தி',
-  claire_placeholder: 'டைப் செய்யுங்கள் அல்லது மைக் அழுத்துங்கள்',
+  claire_placeholder: 'இங்கே டைப் செய்யுங்கள்',
   hold_to_talk: 'அழுத்திப் பேசுங்கள் · தொட்டு பதிவு செய்யுங்கள்',
   slide_cancel: 'ரத்து செய்ய இடப்பக்கம் இழுக்கவும்',
   tap_stop: 'முடிந்ததும் அனுப்பு தொடுங்கள்',
