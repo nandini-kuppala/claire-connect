@@ -56,7 +56,7 @@ counter = (r.get('offer') or r.get('counter') or {}).get('id')
 det = call(f'/conversations/{conv}', sree)[1]
 pending = [x for x in det.get('offers', []) if x.get('status') == 'pending']
 check('buyer counter pending for seller', bool(pending))
-st, r = call(f"/offers/{pending[0]['id']}/respond", sree, 'POST', {'action': 'accept'}) if pending else (0, {})
+st, r = call(f"/offers/{pending[-1]['id']}/respond", sree, 'POST', {'action': 'accept'}) if pending else (0, {})
 order = (r.get('order') or {}).get('id')
 check('order created on accept', bool(order), r)
 
