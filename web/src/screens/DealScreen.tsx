@@ -22,6 +22,8 @@ import {
   Tag,
   Truck,
   type LucideIcon,
+  Repeat,
+  Smile,
 } from '../icons';
 import { CC_CARD } from '@shared/cards';
 import { catById, unitLabel } from '@shared/taxonomy';
@@ -276,6 +278,10 @@ export default function DealScreen() {
         if (mid > p && mid < myLastPrice) out.push({ id: 'ask', label: dt('counter_at', { price: inr(mid, { decimals: true }) }), icon: Pencil, onTap: () => void counter(mid) });
       }
       out.push({ id: 'delivery', label: dt('chip_delivery'), icon: Truck, text: dt('msg_delivery') });
+    } else if (detail.orders.length > 0 && detail.orders.every((o) => o.status === 'closed' || o.status === 'cancelled')) {
+      // Deal finished: nudge a repeat order (buyers) and a thank-you (both sides).
+      if (side === 'buyer') out.push({ id: 'reorder', label: dt('chip_reorder'), icon: Repeat, text: dt('msg_reorder') });
+      out.push({ id: 'thanks', label: dt('chip_thanks'), icon: Smile, text: dt(side === 'buyer' ? 'msg_thanks_buyer' : 'msg_thanks_seller') });
     } else if (accepted) {
       out.push({ id: 'delivery', label: dt('chip_delivery'), icon: Truck, text: dt('msg_delivery') });
       if (side === 'buyer') out.push({ id: 'invoice', label: dt('chip_invoice'), icon: Receipt, text: dt('msg_invoice') });
