@@ -1,0 +1,32 @@
+PODS:
+  - Flutter (1.0.0)
+  - rongcloud_im_wrapper_plugin (0.0.1):
+    - Flutter
+    - RongCloudIM/ChatRoom (= 5.36.5)
+    - RongCloudIM/IMLibCore (= 5.36.5)
+  - RongCloudIM/ChatRoom (5.36.5):
+    - RongCloudIM/IMLibCore
+  - RongCloudIM/IMLibCore (5.36.5)
+
+DEPENDENCIES:
+  - Flutter (from `Flutter`)
+  - rongcloud_im_wrapper_plugin (from `.symlinks/plugins/rongcloud_im_wrapper_plugin/ios`)
+
+SPEC REPOS:
+  trunk:
+    - RongCloudIM
+
+EXTERNAL SOURCES:
+  Flutter:
+    :path: Flutter
+  rongcloud_im_wrapper_plugin:
+    :path: ".symlinks/plugins/rongcloud_im_wrapper_plugin/ios"
+
+SPEC CHECKSUMS:
+  Flutter: 71a624a5bc0c04062bf19101d501e466baf2fb47
+  rongcloud_im_wrapper_plugin: bd83650d3e47fad49958473f3b9345491cbe6177
+  RongCloudIM: 9e6b0de2553aaf986b67e35ed2e3a17291b85e1c
+
+PODFILE CHECKSUM: 27134bc2d384ece768005ef589b44329fd4326e2
+
+COCOAPODS: 1.16.2
