@@ -6,6 +6,8 @@ export const CC_CARD = 'CC:Card';
 export const CC_HINT = 'CC:Hint';
 export const CC_REPLY = 'CC:Reply';
 export const CC_VOICE = 'CC:Voice';
+/** Summary of a Nexconn Call SDK voice / video call, posted into the deal chat by the caller when it ends. */
+export const CC_CALL = 'CC:Call';
 
 export interface Chip {
   id: string;        // e.g. "qty:1000"
@@ -84,4 +86,18 @@ export interface VoicePayload {
   durationMs: number;
   lang: string;
   transcript: string;
+}
+
+/** 'completed' = the call connected; everything else is a call that did not connect. */
+export type CallOutcome = 'completed' | 'missed' | 'declined' | 'busy' | 'cancelled' | 'failed';
+
+export interface CallPayload {
+  media: 'audio' | 'video';
+  outcome: CallOutcome;
+  /** Talk time in seconds (0 when the call did not connect). */
+  durationSec: number;
+  callerId: string;
+  calleeId: string;
+  /** Nexconn call id, for support look-ups. */
+  callId?: string;
 }

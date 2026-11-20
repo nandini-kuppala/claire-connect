@@ -1260,3 +1260,36 @@ export const Bookmark = createIcon(
     <path d={bookmarkD} />
   </>,
 );
+
+/* ------------------------------------------------------------------ */
+/* Calls                                                               */
+/* ------------------------------------------------------------------ */
+
+/** Hang up: the handset turned down. */
+export const PhoneOff = createIcon(
+  'PhoneOff',
+  <g transform="rotate(135 12 12)">
+    <Patch d={phoneD} />
+    <path d={phoneD} />
+  </g>,
+);
+
+export const MicOff = createIcon(
+  'MicOff',
+  <>
+    <PatchRect x={8.5} y={3} width={7} height={11} rx={3.5} />
+    <rect x={8.5} y={3} width={7} height={11} rx={3.5} />
+    <path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5v3M9 20.75h6" />
+    <path d="M4.5 4.5l15 15" />
+  </>,
+);
+
+export const VideoOff = createIcon(
+  'VideoOff',
+  <>
+    <PatchRect x={2.5} y={6.5} width={13} height={11} rx={3} />
+    <rect x={2.5} y={6.5} width={13} height={11} rx={3} />
+    <path d="M15.5 10.5l4.4-2.6c.7-.4 1.6.1 1.6.9v6.4c0 .8-.9 1.3-1.6.9l-4.4-2.6" />
+    <path d="M3.5 4l15 16" />
+  </>,
+);
