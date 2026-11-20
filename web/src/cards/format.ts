@@ -1,4 +1,5 @@
 import type { CardCtx, ChatMessage } from './types';
+import { RS } from '../screens/results.strings';
 
 /** ₹ with Indian digit grouping. Small amounts keep up to 2 decimals (₹167.8), large ones are whole. */
 export function inr(n: number | null | undefined, decimals?: number): string {
@@ -10,10 +11,12 @@ export function inr(n: number | null | undefined, decimals?: number): string {
 export const num = (n: number | null | undefined) => (n == null || !Number.isFinite(n) ? '—' : n.toLocaleString('en-IN'));
 
 /** Short unit for "per" labels: ₹168 / pc. */
-export const unitPer = (u: string) => (u === 'kg' ? 'kg' : u === 'dozen' ? 'dozen' : 'pc');
+// Unit words follow the viewer's language (results namespace: pcs / పీసులు / नग …); English stays pc / pcs / kg / dozen.
+const unitBase = (u: string) => (u === 'kg' ? 'u_kg' : u === 'dozen' ? 'u_dozen' : 'u_piece') as 'u_kg' | 'u_dozen' | 'u_piece';
+export const unitPer = (u: string, lang = 'en') => RS.get(lang, `${unitBase(u)}1` as 'u_piece1');
 
 /** Unit after a quantity: 1,000 pcs · 20 dozen · 100 kg. */
-export const unitQty = (u: string, n = 2) => (u === 'kg' ? 'kg' : u === 'dozen' ? 'dozen' : n === 1 ? 'pc' : 'pcs');
+export const unitQty = (u: string, n = 2, lang = 'en') => RS.get(lang, (n === 1 ? `${unitBase(u)}1` : unitBase(u)) as 'u_piece');
 
 /** Strip leading emoji from server-provided labels (UI uses Lucide icons only). */
 export function cleanLabel(s: string): string {
@@ -32,7 +35,8 @@ export function initials(name: string): string {
 }
 
 export function fmtDate(ms: number, lang: string): string {
-  const loc = lang === 'hi' ? 'hi-IN' : lang === 'ta' ? 'ta-IN' : 'en-IN';
+  // Month names in the user's language, digits kept Latin (bn / mr / gu would otherwise switch numerals).
+  const loc = /^(hi|ta|te|kn|ml|bn|or|mr|gu)$/.test(lang) ? `${lang}-IN-u-nu-latn` : 'en-IN';
   return new Date(ms).toLocaleDateString(loc, { day: 'numeric', month: 'short' });
 }
 

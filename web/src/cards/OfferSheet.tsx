@@ -106,7 +106,7 @@ export function OfferSheet({ open, onClose, mode, lang, unit, title, initial, th
     }
   };
 
-  const per = unitPer(unit);
+  const per = unitPer(unit, lang);
 
   return (
     <Sheet
@@ -120,7 +120,7 @@ export function OfferSheet({ open, onClose, mode, lang, unit, title, initial, th
             <p className="mb-2 flex items-baseline justify-between text-[14px] text-ink-2">
               <span>
                 {t('total')}
-                {mode === 'new' && q > 0 && ` · ${num(q)} ${unitQty(unit, q)}`}
+                {mode === 'new' && q > 0 && ` · ${num(q)} ${unitQty(unit, q, lang)}`}
               </span>
               <span className="font-head text-[18px] font-bold text-ink tabular-nums">{inr(total)}</span>
             </p>
@@ -153,7 +153,7 @@ export function OfferSheet({ open, onClose, mode, lang, unit, title, initial, th
             <button
               type="button"
               onClick={() => step(-1)}
-              aria-label="Lower price"
+              aria-label={t('price_down')}
               className="inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-line-strong bg-surface text-ink transition-colors hover:bg-sunken"
             >
               <Minus size={20} />
@@ -174,7 +174,7 @@ export function OfferSheet({ open, onClose, mode, lang, unit, title, initial, th
             <button
               type="button"
               onClick={() => step(1)}
-              aria-label="Raise price"
+              aria-label={t('price_up')}
               className="inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-line-strong bg-surface text-ink transition-colors hover:bg-sunken"
             >
               <Plus size={20} />
@@ -189,7 +189,7 @@ export function OfferSheet({ open, onClose, mode, lang, unit, title, initial, th
 
         {mode === 'new' ? (
           <>
-            <Field label={`${t('qty')} (${unitQty(unit)})`}>
+            <Field label={`${t('qty')} (${unitQty(unit, 2, lang)})`}>
               <input
                 type="text"
                 inputMode="numeric"

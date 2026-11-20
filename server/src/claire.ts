@@ -8,7 +8,8 @@ import { understand } from './ai.js';
 import { match, splitJob, marketBand } from './match.js';
 import { getBiz, listingSummary, type UserRow } from './biz.js';
 import { id, now, inr } from './util.js';
-import { CATEGORIES, catById } from '../../shared/taxonomy.js';
+import { CATEGORIES, catById, categoryName } from '../../shared/taxonomy.js';
+import { serverLocale } from './locales/index.js';
 import { CC_CARD, type CardPayload, type Chip } from '../../shared/cards.js';
 import { createTicket } from './desk.js';
 
@@ -50,11 +51,7 @@ async function save(userId: string, s: Session) {
   );
 }
 
-const catName = (lang: string, catId?: string) => {
-  const c = catById(catId);
-  if (!c) return '';
-  return (c.names as any)[lang] ?? c.names.en;
-};
+const catName = (lang: string, catId?: string) => (catById(catId) ? categoryName(catId, lang, serverLocale) : '');
 
 async function say(user: UserRow, outs: Out[]) {
   for (const o of outs) {

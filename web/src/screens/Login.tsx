@@ -1,5 +1,5 @@
 // Phone + OTP sign-in with one-tap demo accounts.
-// Signed-out visitors pick the login copy's language on the pill (en / ta / hi), kept in localStorage.
+// Signed-out visitors pick the login copy's language on the pill (any of the ten app languages), kept in localStorage.
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import clsx from 'clsx';
@@ -7,6 +7,8 @@ import { ArrowRight, Check, ChevronDown, ChevronRight, Eye, Handshake, Headset, 
 import { api, errorText } from '../lib/api';
 import { langNative } from '../lib/format';
 import { translate } from '../i18n';
+import { useLocaleVersion } from '../locales';
+import { LANGS, type Lang } from '@shared/taxonomy';
 import { isAgent, isOnboarded, useSession, type SessionPayload, type SessionUser } from '../store/session';
 import { Avatar, BrandMark, ClaireBot } from '../components/Avatar';
 import { Button } from '../components/Button';
@@ -16,8 +18,8 @@ import { LoginStrings as S, type LoginKey } from './Login.strings';
 const DEMO_OTP = '123456';
 const LANG_KEY = 'cc_login_lang';
 const DEMO_OPEN_KEY = 'cc_login_demo_open';
-const LOGIN_LANGS = ['en', 'ta', 'hi'] as const;
-type LoginLang = (typeof LOGIN_LANGS)[number];
+const LOGIN_LANGS = LANGS.map((l) => l.code);
+type LoginLang = Lang;
 
 interface DemoAccount {
   phone: string;
@@ -49,7 +51,7 @@ function initialLang(): LoginLang {
   const saved = readStored(LANG_KEY);
   if (saved && (LOGIN_LANGS as readonly string[]).includes(saved)) return saved as LoginLang;
   const nav = typeof navigator !== 'undefined' ? navigator.language.toLowerCase() : '';
-  return nav.startsWith('ta') ? 'ta' : nav.startsWith('hi') ? 'hi' : 'en';
+  return LOGIN_LANGS.find((l) => l !== 'en' && nav.startsWith(l)) ?? 'en';
 }
 
 /** "Stitching unit" → the role label in the chosen language; unknown labels pass through. */
@@ -71,6 +73,7 @@ export default function Login() {
   const [lang, setLang] = useState<LoginLang>(initialLang);
   const [langPicked, setLangPicked] = useState(() => !!readStored(LANG_KEY));
   const [langOpen, setLangOpen] = useState(false);
+  useLocaleVersion(lang); // re-render once the chosen language's overlay file has loaded
   const s = (key: LoginKey) => S.get(lang, key);
   const t = (key: string, vars?: Record<string, string | number>) => translate(lang, key, vars);
 
@@ -398,7 +401,7 @@ export default function Login() {
       </div>
 
       <Sheet open={langOpen} onClose={() => setLangOpen(false)} title={s('language')} subtitle={s('login_lang_sub')}>
-        <div className="flex flex-col gap-2 pb-2" role="radiogroup" aria-label={s('language')}>
+        <div className="grid grid-cols-2 gap-2 pb-2" role="radiogroup" aria-label={s('language')}>
           {LOGIN_LANGS.map((l) => {
             const active = l === lang;
             return (
@@ -410,11 +413,11 @@ export default function Login() {
                 lang={l}
                 onClick={() => pickLang(l)}
                 className={clsx(
-                  'flex min-h-[60px] items-center gap-3 rounded-[18px] border px-4 text-left transition-colors',
+                  'flex min-h-[56px] items-center gap-2 rounded-[18px] border px-4 text-left transition-colors',
                   active ? 'border-primary bg-primary-tint' : 'border-line bg-surface hover:bg-sunken',
                 )}
               >
-                <span className="flex-1 font-head text-[20px] font-semibold text-ink">{langNative(l)}</span>
+                <span className="min-w-0 flex-1 truncate font-head text-[19px] font-semibold text-ink">{langNative(l)}</span>
                 {active && (
                   <span className="flex size-6 items-center justify-center rounded-full bg-primary text-white">
                     <Check size={14} aria-hidden />

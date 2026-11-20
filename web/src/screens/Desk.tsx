@@ -13,24 +13,25 @@ import { ContextPanel, type OrderEvent, type Party } from '../desk/ContextPanel'
 import { SupervisorStrip, normStats, type DeskStats } from '../desk/SupervisorStrip';
 
 type AgentStatus = 'online' | 'away';
-interface Detail { ticket: Ticket; parties: Party[]; order: Order | null; events: OrderEvent[]; channelId: string | null }
+interface Detail { ticket: Ticket; parties: Party[]; order: Order | null; events: OrderEvent[]; channelId: string | null; conversationId: string | null }
 
 function normDetail(r: any, lang: string): Detail {
   const ticket = normTicket(r.ticket ?? r, lang);
   const parties: Party[] = listOf(r.parties).map((p: any) => ({
     id: p.id, name: p.name ?? '', ownerName: p.ownerName ?? p.owner_name ?? null, city: p.city ?? null, language: p.language ?? null,
     accent: p.accent ?? null, role: p.role ?? p.role_label ?? null, side: p.side === 'buyer' || p.side === 'seller' ? p.side : null, trust: normTrust(p.trust),
+    userIds: Array.isArray(p.userIds) ? p.userIds.map(String) : [],
   }));
   const events: OrderEvent[] = listOf(r.orderEvents ?? r.order_events ?? r.events).map((e: any) => ({
     id: e.id, type: e.type, at: e.at ?? e.created_at ?? null, payload: e.payload ?? null,
   }));
   const channelId = r.conversation?.channelId ?? r.conversation?.channel_id ?? ticket.channelId ?? null;
-  return { ticket, parties, order: r.order ? normOrder(r.order) : null, events, channelId };
+  return { ticket, parties, order: r.order ? normOrder(r.order) : null, events, channelId, conversationId: r.conversation?.id ?? null };
 }
 
 export default function Desk() {
   const nav = useNavigate();
-  const { user, features, lang } = useMe();
+  const { user, lang } = useMe();
   const logout = useSession((s: any) => s.logout) as (() => void) | undefined;
   const myId = user?.id ?? '';
   const isAgent = user?.role === 'agent' || user?.role === 'supervisor';
@@ -283,7 +284,7 @@ export default function Desk() {
           parties={detail.parties}
           order={detail.order}
           events={detail.events}
-          canCall={!!features?.call}
+          callContext={{ channel, conversationId: detail.conversationId }}
           joined={joined}
           busy={busy}
           onMarkPaid={markPaid}

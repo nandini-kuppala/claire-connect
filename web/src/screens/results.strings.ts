@@ -1,7 +1,7 @@
 // Copy for the Results screen, the Compare screen and the compact results card in Claire's chat.
 import { defineStrings } from '../lib/localStrings';
 
-export const RS = defineStrings({
+export const RS = defineStrings('results', {
   en: {
     back: 'Back',
     loading: 'Finding the best suppliers…',

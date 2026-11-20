@@ -10,7 +10,8 @@ import { draftSellerReply } from './ai.js';
 import { createTicket, nextSeq, safe, ensureChatUsers, ensureNexconnGroup, langName, OPEN_STATUSES } from './desk.js';
 import { id, now, inr, HttpError } from './util.js';
 import { advanceAmount, balanceAmount } from './money.js';
-import { catById } from '../../shared/taxonomy.js';
+import { catById, categoryName } from '../../shared/taxonomy.js';
+import { serverLocale } from './locales/index.js';
 import { CC_CARD, CC_HINT, type CardPayload, type HintPayload, type MatchLine } from '../../shared/cards.js';
 
 // ── Types ─────────────────────────────────────────────────────────────────
@@ -235,8 +236,9 @@ const P: Record<string, Record<string, string>> = {
     q_paid_on_time: 'நேரத்தில் பணம்', q_clarity: 'தெளிவான தேவைகள்', q_fair_returns: 'ரிட்டர்னில் நியாயம் / ரத்து இல்லை',
   },
 };
+// Namespace "deals"; te/kn/ml/bn/or/mr/gu come from src/locales/<lang>.json.
 function tr(lang: string, key: string, vars: Record<string, string | number> = {}) {
-  let s = (P[lang] ?? P.en)[key] ?? P.en[key] ?? key;
+  let s = P[lang]?.[key] ?? serverLocale(lang, 'deals', key) ?? P.en[key] ?? key;
   for (const [k, v] of Object.entries(vars)) s = s.replaceAll(`{${k}}`, String(v));
   return s;
 }
@@ -246,7 +248,9 @@ const UNIT: Record<string, Record<string, string>> = {
   ta: { piece: 'பீஸ்', kg: 'கிலோ', dozen: 'டஜன்' },
 };
 const BUNDLES: Record<string, string> = { en: 'bundles', hi: 'बंडल', ta: 'பண்டல்கள்' };
-const unitOf = (lang: string, unit: string) => (UNIT[lang] ?? UNIT.en)[unit] ?? unit;
+// Namespace "deal_units" (keys piece, kg, dozen, bundles) for the overlay languages.
+const unitOf = (lang: string, unit: string) => UNIT[lang]?.[unit] ?? serverLocale(lang, 'deal_units', unit) ?? UNIT.en[unit] ?? unit;
+const bundlesWord = (lang: string) => BUNDLES[lang] ?? serverLocale(lang, 'deal_units', 'bundles') ?? BUNDLES.en;
 const num = (n: number) => Number(n).toLocaleString('en-IN');
 const fmtDate = (ts: number) => new Date(ts).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
 
@@ -831,7 +835,7 @@ export async function orderEvent(user: UserRow, orderId: string, type: OrderEven
         : tr(lang, 'in_production', v);
       case 'dispatched': {
         const d = fresh.dispatch ?? {};
-        const via = [d.transporter, d.lr ? `LR ${d.lr}` : null, d.bundles ? `${d.bundles} ${BUNDLES[lang] ?? BUNDLES.en}` : null].filter(Boolean).join(', ');
+        const via = [d.transporter, d.lr ? `LR ${d.lr}` : null, d.bundles ? `${d.bundles} ${bundlesWord(lang)}` : null].filter(Boolean).join(', ');
         return tr(lang, 'dispatched', { ...v, via: via ? ` · ${via}` : '' });
       }
       case 'delivered': return fresh.closed_at ? tr(lang, 'delivered_closed', v) : tr(lang, 'delivered', { ...v, amount: inr(balanceAmount(fresh)), date: fmtDate(fresh.balance_due_at ?? at) });
@@ -1118,7 +1122,7 @@ export async function inbox(user: UserRow) {
     const listing = listingId ? listingMap.get(listingId) : null;
     const category = (src?.category ?? req?.category ?? listing?.category ?? null) as string | null;
     const cat = category ? catById(category) : null;
-    const title = (src?.title ?? req?.title ?? listing?.title ?? (cat ? cat.names[lang] ?? cat.names.en : null)) as string | null;
+    const title = (src?.title ?? req?.title ?? listing?.title ?? (cat ? categoryName(cat, lang, serverLocale) : null)) as string | null;
     if (!title && !cat) return null;
     const art = listing?.art ?? (cat ? { shape: cat.shape } : null);
     return { title, qty: (src?.qty ?? req?.qty ?? null) as number | null, unit: (src?.unit ?? req?.unit ?? cat?.unit ?? null) as string | null, category, art };

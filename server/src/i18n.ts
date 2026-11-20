@@ -1,5 +1,8 @@
-// Claire's phrases in the three launch languages. Other languages fall back to English
-// (the client can still translate free text through Nexconn translation).
+// Claire's phrases (namespace "claire") and unit words (namespace "units"). en / hi / ta live inline;
+// te, kn, ml, bn, or, mr, gu come from the overlay JSON in src/locales (docs/TRANSLATING.md).
+// Lookup: inline table for the language → overlay JSON → English → key.
+import { serverLocale } from './locales/index.js';
+
 type Dict = Record<string, string>;
 
 const en: Dict = {
@@ -155,8 +158,7 @@ const ta: Dict = {
 const TABLES: Record<string, Dict> = { en, hi, ta };
 
 export function t(lang: string, key: string, vars: Record<string, string | number> = {}) {
-  const table = TABLES[lang] || en;
-  let s = table[key] ?? en[key] ?? key;
+  let s = TABLES[lang]?.[key] ?? serverLocale(lang, 'claire', key) ?? en[key] ?? key;
   for (const [k, v] of Object.entries(vars)) s = s.replaceAll(`{${k}}`, String(v));
   return s;
 }
@@ -167,6 +169,9 @@ export const unitWord = (lang: string, unit: string, plural = true) => {
     hi: { piece: ['पीस', 'पीस'], kg: ['किलो', 'किलो'], dozen: ['दर्जन', 'दर्जन'] },
     ta: { piece: ['பீஸ்', 'பீஸ்'], kg: ['கிலோ', 'கிலோ'], dozen: ['டஜன்', 'டஜன்'] },
   };
-  const m = (map[lang] || map.en)[unit] || map.en.piece;
-  return plural ? m[1] : m[0];
+  const u = map.en[unit] ? unit : 'piece';
+  const inline = map[lang]?.[u];
+  if (inline) return plural ? inline[1] : inline[0];
+  // Overlay keys: piece_one / piece_other, kg_one / kg_other, dozen_one / dozen_other.
+  return serverLocale(lang, 'units', `${u}_${plural ? 'other' : 'one'}`) ?? (plural ? map.en[u][1] : map.en[u][0]);
 };

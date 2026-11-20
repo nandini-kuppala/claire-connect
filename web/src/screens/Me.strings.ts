@@ -1,6 +1,6 @@
 import { defineStrings } from '../lib/localStrings';
 
-export const MeS = defineStrings({
+export const MeS = defineStrings('me', {
   en: {
     title: 'Profile',
     retry: 'Try again',

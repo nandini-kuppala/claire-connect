@@ -36,6 +36,19 @@ export const CATEGORIES: Category[] = [
 
 export const catById = (id?: string | null) => CATEGORIES.find((c) => c.id === id);
 
+/** Looks up overlay text (web: localeString from src/locales, server: serverLocale from src/locales). */
+export type LocaleLookup = (lang: string, ns: string, key: string) => string | undefined;
+
+/**
+ * Category display name in a language: inline names (en / ta / hi) → overlay namespace "taxonomy"
+ * (key = category id, e.g. "garment.tshirt") → English. Unknown ids pass through.
+ */
+export function categoryName(c: Category | string | null | undefined, lang: string, overlay?: LocaleLookup): string {
+  const cat = typeof c === 'string' ? catById(c) : c;
+  if (!cat) return typeof c === 'string' ? c : '';
+  return (cat.names as Record<string, string>)[lang] ?? overlay?.(lang, 'taxonomy', cat.id) ?? cat.names.en;
+}
+
 export const LANGS: { code: Lang; native: string; english: string }[] = [
   { code: 'ta', native: 'தமிழ்', english: 'Tamil' },
   { code: 'hi', native: 'हिन्दी', english: 'Hindi' },

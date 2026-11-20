@@ -4,7 +4,8 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { X } from '../icons';
 import { useSession } from '../store/session';
-import { catById } from '../../../shared/taxonomy';
+import { categoryName } from '../../../shared/taxonomy';
+import { localeString } from '../locales';
 
 // ── Tokens ────────────────────────────────────────────────────────────────
 // Mirrors the "Tiruppur cotton" tokens in index.css (kept as hex so callers can build tints like `${C.primary}33`).
@@ -83,11 +84,7 @@ export const num = (n: number | null | undefined) => (n == null ? '—' : Number
 export const initials = (name?: string | null) =>
   (name || '?').trim().split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase() ?? '').join('') || '?';
 export const unitShort = (u?: string | null) => (u === 'kg' ? 'kg' : u === 'dozen' ? 'doz' : 'pc');
-export const catName = (id: string | null | undefined, lang: string) => {
-  const c = catById(id ?? undefined);
-  if (!c) return id ?? '';
-  return (c.names as Record<string, string>)[lang] ?? c.names.en;
-};
+export const catName = (id: string | null | undefined, lang: string) => categoryName(id ?? '', lang, localeString);
 export function ago(ts?: number | string | null) {
   if (!ts) return '';
   const ms = Date.now() - new Date(ts).getTime();
@@ -99,7 +96,7 @@ export function ago(ts?: number | string | null) {
   return `${Math.round(h / 24)}d ago`;
 }
 export const fmtDate = (ts?: number | string | null, lang = 'en') =>
-  ts ? new Date(ts).toLocaleDateString(`${lang}-IN`, { day: 'numeric', month: 'short' }) : '';
+  ts ? new Date(ts).toLocaleDateString(`${lang}-IN-u-nu-latn`, { day: 'numeric', month: 'short' }) : '';
 export const fmtTime = (ts?: number | string | null) =>
   ts ? new Date(ts).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }) : '';
 

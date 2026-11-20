@@ -1,12 +1,16 @@
 // Right-hand context panel: AI brief + next step, order timeline, both parties' trust profiles, actions.
 import { useState } from 'react';
-import { BadgeCheck, CheckCircle2, Circle, IndianRupee, Lightbulb, Phone, ShieldAlert } from '../icons';
+import { BadgeCheck, CheckCircle2, Circle, IndianRupee, Lightbulb, Phone, ShieldAlert, Video } from '../icons';
+import { useCanCall } from '../call/CallButtons';
+import { startCall, useCallStore, type CallContext } from '../call/service';
 import { Avatar, ClaireMark } from '../components/Avatar';
 import { C, HEAD, LangChip, StatusPill, TrustBreakdown, TrustRing, fmtTime, inr, unitShort, type Order, type Ticket, type Trust } from './kit';
 
 export interface Party {
   id: string; name: string; ownerName?: string | null; city?: string | null; language?: string | null; accent?: string | null; role?: string | null;
   side: 'buyer' | 'seller' | null; trust: Trust | null;
+  /** Owner user ids (Nexconn ids) the agent can call. */
+  userIds?: string[];
 }
 export interface OrderEvent { id: string; type: string; at: number | null; payload?: Record<string, unknown> | null }
 
@@ -20,9 +24,9 @@ const ALERT_EVENTS = new Set(['problem', 'overdue']);
 export const OUTCOMES = ['Payment received', 'Partial payment agreed', 'Replacement or credit note', 'Delivery rescheduled', 'No issue found', 'Question answered'];
 
 export function ContextPanel({
-  ticket, parties, order, events, canCall, joined, busy, onMarkPaid, onResolve,
+  ticket, parties, order, events, callContext, joined, busy, onMarkPaid, onResolve,
 }: {
-  ticket: Ticket; parties: Party[]; order: Order | null; events: OrderEvent[]; canCall: boolean; joined: boolean; busy: string | null;
+  ticket: Ticket; parties: Party[]; order: Order | null; events: OrderEvent[]; callContext: CallContext; joined: boolean; busy: string | null;
   onMarkPaid: () => void; onResolve: (r: { outcome: string; upheld: boolean; againstBusinessId: string | null; note: string | null }) => void;
 }) {
   const [resolving, setResolving] = useState(false);
@@ -31,9 +35,9 @@ export function ContextPanel({
   const [upheld, setUpheld] = useState(false);
   const [against, setAgainst] = useState<string | null>(null);
   const [openTrust, setOpenTrust] = useState<string | null>(null);
+  const canCall = useCanCall();
+  const inCall = useCallStore((s) => s.phase !== 'idle' && s.phase !== 'notice' && s.phase !== 'ended');
 
-  const buyer = parties.find((p) => p.side === 'buyer');
-  const seller = parties.find((p) => p.side === 'seller');
   const resolved = ticket.status === 'resolved';
   const paid = order && ['balance_paid', 'closed'].includes(order.status);
 
@@ -130,17 +134,32 @@ export function ContextPanel({
       <section className="p-4">
         <h3 className={`${HEAD} text-[15px] font-semibold`} style={{ color: C.ink }}>Actions</h3>
         {canCall && (
-          <div className="mt-2 grid grid-cols-2 gap-2">
-            {([['Call buyer', buyer], ['Call seller', seller]] as [string, Party | undefined][]).map(([label, p]) => (
-              <button
-                key={label}
-                disabled={!p}
-                className="flex h-10 items-center justify-center gap-1.5 rounded-full border text-[13px] font-medium disabled:cursor-not-allowed disabled:opacity-45"
-                style={{ borderColor: C.lineStrong, color: C.ink2, background: C.surface }}
-              >
-                <Phone size={14} /> {label}
-              </button>
-            ))}
+          <div className="mt-2 space-y-2">
+            {[...parties]
+              .sort((a, b) => (a.side === 'buyer' ? -1 : b.side === 'buyer' ? 1 : 0))
+              .slice(0, 3)
+              .map((party) => {
+                const side = party.side ?? party.name;
+                const userId = party.userIds?.[0];
+                const call = (media: 'audio' | 'video') =>
+                  userId &&
+                  void startCall(
+                    { userId, name: party.ownerName ? `${party.ownerName} · ${party.name}` : party.name, accent: party.accent, trust: party.trust?.score ?? null, sub: [party.role, party.city].filter(Boolean).join(' · ') || null },
+                    media,
+                    callContext,
+                  );
+                const btn = 'flex h-10 flex-1 items-center justify-center gap-1.5 rounded-full border text-[13px] font-medium disabled:cursor-not-allowed disabled:opacity-45';
+                return (
+                  <div key={party.id} className="flex gap-2">
+                    <button disabled={!userId || inCall} onClick={() => call('audio')} className={`${btn} min-w-0 px-3`} style={{ borderColor: C.lineStrong, color: C.ink2, background: C.surface }} title={`Voice call ${party.name}`}>
+                      <Phone size={14} /> <span className="truncate">Call {side}</span>
+                    </button>
+                    <button disabled={!userId || inCall} onClick={() => call('video')} className={`${btn} max-w-[110px]`} style={{ borderColor: C.lineStrong, color: C.ink2, background: C.surface }} title={`Video call ${party.name}`} aria-label={`Video call ${side}`}>
+                      <Video size={15} /> Video
+                    </button>
+                  </div>
+                );
+              })}
           </div>
         )}
         {order && (

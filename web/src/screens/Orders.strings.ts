@@ -1,6 +1,6 @@
 import { defineStrings } from '../lib/localStrings';
 
-export const OrdersS = defineStrings({
+export const OrdersS = defineStrings('orders', {
   en: {
     title: 'Orders',
     refresh: 'Refresh',

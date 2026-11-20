@@ -1,5 +1,6 @@
 // Language picker: big native-script rows. Saves to the profile and switches the UI at once.
-// English, Tamil and Hindi have full screens; the others are chat languages (Claire translates).
+// All ten languages are full app languages: en / ta / hi from the inline tables, the other seven from
+// the overlay JSON in src/locales (untranslated keys fall back to English until translators fill them).
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import clsx from 'clsx';
@@ -10,8 +11,7 @@ import { translate, useT } from '../i18n';
 import { isOnboarded, useSession } from '../store/session';
 import { BrandMark } from '../components/Avatar';
 import { LanguageStrings } from './Language.strings';
-
-const FULL_UI = new Set(['en', 'hi', 'ta']);
+import { ensureLocale } from '../locales';
 
 export default function Language() {
   const navigate = useNavigate();
@@ -28,7 +28,8 @@ export default function Language() {
     setSaving(code);
     setError(null);
     try {
-      await api.patch('/api/me', { language: code });
+      // Fetch the language's screen text alongside the save, so the switch lands fully translated.
+      await Promise.all([api.patch('/api/me', { language: code }), ensureLocale(code)]);
       setUser({ language: code });
       if (onboarding) navigate('/onboarding', { replace: true });
       else if (window.history.length > 1) navigate(-1);
@@ -40,18 +41,15 @@ export default function Language() {
     }
   }
 
-  const full = LANGS.filter((l) => FULL_UI.has(l.code));
-  const chatOnly = LANGS.filter((l) => !FULL_UI.has(l.code));
-
-  const mark = (code: string, active: boolean, size: 'lg' | 'sm') =>
+  const mark = (code: string, active: boolean) =>
     saving === code ? (
-      <Loader2 size={size === 'lg' ? 22 : 18} className="shrink-0 animate-spin text-primary" aria-hidden />
+      <Loader2 size={22} className="shrink-0 animate-spin text-primary" aria-hidden />
     ) : active ? (
-      <span className={clsx('flex shrink-0 items-center justify-center rounded-full bg-primary text-white', size === 'lg' ? 'size-7' : 'size-6')}>
-        <Check size={size === 'lg' ? 16 : 14} aria-hidden />
+      <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary text-white">
+        <Check size={16} aria-hidden />
       </span>
     ) : (
-      <span className={clsx('shrink-0 rounded-full border-2 border-line-strong', size === 'lg' ? 'size-7' : 'size-6')} aria-hidden />
+      <span className="size-7 shrink-0 rounded-full border-2 border-line-strong" aria-hidden />
     );
 
   return (
@@ -90,7 +88,7 @@ export default function Language() {
         <div role="radiogroup" aria-label={t('choose_language')} className="mt-6">
           <h2 className="px-1 text-[13px] font-semibold text-meta">{s('full_app')}</h2>
           <div className="mt-2 flex flex-col gap-2.5">
-            {full.map((l) => {
+            {LANGS.map((l) => {
               const active = l.code === current;
               return (
                 <button
@@ -110,36 +108,7 @@ export default function Language() {
                     <span className="block font-head text-[24px] leading-tight font-bold text-ink">{l.native}</span>
                     {l.native !== l.english && <span className="mt-0.5 block text-[13px] text-meta" lang="en">{l.english}</span>}
                   </span>
-                  {mark(l.code, active, 'lg')}
-                </button>
-              );
-            })}
-          </div>
-
-          <h2 className="mt-7 px-1 text-[13px] font-semibold text-meta">{s('chat_too')}</h2>
-          <p className="mt-0.5 px-1 text-[12.5px] leading-snug text-faint">{s('chat_too_sub')}</p>
-          <div className="mt-2.5 grid grid-cols-2 gap-2.5">
-            {chatOnly.map((l) => {
-              const active = l.code === current;
-              return (
-                <button
-                  key={l.code}
-                  type="button"
-                  role="radio"
-                  aria-checked={active}
-                  lang={l.code}
-                  disabled={!!saving}
-                  onClick={() => void choose(l.code)}
-                  className={clsx(
-                    'flex min-h-[64px] items-center gap-2 rounded-[18px] border-2 px-4 text-left transition-colors disabled:opacity-70',
-                    active ? 'border-primary bg-primary-tint' : 'border-line bg-surface hover:border-line-strong hover:bg-sunken/50',
-                  )}
-                >
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate font-head text-[19px] leading-tight font-semibold text-ink">{l.native}</span>
-                    <span className="block truncate text-[12px] text-meta" lang="en">{l.english}</span>
-                  </span>
-                  {mark(l.code, active, 'sm')}
+                  {mark(l.code, active)}
                 </button>
               );
             })}

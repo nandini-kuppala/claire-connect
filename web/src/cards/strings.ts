@@ -1,6 +1,8 @@
 // UI strings used inside chat cards. Card payload text arrives already localised from the server;
 // these cover the fixed labels the client draws (buttons, section headers, field names).
-// Languages other than en/hi/ta fall back to English. Trade terms (MOQ, GST, LR) stay as is.
+// Namespace "cards". en / hi / ta live inline; te, kn, ml, bn, or, mr, gu come from the overlay JSON in
+// src/locales (docs/TRANSLATING.md). Trade terms (MOQ, GST, LR) stay as is.
+import { localeString } from '../locales';
 
 const en = {
   chat: 'Chat',
@@ -143,6 +145,8 @@ const en = {
   jobs_sent: 'Job offers sent to {n} units. Replies will come in their chats.',
   only_you: 'Only you see this',
   price_per: 'Price per {unit}',
+  price_down: 'Lower price',
+  price_up: 'Raise price',
   your_price: 'Your price',
   their_price: 'Their offer',
   dispatch_days: 'Dispatch in (days)',
@@ -321,6 +325,8 @@ const hi: Dict = {
   job_value: 'जॉब की कीमत',
   send_job: 'जॉब ऑफ़र भेजें',
   price_per: 'प्रति {unit} दाम',
+  price_down: 'दाम घटाएँ',
+  price_up: 'दाम बढ़ाएँ',
   their_price: 'उनका ऑफ़र',
   dispatch_days: 'डिस्पैच (दिन में)',
   advance_pct: 'एडवांस',
@@ -475,6 +481,8 @@ const ta: Dict = {
   job_value: 'வேலை மதிப்பு',
   send_job: 'வேலை ஆஃபர் அனுப்பு',
   price_per: 'ஒரு {unit} விலை',
+  price_down: 'விலையைக் குறை',
+  price_up: 'விலையைக் கூட்டு',
   their_price: 'அவர்கள் ஆஃபர்',
   dispatch_days: 'அனுப்புதல் (நாட்கள்)',
   advance_pct: 'அட்வான்ஸ்',
@@ -525,7 +533,7 @@ export function badgeLabel(badge: string, t: T): string {
 export function strings(lang: string): T {
   const d = DICTS[lang] ?? {};
   return (key, vars) => {
-    let s: string = d[key] ?? en[key] ?? String(key);
+    let s: string = d[key] ?? localeString(lang, 'cards', key) ?? en[key] ?? String(key);
     if (vars) for (const [k, v] of Object.entries(vars)) s = s.split(`{${k}}`).join(String(v));
     return s;
   };

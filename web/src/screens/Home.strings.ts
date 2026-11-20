@@ -2,7 +2,7 @@
 // user's own message, so they are written the way a trader would say them.
 import { defineStrings } from '../lib/localStrings';
 
-export const HomeStrings = defineStrings({
+export const HomeStrings = defineStrings('home', {
   en: {
     hi_name: "Hi {name}! I'm Claire",
     hi: "Hi! I'm Claire",

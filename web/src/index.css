@@ -42,8 +42,8 @@
   --color-navy: #13203b;
   --color-claire-row: #f1e8ef;
 
-  --font-sans: 'Figtree', 'Hind Madurai', 'Hind', 'Noto Sans Bengali', 'Noto Sans Telugu', system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --font-head: 'Bricolage Grotesque', 'Hind Madurai', 'Hind', 'Noto Sans Bengali', 'Noto Sans Telugu', system-ui, sans-serif;
+  --font-sans: 'Figtree', 'Hind Madurai', 'Hind', 'Noto Sans Bengali', 'Noto Sans Telugu', 'Noto Sans Kannada', 'Noto Sans Malayalam', 'Noto Sans Oriya', 'Noto Sans Gujarati', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-head: 'Bricolage Grotesque', 'Hind Madurai', 'Hind', 'Noto Sans Bengali', 'Noto Sans Telugu', 'Noto Sans Kannada', 'Noto Sans Malayalam', 'Noto Sans Oriya', 'Noto Sans Gujarati', system-ui, sans-serif;
 
   /* No sharp corners anywhere. */
   --radius-xs: 8px;

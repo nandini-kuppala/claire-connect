@@ -156,7 +156,7 @@ export function OrderCard({ payload, ctx }: CardProps<'order'>) {
 
         <p className="mt-2 text-[13px] text-meta">
           <span className="tabular-nums">
-            {num(payload.qty)} {unitQty(payload.unit, payload.qty)} × {inr(payload.unitPrice)}/{unitPer(payload.unit)}
+            {num(payload.qty)} {unitQty(payload.unit, payload.qty, ctx.lang)} × {inr(payload.unitPrice)}/{unitPer(payload.unit, ctx.lang)}
           </span>{' '}
           · {counterpartName}
         </p>

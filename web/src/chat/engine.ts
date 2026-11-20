@@ -20,7 +20,8 @@ import {
   type ChannelIdentifier,
   type Message,
 } from '@nexconn/chat';
-import { CC_CARD, CC_HINT, CC_REPLY, CC_VOICE, type VoicePayload } from '@shared/cards';
+import { CC_CALL, CC_CARD, CC_HINT, CC_REPLY, CC_VOICE, type VoicePayload } from '@shared/cards';
+import { callSummaryText } from '../call/call.strings';
 import { api, getToken } from '../lib/api';
 import { useSession, type ChatCreds } from '../store/session';
 import { handleTranslationResults, setNexconnTranslateReady, translateItems, type TranslateRequest } from './translate';
@@ -92,6 +93,8 @@ export function previewText(m: ChatMessage | null | undefined, labels: { voice: 
       return c.transcript ? `${labels.voice}: ${c.transcript}` : labels.voice;
     case 'RC:HQVCMsg':
       return labels.voice;
+    case CC_CALL:
+      return callSummaryText(c, useSession.getState().user?.language || 'en');
     case CC_CARD:
       return String(c.text || c.title || (c.kind === 'offer' || c.kind === 'order' ? `${c.title ?? ''}` : '') || labels.card);
     default:
@@ -245,7 +248,18 @@ const CUSTOM_MESSAGES = [
   { messageType: CC_HINT, isPersisted: true, isCounted: false },
   { messageType: CC_REPLY, isPersisted: true, isCounted: true },
   { messageType: CC_VOICE, isPersisted: true, isCounted: true },
+  { messageType: CC_CALL, isPersisted: true, isCounted: true },
 ];
+
+/** Loads and initialises the Nexconn Call SDK (voice / video calls). It must be in place before connect. */
+let callReady: Promise<void> | null = null;
+function prepareCalls(): Promise<void> {
+  callReady ??= import('../call/service')
+    .then((m) => m.initCallEngine())
+    .catch((err) => console.warn('[call] not available', err));
+  // Never hold the chat connection hostage to the call module.
+  return Promise.race([callReady, new Promise<void>((r) => setTimeout(r, 6000))]);
+}
 
 function initNexconn(creds: ChatCreds) {
   if (ncInitializedKey) return; // NCEngine.initialize may only run once per page load
@@ -254,6 +268,8 @@ function initNexconn(creds: ChatCreds) {
   // Registration needs the initialised engine (it is a no-op before initialize) and must precede connect.
   NCEngine.registerCustomMessages(CUSTOM_MESSAGES);
   ncInitializedKey = creds.appKey;
+  // Call SDK: initialised right after NCEngine.initialize (it installs itself as an engine plugin).
+  void prepareCalls();
 
   NCEngine.addConnectionStatusHandler(
     'cc-conn',
@@ -323,6 +339,7 @@ async function connectNexconn(creds: ChatCreds, lang: string) {
   if (!creds.token) throw new Error('No chat token from the server');
   initNexconn(creds);
   setState('connecting');
+  await prepareCalls();
   const r = await NCEngine.connect({ token: creds.token });
   if (!r.isOk) {
     setState('error');
@@ -331,6 +348,7 @@ async function connectNexconn(creds: ChatCreds, lang: string) {
   myId = r.data?.userId || NCEngine.getCurrentUserId();
   setState('connected');
   setNexconnTranslateReady(true);
+  void import('../call/service').then((m) => m.onChatConnected()).catch(() => undefined);
   // Built-in translation settings: best effort, the app translates on demand anyway.
   NCEngine.translateModule.setTranslationLanguage(lang).catch(() => undefined);
   NCEngine.translateModule.setAutoTranslateEnabled(true).catch(() => undefined);
@@ -447,6 +465,7 @@ export const engine = {
   },
 
   async disconnect() {
+    void import('../call/service').then((m) => m.endAllCalls()).catch(() => undefined);
     connectPromise = null;
     connectedToken = null;
     eventSource?.close();

@@ -11,6 +11,7 @@ fs.mkdirSync(path.join(uploadsDir, 'tts'), { recursive: true });
 fs.mkdirSync(path.join(uploadsDir, 'img'), { recursive: true });
 
 const SARVAM = 'https://api.sarvam.ai';
+// All ten app languages (+ Punjabi). Sarvam names Odia `od-IN` (not `or-IN`); FROM_CODE maps it back to `or`.
 const LANG_CODE: Record<string, string> = {
   ta: 'ta-IN', hi: 'hi-IN', en: 'en-IN', te: 'te-IN', kn: 'kn-IN', ml: 'ml-IN', bn: 'bn-IN', or: 'od-IN', mr: 'mr-IN', gu: 'gu-IN', pa: 'pa-IN',
 };

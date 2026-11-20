@@ -37,8 +37,8 @@ export function OfferCard({ message, payload, ctx }: CardProps<'offer'>) {
   }, [confirming]);
   const pending = status === 'pending';
   const isCounter = payload.parentPrice != null;
-  const per = unitPer(payload.unit);
-  const qtyText = `${num(payload.qty)} ${unitQty(payload.unit, payload.qty)}`;
+  const per = unitPer(payload.unit, ctx.lang);
+  const qtyText = `${num(payload.qty)} ${unitQty(payload.unit, payload.qty, ctx.lang)}`;
   const canAct = pending && !message.mine;
 
   const respond = async (action: 'accept' | 'decline' | 'counter', unitPrice?: number) => {

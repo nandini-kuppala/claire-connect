@@ -4,7 +4,7 @@ import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, use
 import { useNavigate } from 'react-router-dom';
 import { ArrowDown, Loader2, MessageCircle, RefreshCw, WifiOff, type LucideIcon } from '../icons';
 import clsx from 'clsx';
-import { CC_CARD, CC_HINT, CC_REPLY, CC_VOICE, type CardPayload, type HintPayload, type ReplyPayload, type VoicePayload } from '@shared/cards';
+import { CC_CALL, CC_CARD, CC_HINT, CC_REPLY, CC_VOICE, type CallPayload, type CardPayload, type HintPayload, type ReplyPayload, type VoicePayload } from '@shared/cards';
 import { CardRenderer, HintBubble, ReplyBubble, SYSTEM_CARD_KINDS } from '../cards/CardRenderer';
 import type { CardCtx } from '../cards/types';
 import { CatalogSheet } from '../components/CatalogSheet';
@@ -20,6 +20,7 @@ import { isDifferent, type TranslateRequest } from './translate';
 import { BubbleShell, MessageBubble, SystemPill, type BubblePosition, type TranslationState } from './MessageBubble';
 import { VoiceBubble } from './VoiceBubble';
 import { Composer } from './Composer';
+import { CallLine } from '../call/CallButtons';
 import { transcribeClip, type VoiceClip } from './VoiceRecorder';
 
 export interface SendInfo {
@@ -90,7 +91,7 @@ export interface ChatViewProps {
 
 const BOTS = new Set([CLAIRE_ID, UPDATES_ID, DESK_ID]);
 const SYSTEM_TYPES = new Set(['RC:InfoNtf', 'RC:GrpNtf', 'RC:RcNtf', 'RC:ChrmNtf', 'RC:ProfileNtf']);
-const RENDERED = new Set(['RC:TxtMsg', 'RC:StreamMsg', 'RC:HQVCMsg', 'RC:ImgMsg', CC_CARD, CC_HINT, CC_REPLY, CC_VOICE, ...SYSTEM_TYPES]);
+const RENDERED = new Set(['RC:TxtMsg', 'RC:StreamMsg', 'RC:HQVCMsg', 'RC:ImgMsg', CC_CARD, CC_HINT, CC_REPLY, CC_VOICE, CC_CALL, ...SYSTEM_TYPES]);
 const WIDE_CARDS = new Set(['results', 'tiles', 'carousel', 'job_split']);
 const THINKING_TIMEOUT = 45_000;
 const TYPING_TTL = 6_000;
@@ -613,6 +614,8 @@ export function ChatView({
       }
       case CC_HINT:
         return <HintBubble message={m} payload={c as HintPayload} ctx={baseCtx} />;
+      case CC_CALL:
+        return <CallLine payload={c as Partial<CallPayload>} />;
       case CC_REPLY:
         return (
           <div className={clsx('flex w-full', m.mine ? 'justify-end' : 'justify-start')}>

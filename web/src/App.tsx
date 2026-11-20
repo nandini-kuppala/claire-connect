@@ -4,6 +4,7 @@ import { Navigate, Route, Routes, useLocation, useParams } from 'react-router-do
 import { Loader2 } from './icons';
 import { useSession, isAgent, isOnboarded } from './store/session';
 import { engine } from './chat/engine';
+import { useLocaleVersion } from './locales';
 import { AppShell } from './components/AppShell';
 import Login from './screens/Login';
 import Language from './screens/Language';
@@ -20,6 +21,7 @@ import Home from './screens/Home';
 import Results from './screens/Results';
 import Compare from './screens/Compare';
 import IconGallery from './icons/Gallery';
+import { CallLayer } from './call/CallLayer';
 
 function Splash() {
   return (
@@ -68,6 +70,9 @@ function ChatRoute() {
 export default function App() {
   const refresh = useSession((s) => s.refresh);
   const token = useSession((s) => s.token);
+  // Re-render the whole tree when a language overlay file (src/locales/<lang>.json) finishes loading,
+  // so non-hook lookups (cards' strings(lang), catName, translate) pick up the new text too.
+  useLocaleVersion(useSession((s) => s.user?.language));
   useEffect(() => {
     if (token) void refresh();
     // Only on first load / sign-in.
@@ -76,6 +81,7 @@ export default function App() {
   return (
     <>
       <ChatConnection />
+      <CallLayer />
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/s/:slug" element={<Storefront />} />

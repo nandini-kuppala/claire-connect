@@ -6,7 +6,8 @@ import { match, splitJob, freightFor, transitDays, type Need } from '../match.js
 import { trustOf } from '../trust.js';
 import { unitWord } from '../i18n.js';
 import { h, HttpError, requireAuth, type AuthedRequest } from '../util.js';
-import { catById } from '../../../shared/taxonomy.js';
+import { catById, categoryName } from '../../../shared/taxonomy.js';
+import { serverLocale } from '../locales/index.js';
 import type { MatchCard, MatchLine } from '../../../shared/cards.js';
 
 const router = Router();
@@ -63,11 +64,7 @@ export interface ResultCard extends Omit<MatchCard, 'lines'> {
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────
-const catName = (lang: string, catId: string) => {
-  const c = catById(catId);
-  if (!c) return catId;
-  return (c.names as Record<string, string>)[lang] ?? c.names.en;
-};
+const catName = (lang: string, catId: string) => categoryName(catId, lang, serverLocale);
 
 function titleOf(doc: any, lang: string) {
   const name = catName(lang, doc.category);
@@ -294,7 +291,11 @@ function recommend(cards: ResultCard[], lang: string, unit: string) {
     (c.kind === 'combo' ? 0.04 * (c.lines.length - 1) : 0) -
     (c.kind === 'mto' ? 0.03 : 0);
   const best = [...cards].sort((a, b) => score(b) - score(a))[0];
-  const R = (REASON as Record<string, ReasonTable>)[lang] ?? REASON.en;
+  // Namespace "reasons": inline en / ta / hi first, then the overlay JSON, then English, key by key.
+  const inline = (REASON as Record<string, ReasonTable | undefined>)[lang];
+  const R = Object.fromEntries(
+    (Object.keys(REASON.en) as (keyof ReasonTable)[]).map((k) => [k, inline?.[k] ?? serverLocale(lang, 'reasons', k) ?? REASON.en[k]]),
+  ) as ReasonTable;
   const strengths: string[] = [];
   if (cards.length > 1) {
     if (best.avgPrice === minPrice) strengths.push(R.cheapest);

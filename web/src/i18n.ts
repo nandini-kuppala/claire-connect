@@ -1,7 +1,9 @@
-// UI strings in en / ta / hi. Other languages fall back to English (Claire and chat
-// content are translated separately). `t(key, vars)` returns the key itself if unknown.
+// UI strings (namespace "app"). en / ta / hi live inline below; te, kn, ml, bn, or, mr, gu come from
+// the overlay JSON in src/locales (see docs/TRANSLATING.md). Lookup: inline table for the language →
+// overlay JSON → English → the key itself.
 import { useCallback } from 'react';
 import { useSession } from './store/session';
+import { localeString, useLocaleVersion } from './locales';
 
 type Dict = Record<string, string>;
 
@@ -791,7 +793,7 @@ const ta: Partial<Record<TKey, string>> = {
 const TABLES: Record<string, Partial<Record<string, string>>> = { en, hi, ta };
 
 export function translate(lang: string, key: string, vars?: Record<string, string | number>): string {
-  let s = TABLES[lang]?.[key] ?? (en as Dict)[key] ?? key;
+  let s = TABLES[lang]?.[key] ?? localeString(lang, 'app', key) ?? (en as Dict)[key] ?? key;
   if (vars) for (const [k, v] of Object.entries(vars)) s = s.replaceAll(`{${k}}`, String(v));
   return s;
 }
@@ -809,5 +811,6 @@ export function roleText(t: TFn, role?: string | null): string {
 /** `const t = useT(); t('send')` — re-renders when the user's language changes. */
 export function useT(): TFn {
   const lang = useSession((s) => s.user?.language || 'en');
-  return useCallback<TFn>((key, vars) => translate(lang, key, vars), [lang]);
+  const version = useLocaleVersion(lang);
+  return useCallback<TFn>((key, vars) => translate(lang, key, vars), [lang, version]);
 }

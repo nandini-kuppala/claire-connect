@@ -1,7 +1,7 @@
 // Copy for the Chats inbox (route /chats).
 import { defineStrings } from '../lib/localStrings';
 
-export const InboxStrings = defineStrings({
+export const InboxStrings = defineStrings('inbox', {
   en: {
     title: 'Messages',
     new_n: '{n} new',

@@ -2,7 +2,7 @@
 // i18n tables stay untouched. Cards pass ctx.lang: use `dealT(lang)`; screens can use `DealStrings.use()`.
 import { defineStrings } from '../lib/localStrings';
 
-export const DealStrings = defineStrings({
+export const DealStrings = defineStrings('deal', {
   en: {
     online: 'Online',
     more_options: 'More options',

@@ -1,6 +1,6 @@
 import { defineStrings } from '../lib/localStrings';
 
-export const CatS = defineStrings({
+export const CatS = defineStrings('catalog', {
   en: {
     title_add: 'Add products',
     title_found: 'Claire found {n} products',

@@ -3,7 +3,8 @@ import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { fileURLToPath } from 'node:url';
 
-const backend = 'http://localhost:8787';
+// API_TARGET lets a second copy run against another API port (e.g. tests on :8795).
+const backend = process.env.API_TARGET || 'http://localhost:8787';
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],

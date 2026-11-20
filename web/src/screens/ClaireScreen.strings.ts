@@ -1,7 +1,7 @@
 // Copy for the Claire assistant chat header and Home → Claire hand-offs.
 import { defineStrings } from '../lib/localStrings';
 
-export const ClaireStrings = defineStrings({
+export const ClaireStrings = defineStrings('claire', {
   en: {
     title: 'Claire · AI',
     sub: 'Your sourcing assistant',

@@ -1,6 +1,6 @@
 import { defineStrings } from '../lib/localStrings';
 
-export const OnboardingStrings = defineStrings({
+export const OnboardingStrings = defineStrings('onboarding', {
   en: {
     step_of: 'Step {n} of {total}',
     s_intro: 'About you',

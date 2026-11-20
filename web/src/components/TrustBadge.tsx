@@ -3,7 +3,7 @@ import { ShieldCheck, Sparkle } from '../icons';
 import clsx from 'clsx';
 import { defineStrings } from '../lib/localStrings';
 
-const S = defineStrings({
+const S = defineStrings('trust', {
   en: { new_on: 'New on CLAIRE', trust: 'Trust' },
   ta: { new_on: 'CLAIRE-இல் புதியவர்', trust: 'நம்பிக்கை' },
   hi: { new_on: 'CLAIRE पर नए', trust: 'भरोसा' },

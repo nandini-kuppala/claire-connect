@@ -78,11 +78,11 @@ export function HintBubble({ message, payload, ctx }: HintBubbleProps) {
             <div className="min-w-0 flex-1">
               <p className="text-ink">
                 <span className="font-head text-[26px] leading-none font-bold tabular-nums">{inr(draft.price)}</span>
-                <span className="text-[14px] text-meta"> / {unitPer(unit)}</span>
+                <span className="text-[14px] text-meta"> / {unitPer(unit, ctx.lang)}</span>
               </p>
               {qty ? (
                 <p className="mt-1 text-[13px] text-meta tabular-nums">
-                  {num(qty)} {unitQty(unit, qty)}
+                  {num(qty)} {unitQty(unit, qty, ctx.lang)}
                 </p>
               ) : null}
             </div>

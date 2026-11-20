@@ -31,8 +31,8 @@ export function RequirementCard({ message, payload, ctx }: CardProps<'requiremen
     ctx.refresh();
   };
 
-  const per = unitPer(payload.unit);
-  const qty = `${num(payload.qty)} ${unitQty(payload.unit, payload.qty)}`;
+  const per = unitPer(payload.unit, ctx.lang);
+  const qty = `${num(payload.qty)} ${unitQty(payload.unit, payload.qty, ctx.lang)}`;
   const budget = payload.budget ? `≤ ${inr(payload.budget)} / ${per}` : t('no_limit');
   const deadline = payload.deadlineDays ? t('within_days', { n: payload.deadlineDays }) : t('flexible');
 

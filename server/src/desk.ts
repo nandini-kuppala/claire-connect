@@ -7,6 +7,7 @@ import { trustOf, invalidateTrust } from './trust.js';
 import { id, now, inr, HttpError } from './util.js';
 import { balanceAmount } from './money.js';
 import { LANGS, catById } from '../../shared/taxonomy.js';
+import { serverLocale } from './locales/index.js';
 import { CC_CARD, CC_HINT, type CardPayload, type HintPayload } from '../../shared/cards.js';
 
 // ── Types ─────────────────────────────────────────────────────────────────
@@ -139,6 +140,8 @@ export async function ensureNexconnGroup(conv: { id: string; channel_id: string;
 }
 
 export const langName = (code: string) => LANGS.find((l) => l.code === code)?.english ?? code;
+/** Trader-facing: each language in its own script (தமிழ், हिन्दी, English), as the app's language pill shows it. */
+const langNativeName = (code: string) => LANGS.find((l) => l.code === code)?.native ?? code;
 const fmtDate = (ts: number) => new Date(ts).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
 
 // Requester-facing lines, in the requester's language.
@@ -160,7 +163,8 @@ const REQ_TEXT: Record<string, Record<string, string>> = {
   },
 };
 const rt = (lang: string, key: string, vars: Record<string, string | number>) => {
-  let s = (REQ_TEXT[lang] ?? REQ_TEXT.en)[key] ?? REQ_TEXT.en[key];
+  // Namespace "desk"; te/kn/ml/bn/or/mr/gu come from src/locales/<lang>.json.
+  let s = REQ_TEXT[lang]?.[key] ?? serverLocale(lang, 'desk', key) ?? REQ_TEXT.en[key];
   for (const [k, v] of Object.entries(vars)) s = s.replaceAll(`{${k}}`, String(v));
   return s;
 };
@@ -318,7 +322,7 @@ export async function createTicket(opts: CreateTicketOpts): Promise<TicketDoc> {
     let text = rt(lang, 'queued', { code: t.code, min: SLA_MIN[priority] });
     if (agentId) {
       const [agentUser, agent] = await Promise.all([byId('users', agentId), byId<AgentDoc>('agents', agentId)]);
-      text = rt(lang, 'assigned', { code: t.code, agent: agentUser?.name ?? 'Trade Desk', langs: (agent?.languages ?? []).map(langName).join(', ') });
+      text = rt(lang, 'assigned', { code: t.code, agent: agentUser?.name ?? 'Trade Desk', langs: (agent?.languages ?? []).map((c) => (lang === 'en' ? langName(c) : langNativeName(c))).join(', ') });
     }
     await safe('ticket notice', chat.system([t.requester_user_id], text));
   }
@@ -541,11 +545,18 @@ export async function ticketDetail(ticketId: string) {
     t.requester_user_id ? byId('users', t.requester_user_id) : Promise.resolve(null),
     t.assigned_agent_id ? byId('users', t.assigned_agent_id) : Promise.resolve(null),
   ]);
+  // Owner user ids per business: the Trade Desk console calls them (Nexconn Call SDK user ids).
+  const owners = await find('users', { business_id: { $in: t.business_ids }, role: 'owner' }, { projection: { _id: 1, business_id: 1 } });
+  const sideOf = (bid: string) => {
+    const deal = order ?? conversation;
+    return deal ? (deal.buyer_business_id === bid ? 'buyer' : deal.seller_business_id === bid ? 'seller' : null) : null;
+  };
   const parties = await Promise.all(
     businesses.map(async (b) => ({
       id: b.id, name: b.name, ownerName: b.owner_name, city: b.city, state: b.state, language: b.language, accent: b.accent, role: b.role_label,
-      side: order ? (order.buyer_business_id === b.id ? 'buyer' : order.seller_business_id === b.id ? 'seller' : null) : null,
+      side: sideOf(b.id),
       trust: await trustOf(b.id),
+      userIds: owners.filter((u) => u.business_id === b.id).map((u) => u._id as string),
     })),
   );
   const orderEvents = order ? await find('order_events', { order_id: order.id }, { sort: { at: 1 } }) : [];

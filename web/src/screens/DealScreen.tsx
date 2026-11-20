@@ -26,7 +26,8 @@ import {
   Smile,
 } from '../icons';
 import { CC_CARD } from '@shared/cards';
-import { catById, unitLabel } from '@shared/taxonomy';
+import { catById } from '@shared/taxonomy';
+import { unitPer, unitQty } from '../cards/format';
 import { api, errorText } from '../lib/api';
 import { inr, langNative, num } from '../lib/format';
 import { roleText, useT } from '../i18n';
@@ -41,6 +42,7 @@ import { GarmentArt } from '../components/GarmentArt';
 import { TrustBadge, type TrustLike } from '../components/TrustBadge';
 import { Sheet } from '../components/Sheet';
 import { statusLabel, strings } from '../cards/strings';
+import { CallButtons } from '../call/CallButtons';
 import type { DealInfo } from '../cards/dealCtx';
 
 interface Counterpart {
@@ -354,7 +356,7 @@ export default function DealScreen() {
             disabled={!cp?.id || support}
           >
             <span className="flex min-w-0 items-center gap-1.5">
-              <span className="truncate font-head text-[17px] leading-tight font-semibold text-ink">{cp?.name ?? detail.conversation.title}</span>
+              <span className="line-clamp-2 break-words font-head text-[16px] leading-tight font-semibold text-ink">{cp?.name ?? detail.conversation.title}</span>
               {!support && <TrustBadge trust={cp?.trust} className="shrink-0" />}
             </span>
             <span className="mt-0.5 flex min-w-0 items-center gap-1.5 text-[12px] leading-tight text-meta">
@@ -373,6 +375,13 @@ export default function DealScreen() {
               </span>
             </span>
           </button>
+          {!support && (
+            <CallButtons
+              peer={cp?.userIds?.[0] ? { userId: cp.userIds[0], name: cp.name, accent: cp.accent, trust: cp.trust, sub: facts || null } : null}
+              context={{ channel, conversationId }}
+              className="-mr-1"
+            />
+          )}
           {menuItems.length > 0 && (
             <button
               type="button"
@@ -380,7 +389,7 @@ export default function DealScreen() {
               aria-label={dt('more_options')}
               aria-haspopup="menu"
               aria-expanded={menuOpen}
-              className={clsx('flex size-11 shrink-0 items-center justify-center rounded-full text-ink-2 hover:bg-sunken', menuOpen && 'bg-sunken')}
+              className={clsx('flex h-11 w-9 shrink-0 items-center justify-center rounded-full text-ink-2 hover:bg-sunken', menuOpen && 'bg-sunken')}
             >
               <MoreVertical size={22} />
             </button>
@@ -531,13 +540,13 @@ function DealStrip({
   // Show whichever is newer: a pending offer after an old order is what matters now.
   const order = lastOrder && (!offer || (lastOrder.created_at ?? 0) >= (offer.created_at ?? 0)) ? lastOrder : undefined;
   const unit = req?.unit ?? offer?.unit ?? 'piece';
-  const per = unitLabel(unit, 1);
+  const per = unitPer(unit, lang);
   const title = req?.title ?? offer?.title ?? order?.title ?? detail.conversation.title ?? '';
   const qty = req?.qty ?? offer?.qty;
   const shape = catById(req?.category ?? offer?.category)?.shape ?? 'tshirt';
 
   const summary = [
-    qty ? `${num(qty)} ${unitLabel(unit, qty)}` : '',
+    qty ? `${num(qty)} ${unitQty(unit, qty, lang)}` : '',
     listedPrice ? dt('listed', { price: inr(listedPrice, { decimals: true }), unit: per }) : req?.budget ? dt('budget_upto', { price: inr(req.budget), unit: per }) : '',
   ]
     .filter(Boolean)
@@ -557,6 +566,8 @@ function DealStrip({
   if (lastOrder) rows.push([t('status_order'), `${lastOrder.code} · ${statusLabel(lastOrder.status, ct)}`]);
 
   const hasCard = Boolean(req || offer || order);
+  // The agent's languages, each in its own script for traders (English names only on English screens).
+  const agentLangs = lang === 'en' ? (detail.agent?.languageNames ?? []) : (detail.agent?.languages ?? []).map(langNative);
   if (!hasCard && !detail.agent) return null;
 
   return (
@@ -566,7 +577,7 @@ function DealStrip({
           <Headset size={14} aria-hidden className="shrink-0" />
           <span className="min-w-0">
             {t('agent_here', { name: detail.agent.name })}
-            {detail.agent.languageNames?.length ? ` · ${detail.agent.languageNames.join(', ')}` : ''}
+            {agentLangs.length ? ` · ${agentLangs.join(', ')}` : ''}
           </span>
         </p>
       )}
@@ -672,7 +683,7 @@ function OfferSheet({ open, onClose, detail, onDone }: { open: boolean; onClose:
   const total = p > 0 && q > 0 ? p * q : 0;
 
   async function submit() {
-    if (!(p > 0)) return setError(t('offer_price', { unit: unitLabel(unit, 1) }));
+    if (!(p > 0)) return setError(t('offer_price', { unit: unitPer(unit, detail.me.language || 'en') }));
     setBusy(true);
     setError(null);
     try {
@@ -716,8 +727,8 @@ function OfferSheet({ open, onClose, detail, onDone }: { open: boolean; onClose:
       }
     >
       <div className="grid grid-cols-2 gap-3">
-        <NumberField label={t('offer_price', { unit: unitLabel(unit, 1) })} value={price} onChange={setPrice} prefix="₹" step={0.5} />
-        <NumberField label={`${t('quantity')} (${unitLabel(unit)})`} value={qty} onChange={setQty} />
+        <NumberField label={t('offer_price', { unit: unitPer(unit, detail.me.language || 'en') })} value={price} onChange={setPrice} prefix="₹" step={0.5} />
+        <NumberField label={`${t('quantity')} (${unitQty(unit, 2, detail.me.language || 'en')})`} value={qty} onChange={setQty} />
         <NumberField label={t('dispatch_days')} value={dispatch} onChange={setDispatch} />
         <NumberField label={t('advance')} value={advance} onChange={setAdvance} />
         <NumberField label={t('credit_days')} value={credit} onChange={setCredit} />
@@ -897,7 +908,7 @@ function AcceptSheet({ open, offer, onClose, onDone }: { open: boolean; offer: O
     if (open) setError(null);
   }, [open]);
 
-  const per = offer ? unitLabel(offer.unit, 1) : '';
+  const per = offer ? unitPer(offer.unit, lang) : '';
 
   async function accept() {
     if (!offer) return;
@@ -937,7 +948,7 @@ function AcceptSheet({ open, offer, onClose, onDone }: { open: boolean; offer: O
             <span className="text-[15px] text-meta"> / {per}</span>
           </p>
           <p className="mt-1.5 text-[14px] leading-snug text-ink-2">
-            {dt('accept_body', { qty: `${num(offer.qty)} ${unitLabel(offer.unit, offer.qty)}`, total: inr(offer.total) })}
+            {dt('accept_body', { qty: `${num(offer.qty)} ${unitQty(offer.unit, offer.qty, lang)}`, total: inr(offer.total) })}
           </p>
         </div>
       )}

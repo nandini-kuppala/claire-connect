@@ -1,7 +1,7 @@
 // Copy for the CLAIRE Updates channel (read-only order, payment and dispatch notices).
 import { defineStrings } from '../lib/localStrings';
 
-export const UpdatesStrings = defineStrings({
+export const UpdatesStrings = defineStrings('updates', {
   en: {
     title: 'CLAIRE Updates',
     sub: 'Orders, payments and dispatch',

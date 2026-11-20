@@ -1,6 +1,6 @@
 import { defineStrings } from '../lib/localStrings';
 
-export const StoreS = defineStrings({
+export const StoreS = defineStrings('storefront', {
   en: {
     back: 'Back',
     share: 'Share',

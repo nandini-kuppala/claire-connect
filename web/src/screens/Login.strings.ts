@@ -2,7 +2,7 @@
 // for the language picked on the login pill (not the session language).
 import { defineStrings } from '../lib/localStrings';
 
-export const LoginStrings = defineStrings({
+export const LoginStrings = defineStrings('login', {
   en: {
     headline: 'Source, negotiate and buy from trusted suppliers',
     sub: 'Your trade partner for wholesale knitwear, in your own language.',

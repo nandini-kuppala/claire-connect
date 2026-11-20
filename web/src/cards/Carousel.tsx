@@ -40,6 +40,7 @@ export function CarouselCard({ message, payload, ctx }: CardProps<'carousel'>) {
       >
         {payload.items.map((item) => (
           <ProductCard
+            lang={ctx.lang}
             key={item.id}
             item={item}
             t={t}
@@ -74,6 +75,7 @@ export function CarouselCard({ message, payload, ctx }: CardProps<'carousel'>) {
 function ProductCard({
   item,
   t,
+  lang,
   selectable,
   liked,
   onLike,
@@ -81,6 +83,7 @@ function ProductCard({
 }: {
   item: ListingSummary;
   t: T;
+  lang: string;
   selectable: boolean;
   liked: boolean;
   onLike: () => void;
@@ -110,7 +113,7 @@ function ProductCard({
         <span className="line-clamp-2 min-h-[38px] text-[13.5px] leading-[1.4] font-medium text-ink">{item.title}</span>
         <span className="mt-0.5 text-ink">
           <span className="font-head text-[17px] font-bold tabular-nums">{inr(item.price)}</span>
-          <span className="text-[12px] text-meta"> / {unitPer(item.unit)}</span>
+          <span className="text-[12px] text-meta"> / {unitPer(item.unit, lang)}</span>
         </span>
         <span className="text-[12px] text-meta">{t('moq', { n: num(item.moq) })}</span>
         <span className="mt-1 flex items-center gap-1 text-[12px] text-ink-2">
