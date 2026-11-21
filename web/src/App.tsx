@@ -38,6 +38,8 @@ const JobScreen = lazy(() => import('./screens/goods/JobScreen'));
 const MadeForm = lazy(() => import('./screens/goods/MadeForm'));
 const TradeForm = lazy(() => import('./screens/goods/TradeForm'));
 const AdjustScreen = lazy(() => import('./screens/goods/AdjustScreen'));
+const ReportsScreen = lazy(() => import('./screens/goods/ReportsScreen'));
+const BillScreen = lazy(() => import('./screens/goods/BillScreen'));
 
 /** The Goods routes exist only for businesses with the supply-chain flag; others go Home. */
 function RequireGoods({ children }: { children: ReactNode }) {
@@ -72,7 +74,7 @@ function ChatConnection() {
 }
 
 /** Pages a staff login never sees: home (marketplace), orders, store, Trade Desk, onboarding. */
-const STAFF_AWAY = /^\/(?:$|orders|store|s\/|desk|onboarding|catalog|requirements)/;
+const STAFF_AWAY = /^\/(?:$|goods\/reports|orders|store|s\/|desk|onboarding|catalog|requirements)/;
 
 function RequireAuth({ children, allowUnonboarded = false, agentOk = true }: { children: ReactNode; allowUnonboarded?: boolean; agentOk?: boolean }) {
   const token = useSession((s) => s.token);
@@ -273,6 +275,34 @@ export default function App() {
                 <AppShell nav={false}>
                   <Suspense fallback={<Splash />}>
                     <TradeForm />
+                  </Suspense>
+                </AppShell>
+              </RequireGoods>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/goods/reports"
+          element={
+            <RequireAuth agentOk={false}>
+              <RequireGoods>
+                <AppShell variant="wide">
+                  <Suspense fallback={<Splash />}>
+                    <ReportsScreen />
+                  </Suspense>
+                </AppShell>
+              </RequireGoods>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/goods/reports/bills/:k/:id"
+          element={
+            <RequireAuth agentOk={false}>
+              <RequireGoods>
+                <AppShell variant="wide">
+                  <Suspense fallback={<Splash />}>
+                    <BillScreen />
                   </Suspense>
                 </AppShell>
               </RequireGoods>

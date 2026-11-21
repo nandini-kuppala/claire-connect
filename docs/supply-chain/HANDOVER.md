@@ -18,13 +18,16 @@ Read this first in a new session, then `PROGRESS.md` (a report per slice), `BUIL
 | 4.5 | 3f95171 | Buy / sell / returns / samples / move, sale in place, stock corrections, casualty |
 | 5 | ab6a656 | Personal Claire: tools, model chain, cross-script names, answers, record drafts |
 | 6 | 9ecc75e | Statement links (`/l/:token`), WhatsApp share, contact linking (`link_rekey`) |
-| 7 | see `git log` | Staff: provisioning, PIN, staff guard on every route, count approvals, suggestions |
+| 7 | 20c3b64 | Staff: provisioning, PIN, staff guard on every route, count approvals, suggestions |
+| 8a | see `git log` | Reports and money: derived bills, record payment / set-off, balances and oldest unpaid, performance, GST clock, CSV |
 
 ## Slice 7 (staff): done
 Server, web, the 34-check smoke (`scripts/sc-smoke-s7.py`) and a browser pass are all complete; see the slice 7 report in `PROGRESS.md`. The demo staff user on the dev DB is **Kavitha, 9600000001, PIN 2468**, staff of Ravi.
 
-## After slice 7 (from `05-build-plan.md`)
-- **8a** reports and money (bills, settlements, record payment)
+## Slice 8a (reports and money): done
+Server `sc/money.ts`, web `ReportsScreen` / `BillScreen`, the 27-check smoke (`scripts/sc-smoke-s8a.py`) and a browser pass; see the slice 8a report in `PROGRESS.md` for its known gaps (closed days, rate override, due reminders, bill share).
+
+## After slice 8a (from `05-build-plan.md`)
 - **8b** orders ↔ goods (job-work orders, deliveries)
 - **9** flow view
 - Then Phase 7 (field test, polish).
@@ -49,7 +52,7 @@ SC_ENABLED=1 MONGODB_DB=nexconn_sc_dev npm run dev   # API :8787, web :5173 (pro
 - Flag a business: `MONGODB_DB=nexconn_sc_dev npm run sc:flag -w server -- <id|phone> on` (refuses non-dev DBs).
 - Checks:
   - `npm run lint` (typecheck + `scripts/sc-lint.mjs`); `npm test` (24 unit tests);
-  - smokes `python3 scripts/sc-smoke-s{1,2,3,4,45,6,7}.py` (dev server running);
+  - smokes `python3 scripts/sc-smoke-s{1,2,3,4,45,6,7,8a}.py` (dev server running);
   - `cd server && MONGODB_DB=nexconn_sc_dev SC_ENABLED=1 npx tsx src/sc/claire/smoke.mts`;
   - `MONGODB_DB=nexconn_sc_dev npm run sc:verify -w server` (ledger: every event balances, every holding equals its postings);
   - Claire fixtures: `npm run sc:claire-fixtures -w server` (`SC_LLM_OFF=1` = rules only).
@@ -66,5 +69,6 @@ SC_ENABLED=1 MONGODB_DB=nexconn_sc_dev npm run dev   # API :8787, web :5173 (pro
   - Write handlers are plain functions (`sendForWork`, `gotBack`, `recordTrade` return `{status, body}`), so Claire drafts and statement accepts use the same write path. The draft id is the client id, which makes saves idempotent.
 - **Browser and tooling:**
   - In-app browser screenshots of open bottom sheets can be stale; check the DOM, or use a zoom capture.
-  - The dev DB has lots of smoke data (e.g. 41 open jobs Ravi → Lakshmi). Answers and pages cap their lists.
+  - The dev DB has lots of smoke data (e.g. 41 open jobs Ravi → Lakshmi). Answers and pages cap their lists, and anything that loops over jobs must batch its reads: bills took 31 s before batching.
+  - Smokes that assert "more than is there" must compute it from current stock; repeated runs pile stock up.
   - The free OpenRouter model (ERNIE) picks tools well but fails upstream about a third of the time; the rule tier backstops it.

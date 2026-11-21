@@ -124,8 +124,19 @@ In Claire's chat (Home → ask box, or the chat tab), type or speak in any of th
 
 **Try it:** log in as Kavitha (9600000001, OTP 123456, PIN 2468). Notice there is no Home or Orders tab, and that Goods opens on Coming in.
 
+### 4.11 Reports and money
+- **Where:** Goods → the chart icon (**Reports**), for owners only. Staff never see money.
+- **Bills and dues:** one line per party with what you owe them or they owe you, the oldest unpaid bill in days, and how many jobs have no rate yet. Bills are worked out from the rates on your jobs, sales and purchases; nothing is typed in twice.
+- **A party's page:** the net, each side, payments, and every billed line (tap one to open its job).
+- **Record payment:** "I paid them", "They paid me", or, when you both owe each other, "Set off" one bill against the other. It is a record only: no money moves through the app. A mistake is marked **Wrong entry** (tap twice) and kept in history.
+- **How units are doing:** for each unit and process, days taken against the days promised, loss against the usual loss and the best unit, rejects and differences. Days you held them up are not counted. Under 3 jobs it says "Not enough history yet".
+- **GST:** goods out on job work for close to a year are listed at the top.
+- **Download CSV** gives either report as a spreadsheet.
+
+**Try it:** as Ravi, open Reports → Noyyal Dyeing, then **Record payment** → I paid them → ₹1,000 → UPI. The net drops by ₹1,000.
+
 ## 5. What is not built yet
-- **Reports and money:** bills, payments, loss reports (slice 8a).
+- **Money extras:** reminders for unpaid bills, sharing a bill, closed days and per-receipt rate changes.
 - **Orders:** linking marketplace orders to goods (8b).
 - **Flow view** of a whole order (9).
 - **Claire's paid backup model:** needs an Anthropic key.
@@ -133,24 +144,22 @@ In Claire's chat (Home → ask box, or the chat tab), type or speak in any of th
 
 ## 6. How it is tested
 - **Automatic checks:** typecheck and style rules, unit tests, and one walkthrough script per slice that plays the stories above against the dev server:
-  - `scripts/sc-smoke-s1.py`, `s2`, `s3`, `s4`, `s45`, `s6`;
+  - `scripts/sc-smoke-s1.py`, `s2`, `s3`, `s4`, `s45`, `s6`, `s7`, `s8a`;
   - Claire's script.
 - **Ledger check** (`npm run sc:verify -w server`): every record balances, and every stock figure equals its history.
 - See **Test results** below for the latest run.
 
 ## Test results
-**Retest on 21 Nov 2026**, local dev server on the dev database, with all slice 0–6 features plus the slice 7 staff guard active. **Everything passed:**
+**Retest on 21 Nov 2026**, local dev server on the dev database, with slices 0–8a active. **Everything passed:**
 
 | Check | Result |
 |---|---|
-| Typecheck + style rules (`npm run lint`) | 79 files, 0 problems |
+| Typecheck + style rules (`npm run lint`) | 84 files, 0 problems |
 | Unit tests (`npm test`) | 24 pass, 0 fail |
 | Slice 1 walkthrough | no errors |
-| Slices 2, 3, 4, 4.5, 6 walkthroughs | all pass |
+| Slices 2, 3, 4, 4.5, 6, 7, 8a walkthroughs | all pass |
 | Claire walkthrough | all pass |
-| Ledger check (`sc:verify`) | 897 event groups, 896 stock rows, 0 problems |
+| Ledger check (`sc:verify`) | 1173 event groups, 1133 stock rows, 0 problems |
 | Web build | OK |
 
-Not covered by this retest:
-- the staff screens and a staff walkthrough (slice 7 is not finished);
-- a fresh browser pass. Every slice was checked in the browser when it was built.
+Browser passes were done per slice as each was built (slice 8a: Ravi at phone width, English and Tamil).

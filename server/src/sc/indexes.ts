@@ -29,5 +29,8 @@ export async function ensureScIndexes() {
     col('sc_statement_links').createIndex({ token_hash: 1 }, { unique: true }),
     col('sc_notify').createIndex({ sent_at: 1, due_at: 1 }),
     col('sc_drafts').createIndex({ purge_at: 1 }, { expireAfterSeconds: 0 }),
+    col('sc_prices').createIndex({ business_id: 1, movement_id: 1 }, { sparse: true }),
+    col('sc_settlements').createIndex({ parties: 1, voided_at: 1, business_date: 1 }),
+    col('sc_settlements').createIndex({ recorder_business_id: 1, client_id: 1 }, { unique: true }),
   ]);
 }

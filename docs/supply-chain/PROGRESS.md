@@ -522,8 +522,69 @@ Governing brief: `docs/supply-chain/BRIEF.md` (re-read at the start of every pha
   - Size-by-size voice receiving at the gate uses the existing confirm screen and mic; a dedicated "Arrived" flow is not built.
   - The demo staff user "Kavitha" (9600000001, PIN 2468) is on the dev DB only.
 
+### Slice 8a — Reports and money (2026-11-21)
+- **Built** (`sc/money.ts`, owner only; record only, nothing is paid through the app):
+  - **Bills, derived, never stored** (model §3.9, §11.4):
+    - Jobs either way: work I gave (I owe the performer) and work I did (the client owes me). In-house jobs are free.
+    - The rate is the one agreed on the job (`sc_prices`), else the client's rate card in force on the job's date (process-specific before general).
+    - Billable quantity by basis: `per_input_mass` = issued kg, billed once the job is completed or closed; `per_output_piece` = all pieces back; `per_good_output_piece` = the process's billable grades; `lump_sum` = the amount.
+    - Closing adjustments (leftovers the worker kept) are added on the other side.
+    - Sales and purchases with a rate, converted through the unit the rate was typed in. Returns are negative lines on the same side.
+    - Jobs with no rate are counted ("16 jobs have no rate yet"), not guessed.
+  - **Settlements** (`sc_settlements`, the only money record): paid / received / **set-off** (Y: both work for each other).
+    - Modes: cash, UPI, bank transfer, cheque, adjustment.
+    - Idempotent by client id.
+    - A set-off can't exceed the smaller side (409).
+    - A wrong entry is voided (dated), never deleted.
+    - Between two businesses, one record serves both sides: Ravi's "received from Lakshmi" reads "paid" for Lakshmi.
+  - **Balances per party**: billed − settled each way; net = they owe me − I owe them; **oldest unpaid** in working days, first in, first out.
+  - **Performance** (S13), per unit × process over 12 months of closed or completed jobs:
+    - median days against the promised days (else the process default), with paused days excluded and listed;
+    - median loss against the usual loss and the best unit (lowest median among units with ≥ 3 jobs);
+    - rejects % and difference count;
+    - fewer than 3 jobs → "Not enough history yet", with no numbers.
+  - **GST clock** (`/sc/reports/gst`): goods out on job work for 300+ days, with the one-year due date.
+  - **CSV export** (`/sc/reports/bills.csv`, `/performance.csv`): UTF-8 BOM, quoted cells. A cell starting like a formula (`= + - @`) is written as text; plain negative numbers stay numbers.
+  - Indexes: settlements by party and date, a unique client id, prices by movement.
+- **Web:**
+  - Goods header → **Reports** (owner only; a chart icon on phones, with a label for screen readers).
+    - `/goods/reports`: tabs **Bills and dues** and **How units are doing**, the GST alert box and Download CSV.
+    - `/goods/reports/bills/:k/:id`: net, each side, paid / received / set off, oldest unpaid, payments (with a two-tap **Wrong entry**) and what was billed (each line opens its job or record).
+    - **Record payment** sheet: I paid them / They paid me / Set off (only when both owe); prefilled with what's owed.
+  - Staff are redirected away from `/goods/reports`.
+- **Checks:**
+  - typecheck + lint green.
+  - **`scripts/sc-smoke-s8a.py`: 27/27.** It uses a fresh contact named `=SUM(1,1) Dyers …`:
+    - a ₹40/kg card → 100 kg dyed = ₹4,000;
+    - a job still out isn't billed;
+    - the job's own ₹50 rate beats the card;
+    - items link to jobs; oldest unpaid shows;
+    - paid ₹3,000 (a duplicate tap records once); void → back to ₹6,500;
+    - sell 10 kg at ₹200 → they owe ₹2,000; a set-off over the smaller side is refused; set off ₹2,000 → net −₹1,500;
+    - a business-to-business payment reads "paid" on the other side; Lakshmi can't open or pay Ravi's contact;
+    - performance: 2 jobs → not enough; 3 → loss 6 % against 7 %;
+    - CSV: text/csv; the `=SUM` name is written as text; −5500.00 stays a number;
+    - staff get 403 on all 7 money and report routes.
+  - **Browser** (Ravi, 375 px): bills list, the bill page, record ₹1,500 (net ₹5,500 → ₹4,000), two-tap wrong entry, performance tab, Tamil.
+- **Fixed during checks:**
+  - **Bills took 31 s for Ravi** (several lookups per job across ~1,000 smoke jobs). They're now batched: about 1 s.
+  - CSV escaped negative amounts as formulas.
+  - **The success message shifted rows** as it vanished, so a second tap could land on the wrong payment. It's now a floating toast.
+  - **Long Tamil labels squeezed party names**; the direction now sits under the name.
+  - The GST hint said "two years for some goods" (it's three years for capital goods).
+  - **Smoke s45 failed** after many runs: leftover stock at Sri Amman made "collect 1000 kg" possible. It now asks for more than is there.
+- **Known gaps:**
+  - Bills are each side's own view: trade prices are private to whoever recorded them, so two businesses can see different totals until 8b shares agreed prices.
+  - Not built:
+    - closed days (Q) and a per-receipt rate override (W);
+    - a due sweep or reminders for unpaid bills;
+    - a bill PDF or WhatsApp share of a bill;
+    - capital goods' 3-year GST clock (all goods use one year);
+    - Claire answers about money.
+  - Performance days are 0 in the demo data (smokes send and return on the same day).
+
 ## Open questions
 - T8: a separate free Atlas cluster for integration tests needs to be created by the user (not blocking slice 0's pure tests).
 
 ## Next
-Slice 8a (reports and money: bills, settlements, record payment, loss and turnaround reports). Optional: add the Anthropic key and verify the Haiku tier.
+Slice 8b (orders ↔ goods). Optional: add the Anthropic key and verify the Haiku tier.

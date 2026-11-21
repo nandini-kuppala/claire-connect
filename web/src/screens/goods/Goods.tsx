@@ -6,7 +6,8 @@ import clsx from 'clsx';
 import { api, errorText } from '../../lib/api';
 import { Button } from '../../components/Button';
 import { Sheet } from '../../components/Sheet';
-import { ArrowDown, ArrowRight, ChevronRight, Plus, Repeat, Settings, Scissors, SlidersHorizontal, AlertTriangle } from '../../icons';
+import { ArrowDown, ArrowRight, BarChart3, ChevronRight, Plus, Repeat, Settings, Scissors, SlidersHorizontal, AlertTriangle } from '../../icons';
+import { MoneyS } from './Money.strings';
 import { useSession } from '../../store/session';
 import { GoodsS } from './Goods.strings';
 import { SetupS } from './Setup.strings';
@@ -59,6 +60,7 @@ export default function Goods() {
   const lang = useSession((st) => st.user?.language || 'en');
   const [params, setParams] = useSearchParams();
   const isStaff = useSession((st) => st.user?.role === 'staff');
+  const mo = MoneyS.use();
   const [tab, setTabState] = useState<Tab>(() => (params.get('tab') as Tab) || (isStaff && !(() => { try { return localStorage.getItem(TAB_KEY); } catch { return null; } })() ? 'coming' : readTab()));
   const [home, setHome] = useState<Home | null>(null);
   const [out, setOut] = useState<OutRow[] | null>(null);
@@ -167,6 +169,12 @@ export default function Goods() {
         <div className="flex items-center justify-between gap-3">
           <h1 className="font-head text-[28px] font-bold leading-tight text-ink">{s('title')}</h1>
           <span className="flex items-center gap-2">
+          {home?.role === 'owner' && (
+            <button className="inline-flex min-h-11 items-center gap-1.5 rounded-full px-3 text-[14px] font-semibold text-ink-2 hover:bg-sunken" onClick={() => nav('/goods/reports')} aria-label={mo('reports')}>
+              <BarChart3 size={18} aria-hidden />
+              <span className="hidden sm:inline">{mo('reports')}</span>
+            </button>
+          )}
           <button className="inline-flex min-h-11 items-center gap-1.5 rounded-full px-3 text-[14px] font-semibold text-ink-2 hover:bg-sunken" onClick={() => nav('/goods/setup')}>
             <Settings size={18} aria-hidden />
             {ss('open')}
