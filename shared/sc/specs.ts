@@ -62,9 +62,12 @@ export function specLabel(mt: MaterialTypeDef, attrs: SpecAttrs): string {
   for (const k of order) {
     const v = attrs[k];
     if (v === undefined) continue;
-    parts.push(k === 'gsm' ? `${v} GSM` : k === 'length_in' ? `${v}"` : k === 'width_mm' ? `${v} mm` : String(v));
+    // Codes and sizes read as written on a DC: RKF-P22, XL.
+    parts.push(k === 'gsm' ? `${v} GSM` : k === 'length_in' ? `${v}"` : k === 'width_mm' ? `${v} mm` : k === 'style' || k === 'size' ? String(v).toUpperCase() : String(v));
   }
   for (const [k, v] of Object.entries(attrs)) if (!order.includes(k)) parts.push(String(v));
   const s = parts.join(' ') || mt.labels.en;
-  return s.charAt(0).toUpperCase() + s.slice(1);
+  // Fabric and yarn read naturally from their attributes; for pieces, say what they are (kits vs garments of one style).
+  const kind = mt.key === 'knit_fabric' || mt.key === 'yarn' || !parts.length ? '' : ` · ${mt.labels.en}`;
+  return s.charAt(0).toUpperCase() + s.slice(1) + kind;
 }

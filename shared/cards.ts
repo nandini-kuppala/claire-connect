@@ -69,7 +69,14 @@ export type CardPayload =
   | { kind: 'resolved'; ticketCode: string; outcome: string }
   | { kind: 'profile'; name: string; business: string; sells: string[]; buys: string[]; city?: string; capacity?: string }
   | { kind: 'notice'; text: string; tone?: 'info' | 'success' | 'warn' }
-  | { kind: 'job_split'; requirementId: string; title: string; lines: MatchLine[]; total: number; avgPrice: number; readyDays: number };
+  | { kind: 'job_split'; requirementId: string; title: string; lines: MatchLine[]; total: number; avgPrice: number; readyDays: number }
+  /** Supply-chain movement (docs/supply-chain/04 §8.2). One payload for both businesses: the client works out its own
+   *  side from fromBusinessId / toBusinessId. Never carries prices. `text` is a short trilingual fallback line. */
+  | { kind: 'movement'; movementId: string; action: string; text: string; fromBusinessId: string; toBusinessId: string; fromName: string; toName: string;
+      date: string; dcNo?: string | null; processKey?: string | null; lines: { lineId: string; label: string; dim: string; sent: number; received?: number | null; final?: boolean }[];
+      state: 'sent' | 'confirmed' | 'within_tolerance' | 'disputed' | 'cancelled'; disputeId?: string | null }
+  | { kind: 'dispute'; disputeId: string; text: string; movementId?: string | null; lineLabel: string; dim: string; sentBy: string; receivedBy: string;
+      sent: number; received: number; difference: number; allowed: number; state: string; proposal?: { by: string; outcome: string } | null; outcome?: string | null };
 
 export interface HintPayload {
   text: string;

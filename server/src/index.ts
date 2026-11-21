@@ -75,7 +75,9 @@ async function main() {
     const [{ ensureScIndexes }, { ensureTemplates }] = await Promise.all([import('./sc/indexes.js'), import('./sc/templates.js')]);
     await ensureScIndexes();
     await ensureTemplates();
+    app.use('/api', (await import('./sc/files.js')).default);
     app.use('/api', (await import('./sc/routes.js')).default);
+    (await import('./sc/goodsChat.js')).startCardTicker();
     console.log('[sc] supply-chain module on (per-business flag)');
   }
 

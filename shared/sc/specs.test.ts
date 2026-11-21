@@ -23,6 +23,13 @@ test('specs: the same fabric typed two ways has one identity; lot attributes are
   }
 });
 
+test('specs: piece goods say what they are, with codes and sizes in capitals', () => {
+  const kit: MaterialTypeDef = { ...fabric, id: 'mt_kit', key: 'kit', base_dimension: 'count', labels: { en: 'Cut kits', ta: '', hi: '' }, attributes: [{ key: 'style', role: 'spec', type: 'text', required: true }, { key: 'colour', role: 'spec', type: 'text' }, { key: 'size', role: 'spec', type: 'text' }] };
+  const n = normaliseSpec(kit, { style: 'rkf-p22', colour: 'Navy', size: 'm' });
+  assert.ok(n.ok);
+  if (n.ok) assert.equal(specLabel(kit, n.attrs), 'Navy RKF-P22 M · Cut kits');
+});
+
 test('specs: missing required and invalid values are reported, never guessed', () => {
   assert.deepEqual(normaliseSpec(fabric, { colour: 'navy' }), { ok: false, missing: ['state', 'structure'], invalid: [] });
   assert.deepEqual(normaliseSpec(fabric, { state: 'wet', structure: 'rib 1x1', gsm: 'heavy' }), { ok: false, missing: [], invalid: ['state', 'gsm'] });

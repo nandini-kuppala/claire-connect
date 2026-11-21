@@ -26,7 +26,7 @@ s,c=call('GET','/api/sc/goods/coming',tok=T); print('8 coming:',[(row['name'],ro
 s,r=call('POST',f'/api/sc/jobs/{job}/return',{'lines':[{'spec_id':navy,'qty':92,'unit':'kg','rolls':4,'they_sent':93}],'business_date':'2026-11-21','last':True,'client_id':str(uuid.uuid4())},T); print('9 return 92 (they said 93), last ->',s,r['movement']['lines'][0]['settled'])
 s,j=call('GET',f'/api/sc/jobs/{job}',tok=T); print('10 job status',j['job'] and j['job']['status'] if j['job'] else 'n/a')
 s,led=call('GET',f'/api/sc/parties/c/{noy}/ledger',tok=T); oj=[q for q in led['open'] if q['id']==job][0]; print('11 ledger: status',oj['status'],'outputs',oj['outputs']/1000,'kg, loss so far',oj['lossPctSoFar'],'%, history',[h['action'] for h in led['history'][:3]])
-s,i=call('GET','/api/sc/goods/in',tok=T); print('12 in my unit:',[(m['label'],m['qty']/1000,m['lot']) for m in i['mine']])
+s,i=call('GET','/api/sc/goods/in',tok=T); print('12 in my unit:',[(m['label'],m['qty']/1000 if m['dim']=='mass' else m['qty'],m['lot']) for m in i['mine']])
 s,o=call('GET','/api/sc/goods/out',tok=T); print('13 out after completion:',[row['name'] for row in o['rows']])
 # undo
 s,r=call('POST','/api/sc/movements/send',{**send,'client_id':str(uuid.uuid4()),'lines':[{'spec_id':grey,'qty':10,'unit':'kg'}]},T); mv2=r['movement']['id']; job2=r['job']['id']

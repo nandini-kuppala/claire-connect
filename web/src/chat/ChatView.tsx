@@ -327,6 +327,12 @@ export function ChatView({
         if (seenOrders.has(m.content.orderId)) continue;
         seenOrders.add(m.content.orderId);
       }
+      // Supply-chain cards: newest card per movement / dispute only (each state change re-posts the card).
+      const scId = m.type === CC_CARD ? (m.content?.kind === 'movement' ? `mv:${m.content.movementId}` : m.content?.kind === 'dispute' ? `dq:${m.content.disputeId}` : null) : null;
+      if (scId) {
+        if (seenOrders.has(scId)) continue;
+        seenOrders.add(scId);
+      }
       if ((m.type === 'RC:TxtMsg' || m.type === 'RC:StreamMsg') && !textOf(m).trim()) continue;
       out.push(m);
     }

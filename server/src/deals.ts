@@ -1000,6 +1000,8 @@ export async function handleInbound(conversationId: string, senderUserId: string
   }
   const result: { ok: true; price?: number; ticket?: string } = { ok: true };
   if (conv.kind === 'support') return result;
+  // Goods conversations (supply-chain, docs/supply-chain/04 §8.1): no auto-reply, price tips or sentiment desk.
+  if ((conv.kind as string) === 'goods') return result;
 
   // 1. Angry / fraud language → human dispute desk.
   if (ANGRY.test(text) && !conv.agent_user_id) {

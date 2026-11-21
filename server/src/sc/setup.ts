@@ -151,7 +151,7 @@ router.post(
     if (!n.ok) return res.status(400).json({ error: 'Please fill the missing details.', code: 'spec_incomplete', missing: n.missing, invalid: n.invalid });
     const id = specId(n.identity);
     const family_key = `${mt.key}|${n.attrs.structure ?? n.attrs.kind ?? n.attrs.style ?? ''}`;
-    await col('sc_specs').updateOne({ _id: id } as any, { $setOnInsert: { id, material_type_id: mt.id, attrs: n.attrs, family_key, label_en: specLabel(mt, n.attrs), created_at: Date.now() } }, { upsert: true });
+    await col('sc_specs').updateOne({ _id: id } as any, { $set: { label_en: specLabel(mt, n.attrs) }, $setOnInsert: { id, material_type_id: mt.id, attrs: n.attrs, family_key, created_at: Date.now() } }, { upsert: true });
     if (b.alias) {
       await col('sc_aliases').updateOne({ business_id: req.ctx.businessId, alias: b.alias.toLowerCase() } as any, { $set: { spec_id: id, updated_at: Date.now() }, $setOnInsert: { _id: newId('al') } }, { upsert: true });
     }

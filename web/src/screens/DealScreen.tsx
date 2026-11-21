@@ -1,6 +1,7 @@
 // Deal / support chat: shown like a 1-on-1 with the counterpart business, translated both ways.
 // GroupChannel(channelId); after each SDK send the server is told via /api/deals/:id/inbound.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ScCardS } from '../cards/ScCards.strings';
 import { useNavigate, useParams } from 'react-router-dom';
 import clsx from 'clsx';
 import {
@@ -143,6 +144,7 @@ export default function DealScreen() {
   const user = useSession((s) => s.user);
   const myLang = user?.language || 'en';
   const dt = dealT(myLang);
+  const gs = ScCardS.use();
 
   const [detail, setDetail] = useState<Detail | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -233,6 +235,8 @@ export default function DealScreen() {
   const back = () => (window.history.length > 1 ? navigate(-1) : navigate('/chats'));
   const cp = detail?.counterpart;
   const support = detail?.conversation.kind === 'support';
+  // Goods conversation (supply-chain, docs/supply-chain/04 §8.1): movement and dispute cards, no offers or deal tips.
+  const goods = detail?.conversation.kind === 'goods';
   const names = useMemo(() => {
     const n: Record<string, string> = { [CLAIRE_ID]: 'Claire' };
     if (detail?.agent) n[detail.agent.id] = `${detail.agent.name} · Trade Desk`;
@@ -264,7 +268,7 @@ export default function DealScreen() {
 
   // ── Smart replies: derived from where the deal stands ───────────────────
   const quickReplies = useMemo<QuickReply[]>(() => {
-    if (!detail || support) return [];
+    if (!detail || support || goods) return [];
     const out: QuickReply[] = [];
     const accepted = offers.some((o) => o.status === 'accepted') || detail.orders.length > 0;
 
@@ -331,7 +335,8 @@ export default function DealScreen() {
   const menuItems: { id: string; label: string; icon: LucideIcon; run: () => void }[] = detail
     ? [
         ...(cp?.id && !support ? [{ id: 'store', label: t('view_store'), icon: Store, run: () => navigate(`/store/${cp.id}`) }] : []),
-        ...(!support
+        ...(goods && cp?.id ? [{ id: 'goods', label: gs('open_goods'), icon: Package, run: () => navigate(`/goods/party/b/${cp.id}`) }] : []),
+        ...(!support && !goods
           ? [
               { id: 'offer', label: t('make_offer'), icon: Tag, run: () => setSheet('offer') },
               { id: 'sample', label: t('request_sample'), icon: Package, run: () => setSheet('sample') },
@@ -431,7 +436,15 @@ export default function DealScreen() {
     </header>
   );
 
-  const banner = detail ? <DealStrip detail={detail} listedPrice={listedPrice} pendingTheirs={pendingTheirs} onStore={cp?.id && !support ? () => navigate(`/store/${cp.id}`) : undefined} /> : null;
+  const banner = !detail ? null : goods ? (
+    <button className="flex min-h-11 w-full items-center gap-2 border-b border-line bg-surface px-4 py-2 text-left text-[14px] text-ink-2" onClick={() => cp?.id && navigate(`/goods/party/b/${cp.id}`)}>
+      <Package size={16} aria-hidden className="text-meta" />
+      <span className="min-w-0 flex-1">{gs('goods_strip')}</span>
+      <span className="font-semibold text-primary">{gs('open_goods')}</span>
+    </button>
+  ) : (
+    <DealStrip detail={detail} listedPrice={listedPrice} pendingTheirs={pendingTheirs} onStore={cp?.id && !support ? () => navigate(`/store/${cp.id}`) : undefined} />
+  );
 
   return (
     <AppShell variant="chat">

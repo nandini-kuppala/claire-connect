@@ -29,6 +29,9 @@ const GoodsSetup = lazy(() => import('./screens/goods/GoodsSetup'));
 const SendForm = lazy(() => import('./screens/goods/SendForm'));
 const GotBackForm = lazy(() => import('./screens/goods/GotBackForm'));
 const PartyLedger = lazy(() => import('./screens/goods/PartyLedger'));
+const MovementScreen = lazy(() => import('./screens/goods/MovementScreen'));
+const DisputeScreen = lazy(() => import('./screens/goods/DisputeScreen'));
+const ReceiveFirstForm = lazy(() => import('./screens/goods/ReceiveFirstForm'));
 
 /** The Goods routes exist only for businesses with the supply-chain flag; others go Home. */
 function RequireGoods({ children }: { children: ReactNode }) {
@@ -245,6 +248,48 @@ export default function App() {
                 <AppShell >
                   <Suspense fallback={<Splash />}>
                     <PartyLedger />
+                  </Suspense>
+                </AppShell>
+              </RequireGoods>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/goods/movement/:id"
+          element={
+            <RequireAuth agentOk={false}>
+              <RequireGoods>
+                <AppShell nav={false}>
+                  <Suspense fallback={<Splash />}>
+                    <MovementScreen />
+                  </Suspense>
+                </AppShell>
+              </RequireGoods>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/goods/dispute/:id"
+          element={
+            <RequireAuth agentOk={false}>
+              <RequireGoods>
+                <AppShell >
+                  <Suspense fallback={<Splash />}>
+                    <DisputeScreen />
+                  </Suspense>
+                </AppShell>
+              </RequireGoods>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/goods/record/receive-first"
+          element={
+            <RequireAuth agentOk={false}>
+              <RequireGoods>
+                <AppShell nav={false}>
+                  <Suspense fallback={<Splash />}>
+                    <ReceiveFirstForm />
                   </Suspense>
                 </AppShell>
               </RequireGoods>

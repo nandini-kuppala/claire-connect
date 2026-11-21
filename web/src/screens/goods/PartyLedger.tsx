@@ -8,19 +8,36 @@ import { Sheet } from '../../components/Sheet';
 import { ArrowLeft, Clock, Phone, Repeat } from '../../icons';
 import { useSession } from '../../store/session';
 import { RecS } from './Record.strings';
+import { TwoS } from './Two.strings';
 import { SetupS } from './Setup.strings';
 import { Status, type Late } from './Status';
 import { qty as fmtQty, shortDate } from './format';
 
 interface Job { id: string; process_key: string; status: string; since: string; expected_at: string; late: Late; dim: string; sent: number; issued: number; issuedBasis: string; outputs: number; pending: number; pendingAsOutput: number | null; lossPctSoFar: number | null; lossNormPct: number; inputLabel: string; outputLabel: string | null; lots: string[] }
 interface Line { line_id: string; label: string; lot: string | null; grade: string; dim: string; rolls: number | null; sent: number; received: number; their: number | null; settled: { outcome: string; difference: number; pct: number } | null }
-interface Hist { id: string; action: string; business_date: string; dc_no: string | null; cancelled: boolean; undoable_until: number | null; lines: Line[] }
+interface Hist { id: string; action: string; business_date: string; dc_no: string | null; cancelled: boolean; mine?: boolean; undoable_until: number | null; badge?: { kind: string; why?: string }; lines: Line[] }
 interface Ledger { party: { k: string; id: string }; name: { name: string; kind: string; onClaire: boolean; phone?: string | null; sub?: string | null }; open: Job[]; history: Hist[]; role: 'owner' | 'staff' }
 interface Terms { weighing_loss_bearer: string; bill_basis: string; tolerance: { weighed_pct: number; counted_abs: number } }
+
+function Badge({ b, name }: { b?: { kind: string; why?: string }; name: string }) {
+  const t2 = TwoS.use();
+  const s = RecS.use();
+  if (!b) return null;
+  const text =
+    b.kind === 'confirmed_by' ? t2('badge_confirmed_by', { name }) : b.kind === 'confirmed_by_you' ? t2('badge_confirmed_by_you') : b.kind === 'check_and_confirm' ? t2('badge_check') : b.kind === 'not_confirmed' ? t2('badge_not_confirmed') : s('your_record');
+  const cls = b.kind === 'confirmed_by' || b.kind === 'confirmed_by_you' ? 'bg-success-tint text-success border-transparent' : b.kind === 'check_and_confirm' ? 'bg-accent-tint text-accent-ink border-transparent' : b.kind === 'not_confirmed' ? 'border-dashed text-meta' : 'text-ink-2';
+  return (
+    <span className="text-right">
+      <span className={clsx('inline-block rounded-full border border-line-strong px-2 py-0.5 text-[12px] font-semibold', cls)}>{text}</span>
+      {b.why && <span className="block text-[11.5px] text-meta">{t2(`why_${b.why}` as 'why_no_answer')}</span>}
+    </span>
+  );
+}
 
 export default function PartyLedger() {
   const s = RecS.use();
   const ss = SetupS.use();
+  const t2 = TwoS.use();
   const nav = useNavigate();
   const { k, id } = useParams();
   const lang = useSession((st) => st.user?.language || 'en');
@@ -131,7 +148,7 @@ export default function PartyLedger() {
               <li key={h.id} className={clsx('px-4 py-3', h.cancelled && 'opacity-60')}>
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
                   <p className="text-[15px] font-semibold text-ink">{s(`a_${h.action}` as 'a_send_for_work')} · {shortDate(h.business_date, lang)}{h.dc_no ? ` · DC ${h.dc_no}` : ''}</p>
-                  {h.cancelled ? <span className="text-[12.5px] text-meta">{s('cancelled')}</span> : <span className="rounded-full border border-line-strong px-2 py-0.5 text-[12px] font-semibold text-ink-2">{s('your_record')}</span>}
+                  {h.cancelled ? <span className="text-[12.5px] text-meta">{s('cancelled')}</span> : <Badge b={h.badge} name={d.name.name} />}
                 </div>
                 {h.lines.map((l) => (
                   <p key={l.line_id} className="mt-1 text-[14px] text-ink-2">
@@ -139,6 +156,9 @@ export default function PartyLedger() {
                     {l.their !== null && <span className="block text-[12.5px] text-meta">{d.name.name}: {fmtQty(l.their, l.dim)} · {s('you_typed')}{l.settled?.outcome === 'within' ? ` · ${s('weighing_diff', { qty: fmtQty(Math.abs(l.settled.difference), l.dim) })}` : ''}</span>}
                   </p>
                 ))}
+                {h.badge?.kind === 'check_and_confirm' && (
+                  <Button size="sm" variant="tint" className="mt-2" onClick={() => nav(`/goods/movement/${h.id}`)}>{t2('badge_check')}</Button>
+                )}
                 {h.undoable_until && (
                   <Button size="sm" variant="ghost" icon={Repeat} className="mt-1 -ml-2" onClick={() => void undo(h.id)}>{s('undo')}</Button>
                 )}

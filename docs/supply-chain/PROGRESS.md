@@ -3,7 +3,7 @@
 Governing brief: `docs/supply-chain/BRIEF.md` (re-read at the start of every phase and after any context compaction).
 
 ## Current phase
-**Phase 6 — slices 0, 0.5 and 1 done. DEMO STOP after slice 1 (B2): waiting for the user's go-ahead to continue with slice 2** (two-sided records and disputes) on local branch `supply-chain`. Phase 0 done: `00-current-state.md`.
+**Phase 6 — slices 0, 0.5, 1 and 2 done. DEMO STOP after slice 2 (B2): waiting for the user's go-ahead to continue with slice 3** (job workers, forwarding, size grid) on local branch `supply-chain`. Phase 0 done: `00-current-state.md`.
 
 ## Phase status
 | Phase | Doc | Status |
@@ -14,7 +14,7 @@ Governing brief: `docs/supply-chain/BRIEF.md` (re-read at the start of every pha
 | 3 Product & UX | `03-product-ux.md`, `ui-principles.md`, `mockups/` (16 screens) | Done 2026-11-21, rendered at 375/1280 px en+ta, red-teamed, **approved** (U1–U9 defaults) |
 | 4 Technical design | `04-technical-design.md` | Done 2026-11-21, model check run, red-teamed, **approved** (T1–T9 defaults) |
 | 5 Build plan | `05-build-plan.md` (v2) | Done 2026-11-21, red-teamed, **approved** (B1–B3 defaults) |
-| 6 Implementation | slices on branch `supply-chain` | Slices 0, 0.5, 1 done 2026-11-21 — demo stop |
+| 6 Implementation | slices on branch `supply-chain` | Slices 0, 0.5, 1, 2 done 2026-11-21 — demo stop |
 | 7 Final verification | | Not started |
 
 ## Decisions made
@@ -114,6 +114,43 @@ Governing brief: `docs/supply-chain/BRIEF.md` (re-read at the start of every pha
   - Undo uses a repeat icon;
   - desktop wide layout is slice 3;
   - integration tests wait for T8.
+
+### Slice 2 — Two-sided records and disputes (2026-11-21)
+- **Built:**
+  - **Server:**
+    - `ledgerOps.ts`: shared receipt and sender-figure supersession, settlement, and discrepancy docs that carry their posting context.
+    - Sends and returns with businesses on CLAIRE: shared record, per-line viewers, `visible_at` on the movement and its in-transit holdings.
+    - Receiver **confirm / different number**, appended without a version check; a repeat confirm is a no-op.
+    - The performer's **sender figure** on returns the owner recorded (P6: output and dispatch re-posted).
+    - **Receiver-first** entries: unmatched held rows visible only to the recorder, matched when the sender's record becomes visible.
+    - **Share now**; **Undo** refused once the other side acted.
+    - **Disputes** (`disputes.ts`): four absolute outcomes, each with one posting set (short → loss, short-shipped or gain; over → found-pending); conceding or one-sided settles at once; propose/accept; Trade Desk ticket with no conversation attached.
+    - **Goods conversation per pair** + `movement`/`dispute` cards via a leased, idempotent outbox and a 30 s ticker; deal auto-reply and tips skip goods conversations.
+    - **DC photos**: GridFS, capped, signed 10-minute URLs, shared with both parties of the movement.
+    - **`npm run sc:verify`**: every event balances per dimension and every holding equals its postings.
+  - **Web:**
+    - Movement and dispute **cards** that render the reader's side (Check and confirm / All correct / Different number), newest per id.
+    - The Goods conversation reuses the deal chat (no offers, quick replies or deal strip; an "Open Goods" strip).
+    - **Record screen** (confirm or give your figure per line, photos); **dispute screen** (two figures, allowance, four outcomes labelled from your side with their effect, proposal + Accept, Trade Desk).
+    - Coming in: **To check and confirm** and **Waiting for them to record it**; clickable chips (late, to confirm, disputes sheet).
+    - **Received for work** form; the party picker now takes businesses; ledger **badges** (Confirmed by X / by you / Check and confirm / Not confirmed + why); **Share now** in the toast; DC photo capture with on-phone compression.
+- **Checks:**
+  - typecheck + lint green; 16/16 unit tests.
+  - **`scripts/sc-smoke-s2.py`: 25/25 checks** on the dev server: hidden during the undo window; Share now; no price fields for the receiver; a third business gets 404 on the movement and dispute; to-confirm chip; 598/600 counted → dispute; undo refused after the receiver acted; split proposed then accepted → issued 599; 297/300 kg within tolerance; repeat confirm no-op; badges both sides; receiver-first matched on visibility and never shown to the owner; sender figure 592 vs 590 → dispute → conceded → output 592.
+  - The slice 1 walkthrough still passes; `sc:verify` 0 problems.
+  - **Browser** with two origins (Ravi, Lakshmi in Tamil): the Goods conversation in Lakshmi's inbox, Tamil cards, Different number → dispute screen, her proposal, Ravi accepts → settled.
+  - Photos: upload 201, signed GET 200, tampered 403, no login 401.
+- **Decisions in implementation:**
+  - Cards are **untargeted, one payload for both sides**, with the side worked out on the device (04 §8.3 fallback chosen up front), so no reliance on Nexconn persisting targeted messages.
+  - DC photos are shared with both businesses of the movement.
+- **Fixed during checks:**
+  - raw ISO dates on cards;
+  - style codes and sizes now in capitals, and piece goods say what they are ("Navy RKF-P22 M · Cut kits");
+  - a shorter Goods strip text.
+- **Known gaps:**
+  - the job worker's own views (Others' goods, Send back, Forward) are slice 3, so in slice 2 Lakshmi confirms from chat and Coming in;
+  - transporter / LR and the transit-claim outcome come with the Sent-through field in slice 4.5;
+  - integration tests still wait for T8.
 
 ## Open questions
 - T8: a separate free Atlas cluster for integration tests needs to be created by the user (not blocking slice 0's pure tests).

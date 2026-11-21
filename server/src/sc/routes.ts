@@ -8,13 +8,15 @@ import setup from './setup.js';
 import records from './records.js';
 import views from './views.js';
 import { todayIST } from '../../../shared/sc/dates.js';
-import { jobSummaries } from './views.js';
+import { jobSummaries, toConfirmFor } from './views.js';
+import disputes from './disputes.js';
 
 const router = Router();
 router.use('/sc', requireAuth, requireSc);
 router.use(setup);
 router.use(records);
 router.use(views);
+router.use(disputes);
 
 /** Action chips and the Goods badge (03 §4.2). Late/confirm/dispute counts arrive with slices 1–2. */
 router.get(
@@ -25,7 +27,8 @@ router.get(
       jobSummaries(req.ctx),
     ]);
     const late = jobs.filter((j) => j.late.status === 'late' && j.pending > 0).length;
-    res.json({ today: todayIST(), chips: { late, toConfirm: 0, disputes }, badge: disputes, role: req.ctx.role });
+    const toConfirm = (await toConfirmFor(req.ctx)).length;
+    res.json({ today: todayIST(), chips: { late, toConfirm, disputes }, badge: disputes + toConfirm, role: req.ctx.role });
   }),
 );
 

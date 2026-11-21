@@ -5,7 +5,8 @@ import clsx from 'clsx';
 import { api, errorText, ApiError } from '../../lib/api';
 import { Button } from '../../components/Button';
 import { Sheet } from '../../components/Sheet';
-import { ArrowLeft, ChevronRight, Plus, Trash2 } from '../../icons';
+import { ArrowLeft, Camera, ChevronRight, Plus, Trash2 } from '../../icons';
+import { compressPhoto } from './photo';
 import { useSession } from '../../store/session';
 import { addWorkingDays, todayIST } from '@shared/sc/dates';
 import { RecS } from './Record.strings';
@@ -42,6 +43,8 @@ export default function SendForm() {
   const [expected, setExpected] = useState('');
   const [expectedTouched, setExpectedTouched] = useState(false);
   const [dc, setDc] = useState('');
+  const [photo, setPhoto] = useState<{ id: string; url: string } | null>(null);
+  const [photoBusy, setPhotoBusy] = useState(false);
   const [rate, setRate] = useState('');
   const [note, setNote] = useState('');
   const [short, setShort] = useState<{ have: string; need: string } | null>(null);
@@ -72,6 +75,7 @@ export default function SendForm() {
       const body = {
         to: party.ref, process_key: proc.key, business_date: today, expected_at: expected || undefined, dc_no: dc.trim() || undefined, note: note.trim() || undefined, client_id: cid,
         rate_paise: role === 'owner' && Number(rate) > 0 ? Math.round(Number(rate) * 100) : undefined,
+        photo_ids: photo ? [photo.id] : undefined,
         lines: lines.map((l) => ({ spec_id: l.spec!.spec.id, qty: Number(l.qty), unit: l.unit, lot: l.lot.trim() || undefined, they_got: Number(l.theyGot) > 0 ? Number(l.theyGot) : undefined })),
         ...(override ? { allow_untracked: true, untracked_reason: override.reason } : {}),
       };
@@ -172,10 +176,33 @@ export default function SendForm() {
           <input type="date" className={inputCls} value={expected} min={today} onChange={(e) => { setExpectedTouched(true); setExpected(e.target.value); }} />
         </label>
 
-        <label className="block">
+        <div>
           <Label>{s('dc')}</Label>
-          <input className={inputCls} value={dc} onChange={(e) => setDc(e.target.value)} placeholder="0412" />
-        </label>
+          <div className="flex items-center gap-2">
+            <input className={inputCls} value={dc} onChange={(e) => setDc(e.target.value)} placeholder="0412" aria-label={s('dc')} />
+            <label className={clsx('inline-flex min-h-12 shrink-0 cursor-pointer items-center gap-1.5 rounded-full border border-line-strong bg-surface px-3.5 text-[14px] font-semibold text-ink', photoBusy && 'opacity-60')}>
+              <Camera size={18} aria-hidden />
+              {photo ? s('photo_added') : s('photo')}
+              <input type="file" accept="image/*" capture="environment" className="sr-only" disabled={photoBusy}
+                onChange={async (e) => {
+                  const f = e.target.files?.[0];
+                  if (!f) return;
+                  setPhotoBusy(true);
+                  try {
+                    const blob = await compressPhoto(f);
+                    const form = new FormData();
+                    form.append('photo', blob, 'dc.jpg');
+                    setPhoto(await api.upload<{ id: string; url: string }>('/api/sc/files', form));
+                  } catch (err) {
+                    setError(errorText(err));
+                  } finally {
+                    setPhotoBusy(false);
+                  }
+                }} />
+            </label>
+          </div>
+          {photo && <img src={photo.url} alt="" className="mt-2 h-24 w-auto rounded-[12px] border border-line object-cover" />}
+        </div>
 
         {role === 'owner' && (
           <label className="block">

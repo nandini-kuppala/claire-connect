@@ -10,7 +10,7 @@ import type { Party } from './types';
 
 const inputCls = 'min-h-12 w-full rounded-[16px] border border-line-strong bg-surface px-3.5 text-[16px] outline-none focus:border-primary';
 
-export function PartyPicker({ open, onClose, onPick }: { open: boolean; onClose: () => void; onPick: (p: Party) => void }) {
+export function PartyPicker({ open, onClose, onPick, businessOnly = false }: { open: boolean; onClose: () => void; onPick: (p: Party) => void; businessOnly?: boolean }) {
   const s = RecS.use();
   const ss = SetupS.use();
   const [q, setQ] = useState('');
@@ -75,31 +75,32 @@ export function PartyPicker({ open, onClose, onPick }: { open: boolean; onClose:
             <input className="min-w-0 flex-1 bg-transparent text-[16px] outline-none" placeholder={s('search_people')} value={q} onChange={(e) => setQ(e.target.value)} />
           </label>
           <ul className="divide-y divide-line overflow-hidden rounded-[18px] border border-line bg-surface">
-            {list.map((p) => {
+            {list.filter((p) => !businessOnly || p.kind === 'business').map((p) => {
               const business = p.kind === 'business';
               return (
                 <li key={`${p.ref.k}:${p.ref.id}`}>
                   <button
-                    disabled={business}
                     onClick={() => {
                       onPick(p);
                       onClose();
                     }}
-                    className="flex min-h-14 w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-sunken disabled:cursor-default disabled:hover:bg-transparent"
+                    className="flex min-h-14 w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-sunken"
                   >
                     <span className="min-w-0 flex-1">
-                      <span className={business ? 'block text-[15px] font-semibold text-ink-2' : 'block text-[15px] font-semibold text-ink'}>{p.name}</span>
-                      <span className="block text-[12.5px] leading-snug text-meta">{business ? s('two_sided_soon') : p.sub}</span>
+                      <span className="block text-[15px] font-semibold text-ink">{p.name}</span>
+                      <span className="block text-[12.5px] leading-snug text-meta">{[business ? ss('on_claire') : ss('your_contact'), p.sub].filter(Boolean).join(' · ')}</span>
                     </span>
-                    {!business && <ChevronRight size={18} className="shrink-0 text-meta" aria-hidden />}
+                    <ChevronRight size={18} className="shrink-0 text-meta" aria-hidden />
                   </button>
                 </li>
               );
             })}
           </ul>
-          <Button variant="secondary" block icon={Plus} onClick={() => setAdding(true)}>
-            {s('new_contact')}
-          </Button>
+          {!businessOnly && (
+            <Button variant="secondary" block icon={Plus} onClick={() => setAdding(true)}>
+              {s('new_contact')}
+            </Button>
+          )}
         </div>
       )}
     </Sheet>

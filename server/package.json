@@ -8,7 +8,8 @@
     "seed": "tsx src/db/seed.ts",
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test --test-concurrency=1 'src/**/*.test.ts' '../shared/sc/**/*.test.ts'",
-    "sc:flag": "tsx src/sc/flag-cli.ts"
+    "sc:flag": "tsx src/sc/flag-cli.ts",
+    "sc:verify": "tsx src/sc/verify.ts"
   },
   "dependencies": {
     "cors": "^2.8.6",
