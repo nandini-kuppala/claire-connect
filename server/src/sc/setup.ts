@@ -223,6 +223,7 @@ router.post(
     const b = parse(
       z.object({
         code: z.string().trim().min(1).max(30), name: z.string().trim().max(60).optional(), size_set: z.array(z.string().trim().min(1).max(10)).min(1).max(12),
+        set_weight_g: z.number().positive().max(10_000).nullable().optional(),
         trims: z.array(z.object({ spec_id: z.string(), per_piece: z.number().positive().max(1000), unit: z.string().max(10), spare_pct: z.number().min(0).max(50).default(2) })).max(20),
       }),
       req.body,
@@ -230,7 +231,7 @@ router.post(
     for (const t of b.trims) if (!(await col('sc_specs').findOne({ _id: t.spec_id } as any, { projection: { _id: 1 } }))) throw new HttpError(400, 'Please pick the trims again.');
     const code = b.code.toUpperCase();
     const _id = `st_${req.ctx.businessId}_${code}`;
-    await col('sc_styles').updateOne({ _id } as any, { $set: { id: _id, business_id: req.ctx.businessId, code, name: b.name ?? null, size_set: b.size_set.map((x) => x.toUpperCase()), trims: b.trims, updated_at: Date.now() } }, { upsert: true });
+    await col('sc_styles').updateOne({ _id } as any, { $set: { id: _id, business_id: req.ctx.businessId, code, name: b.name ?? null, size_set: b.size_set.map((x) => x.toUpperCase()), trims: b.trims, ...(b.set_weight_g !== undefined ? { set_weight_g: b.set_weight_g } : {}), updated_at: Date.now() } }, { upsert: true });
     res.status(201).json({ style: await col('sc_styles').findOne({ _id } as any) });
   }),
 );

@@ -107,17 +107,25 @@ export function discrepancyDoc(id: string, m: any, line: any, c: SettleCtx, sent
 
 /**
  * The receiver's figure for a line (account, link or on-behalf): posts the change against the previous winning
- * receipt, re-settles the line, and opens a discrepancy beyond tolerance. Closed jobs are refused here (slice 4 reopens).
+ * receipt, re-settles the line, and opens a discrepancy beyond tolerance. A closed job reopens and closes again around it.
  */
 export async function applyReceipt(ctx: Ctx, movementId: string, lineId: string, base: number, evidence: Assertion['evidence'], businessDate: string, final = true) {
+  return onClosedJob(ctx, movementId, lineId, 'late_receipt', () => applyReceiptNow(ctx, movementId, lineId, base, evidence, businessDate, final));
+}
+
+/** 04 §5.6.3: a figure on a line of a closed job reopens it, applies, and closes it again (jobs.ts). */
+async function onClosedJob<T>(ctx: Ctx, movementId: string, lineId: string, reason: string, apply: () => Promise<T>): Promise<T> {
+  const m = await col('sc_movements').findOne({ _id: movementId } as any, { projection: { lines: 1 } });
+  const jobId = (m?.lines as any[] | undefined)?.find((l) => l.line_id === lineId)?.job_id ?? null;
+  const { withLateFigure } = await import('./jobs.js');
+  return withLateFigure(ctx, [jobId], reason, apply);
+}
+
+async function applyReceiptNow(ctx: Ctx, movementId: string, lineId: string, base: number, evidence: Assertion['evidence'], businessDate: string, final = true) {
   const m = await col('sc_movements').findOne({ _id: movementId, cancelled_at: null } as any);
   if (!m) throw new HttpError(404, 'Not found');
   const line = (m.lines as any[]).find((l) => l.line_id === lineId);
   if (!line) throw new HttpError(404, 'Not found');
-  if (line.job_id) {
-    const job = await col('sc_jobs').findOne({ _id: line.job_id } as any, { projection: { status: 1 } });
-    if (job?.status === 'closed') throw new HttpError(409, 'This job is closed.');
-  }
   const open = await col('sc_discrepancies').findOne({ 'refs.movement_id': movementId, 'refs.line_id': lineId, state: { $in: ['open', 'proposed', 'countered', 'escalated'] } } as any);
   if (open) throw new HttpError(409, 'This line has an open difference. Settle it on the dispute screen.');
   const c = settleCtxFor(m, line);
@@ -152,6 +160,10 @@ export async function applyReceipt(ctx: Ctx, movementId: string, lineId: string,
  * output and dispatch, and re-settles the line against what the owner received.
  */
 export async function applySenderFigure(ctx: Ctx, movementId: string, lineId: string, base: number, businessDate: string) {
+  return onClosedJob(ctx, movementId, lineId, 'late_sender_figure', () => applySenderFigureNow(ctx, movementId, lineId, base, businessDate));
+}
+
+async function applySenderFigureNow(ctx: Ctx, movementId: string, lineId: string, base: number, businessDate: string) {
   const m = await col('sc_movements').findOne({ _id: movementId, cancelled_at: null } as any);
   if (!m) throw new HttpError(404, 'Not found');
   const line = (m.lines as any[]).find((l) => l.line_id === lineId);

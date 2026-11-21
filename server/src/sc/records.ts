@@ -59,6 +59,8 @@ const sendBody = z.object({
   client_id: z.string().min(8).max(40),
   allow_untracked: z.boolean().optional(),
   untracked_reason: z.string().trim().max(120).optional(),
+  /** Rework of an earlier job (O): the new job links back, the earlier one is never edited. */
+  rework_of: z.string().max(40).optional(),
 });
 
 router.post(
@@ -137,9 +139,10 @@ router.post(
       s.line.settled = { outcome: st.outcome.outcome, difference: st.outcome.difference, pct: st.outcome.pct };
       if (st.disputeId) discrepancies.push(discrepancyDoc(st.disputeId, movement, s.line, c, s.line.sent[0].base_qty, s.received, st.outcome));
     }
+    const reworkOf = b.rework_of && (await col('sc_jobs').findOne({ _id: b.rework_of, 'owner_party.k': 'b', 'owner_party.id': ctx.businessId } as any, { projection: { _id: 1 } })) ? b.rework_of : null;
     const job = {
       _id: jobId, id: jobId, process_key: proc.key, process_type_id: proc._id, conservation_kind: proc.conservation_kind, loss_norm_pct: proc.loss_norm_pct, rate_basis: proc.rate_basis,
-      owner_party: owner, client_party: owner, performer_party: performer, status: 'issued',
+      owner_party: owner, client_party: owner, performer_party: performer, status: 'issued', rework_of: reworkOf,
       inputs: movLines.map((l) => ({ movement_id: movementId, line_id: l.line_id, spec_id: l.spec_id, dim: l.dim, lot: l.lot, role: l.role ?? 'primary' })),
       outputs: [] as unknown[], returns: [] as string[], promised_at: null, expected_at: expected, business_date: businessDate, pauses: [],
       party_business_ids: parties, created_at: now, version: 1,
@@ -241,7 +244,7 @@ router.post(
       await col('sc_movements').insertOne(movement, { session });
       await col('sc_jobs').updateOne(
         { _id: job._id } as any,
-        { $push: { outputs: { $each: outputs }, returns: movementId } as any, $set: { status: b.last ? 'completed' : 'in_progress', ...(b.last ? { completed_at: now } : {}) }, $inc: { version: 1 } },
+        { $push: { outputs: { $each: outputs }, returns: movementId } as any, $set: { status: b.last ? 'completed' : 'in_progress', ...(b.last ? { completed_at: now } : {}) }, $inc: { version: 1, unprocessed_back: movLines.filter((l: any) => l.line_kind === 'unprocessed_return' && ((job.inputs as any[]).find((i) => i.spec_id === l.spec_id)?.role ?? 'primary') !== 'secondary').reduce((a: number, l: any) => a + l.sent[0].base_qty, 0) } },
         { session },
       );
       // Roll-up: a sub-contractor's outputs count for the parent job the owner sees (with the intermediary).
@@ -447,6 +450,7 @@ router.post(
     const actedOn = (m.lines as any[]).some((l) => [...l.sent, ...l.received].some((a: any) => a.by?.business_id && a.by.business_id !== ctx.businessId));
     if (actedOn) return res.status(409).json({ error: 'They have already confirmed this. Record a correction instead.', code: 'acted_on' });
     const jobId = m.lines?.[0]?.job_id as string | undefined;
+    if (jobId && (await col('sc_jobs').findOne({ _id: jobId, status: 'closed' } as any, { projection: { _id: 1 } }))) return res.status(409).json({ error: 'This job is closed. Reopen it first.', code: 'job_closed' });
     if (m.action === 'send_for_work' && jobId) {
       const job = await col('sc_jobs').findOne({ _id: jobId } as any);
       if (job?.returns?.length) return res.status(409).json({ error: 'Undo the goods that came back first.', code: 'has_returns' });
@@ -459,7 +463,8 @@ router.post(
       await col('sc_discrepancies').updateMany({ 'refs.movement_id': m._id, state: { $ne: 'resolved' } } as any, { $set: { state: 'cancelled' } }, { session });
       if (m.action === 'send_for_work' && jobId) await col('sc_jobs').updateOne({ _id: jobId } as any, { $set: { status: 'cancelled' }, $inc: { version: 1 } }, { session });
       if (m.action === 'return_from_work' && jobId) {
-        await col('sc_jobs').updateOne({ _id: jobId } as any, { $pull: { outputs: { movement_id: m._id }, returns: m._id } as any, $set: { status: 'in_progress', completed_at: null }, $inc: { version: 1 } }, { session });
+        const back = (m.lines as any[]).filter((l) => l.line_kind === 'unprocessed_return').reduce((x: number, l: any) => x + (winningAssertion(l.sent)?.base_qty ?? 0), 0);
+        await col('sc_jobs').updateOne({ _id: jobId } as any, { $pull: { outputs: { movement_id: m._id }, returns: m._id } as any, $set: { status: 'in_progress', completed_at: null }, $inc: { version: 1, unprocessed_back: -back } }, { session });
       }
     });
     await cancelCards('movement', m._id);

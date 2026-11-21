@@ -42,6 +42,7 @@ export interface JobSummary {
   expected_at: string;
   late: ReturnType<typeof lateness>;
   ready: boolean;
+  cancelled: boolean;
   held: string | null;
   dim: Dimension;
   sent: number; // Σ sent (input atoms)
@@ -65,8 +66,8 @@ export async function jobSummaries(ctx: Ctx, opts: { performer?: PartyRef; statu
   if (opts.performer) Object.assign(filter, { 'performer_party.k': opts.performer.k, 'performer_party.id': opts.performer.id });
   const jobs = await col('sc_jobs').find(filter).sort({ expected_at: 1 }).limit(200).toArray();
   if (!jobs.length) return [];
-  const movIds = [...new Set(jobs.flatMap((j: any) => j.inputs.map((i: any) => i.movement_id)))];
-  const movs = new Map((await col('sc_movements').find({ _id: { $in: movIds } } as any).toArray()).map((m: any) => [m._id, m]));
+  const movIds = [...new Set(jobs.flatMap((j: any) => [...j.inputs.map((i: any) => i.movement_id), ...(j.returns ?? [])]).filter(Boolean))];
+  const movs = new Map((await col('sc_movements').find({ _id: { $in: movIds }, cancelled_at: null } as any).toArray()).map((m: any) => [m._id, m]));
   const specIds = [...new Set(jobs.flatMap((j: any) => [...j.inputs.map((i: any) => i.spec_id), ...j.outputs.map((o: any) => o.spec_id)]))];
   const labels = new Map((await col('sc_specs').find({ _id: { $in: specIds } } as any, { projection: { label_en: 1 } }).toArray()).map((s: any) => [s._id, s.label_en as string]));
   // Goods the owner had sent on from a job (a hop) left that job: its unprocessed part no longer counts as there.
@@ -94,12 +95,16 @@ export async function jobSummaries(ctx: Ctx, opts: { performer?: PartyRef; statu
     const outputs = j.outputs.filter((o: any) => o.dim === dim).reduce((a: number, o: any) => a + o.qty, 0);
     const kind = j.conservation_kind as ConservationKind;
     const factor = kind === 'mass_losing' ? (j.loss_norm_pct ?? 0) / 100 : 1;
-    const p = approxPending({ kind, issued: Math.max(0, issued - (hopped.get(j._id) ?? 0)), outputs, factor });
+    // Goods that came back "as sent" (unprocessed, V) are no longer there either.
+    const inputRole = new Map((j.inputs as any[]).map((i) => [i.spec_id, i.role ?? 'primary']));
+    let unprocessed = 0;
+    for (const rid of j.returns ?? []) for (const l of movs.get(rid)?.lines ?? []) if (l.job_id === j._id && l.line_kind === 'unprocessed_return' && l.dim === dim && inputRole.get(l.spec_id) !== 'secondary') unprocessed += winningAssertion(l.sent)?.base_qty ?? 0;
+    const p = approxPending({ kind, issued: Math.max(0, issued - (hopped.get(j._id) ?? 0) - unprocessed), outputs, factor });
     const last = j.outputs.at(-1);
     return {
       id: j._id, process_key: j.process_key, performer: j.performer_party, status: j.status, since: j.business_date, expected_at: j.expected_at,
-      late: lateness(j.expected_at, today, { pausedDays: (j.pauses ?? []).reduce((n: number, p: any) => n + workingDaysBetween(p.from, p.to ?? today), 0), reason: (j.pauses ?? []).some((p: any) => !p.to) ? 'held_for_dues' : j.ready_at ? 'ready_not_collected' : 'processing' }),
-      ready: !!j.ready_at, held: (j.pauses ?? []).find((p: any) => !p.to)?.reason ?? null, dim, sent, issued, issuedBasis: bases.size > 1 ? 'mixed' : ((bases.values().next().value ?? 'sent') as 'sent' | 'their_figure'),
+      late: j.cancelled_at ? { status: 'on_time' as const, days: 0, reason: null } : lateness(j.expected_at, today, { pausedDays: (j.pauses ?? []).reduce((n: number, p: any) => n + workingDaysBetween(p.from, p.to ?? today), 0), reason: (j.pauses ?? []).some((p: any) => !p.to) ? 'held_for_dues' : j.ready_at ? 'ready_not_collected' : 'processing' }),
+      ready: !!j.ready_at, cancelled: !!j.cancelled_at, held: (j.pauses ?? []).find((p: any) => !p.to)?.reason ?? null, dim, sent, issued, issuedBasis: bases.size > 1 ? 'mixed' : ((bases.values().next().value ?? 'sent') as 'sent' | 'their_figure'),
       outputs, pending: p.input, pendingAsOutput: kind === 'mass_losing' ? p.asOutput : null, overYield: p.overYield,
       // Loss is shown only once nothing is estimated to be left (or the owner said it was the last); before that the
       // remainder is still being processed, not lost.
@@ -242,8 +247,11 @@ router.get(
       sent: (l.sent as any[]).map((a) => ({ qty: a.base_qty, evidence: a.evidence, by: a.by?.business_id ?? null, at: a.recorded_at })),
       received: (l.received as any[]).map((a) => ({ qty: a.base_qty, evidence: a.evidence, by: a.by?.business_id ?? null, at: a.recorded_at, reason: a.reason ?? null })),
     }));
+    // The job behind it, for its owner or client only (a performer opens its own work screen instead).
+    const jobId = (m.lines as any[])[0]?.job_id ?? null;
+    const job = jobId ? await col('sc_jobs').findOne({ _id: jobId, $or: [{ 'owner_party.k': 'b', 'owner_party.id': req.ctx.businessId }, { 'client_party.k': 'b', 'client_party.id': req.ctx.businessId }] } as any, { projection: { _id: 1 } }) : null;
     res.json({
-      id: m._id, action: m.action, business_date: m.business_date, dc_no: m.dc_no ?? null, cancelled: !!m.cancelled_at, recorder: m.recorder_business_id,
+      id: m._id, action: m.action, business_date: m.business_date, dc_no: m.dc_no ?? null, cancelled: !!m.cancelled_at, recorder: m.recorder_business_id, jobId: job?._id ?? null,
       from: { ...m.from.party, name: names.get(key(m.from.party))?.name ?? '—' }, to: { ...m.to.party, name: names.get(key(m.to.party))?.name ?? '—' },
       terms: { tolerance: m.terms_snapshot?.tolerance, weighing_loss_bearer: m.terms_snapshot?.weighing_loss_bearer }, lines,
       photos: docs.map((d: any) => signedUrl(d._id)),

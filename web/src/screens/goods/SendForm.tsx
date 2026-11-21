@@ -1,6 +1,6 @@
 // Record → Send for work (03 S4): counterparties on or off Claire; lines one by one or from a size × colour grid.
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import clsx from 'clsx';
 import { api, errorText, ApiError } from '../../lib/api';
 import { Button } from '../../components/Button';
@@ -17,7 +17,7 @@ import { WorkS } from './Work.strings';
 import { clientId, qty as fmtQty } from './format';
 import type { Party, ResolvedSpec } from './types';
 
-interface Process { key: string; labels: Record<string, string>; default_turnaround_days: number; rate_basis: string }
+interface Process { key: string; labels: Record<string, string>; default_turnaround_days: number; rate_basis: string; in_house_only?: boolean }
 interface Line { spec: ResolvedSpec | null; qty: string; unit: string; lot: string; theyGot: string }
 const emptyLine = (): Line => ({ spec: null, qty: '', unit: '', lot: '', theyGot: '' });
 const inputCls = 'min-h-12 w-full rounded-[16px] border border-line-strong bg-surface px-3.5 text-[16px] outline-none focus:border-primary';
@@ -41,7 +41,9 @@ export default function SendForm() {
   const [party, setParty] = useState<Party | null>(null);
   const [procs, setProcs] = useState<Process[]>([]);
   const [proc, setProc] = useState<Process | null>(null);
-  const [lines, setLines] = useState<Line[]>([emptyLine()]);
+  // Made here → "Save and send for work" hands over what came out (J17).
+  const prefill = (useLocation().state as { prefill?: { spec: ResolvedSpec; qty: string; unit: string; lot: string }[] } | null)?.prefill;
+  const [lines, setLines] = useState<Line[]>(() => (prefill?.length ? prefill.map((p) => ({ ...p, theyGot: '' })) : [emptyLine()]));
   const [pickFor, setPickFor] = useState<number | null>(null);
   const [partyOpen, setPartyOpen] = useState(false);
   const [expected, setExpected] = useState('');
@@ -60,7 +62,7 @@ export default function SendForm() {
 
   useEffect(() => {
     void api.get<{ role: 'owner' | 'staff' }>('/api/sc/home').then((h) => setRole(h.role)).catch(() => undefined);
-    void api.get<{ processes: Process[] }>('/api/sc/templates').then((r) => setProcs(r.processes)).catch(() => undefined);
+    void api.get<{ processes: Process[] }>('/api/sc/templates').then((r) => setProcs(r.processes.filter((p) => !p.in_house_only))).catch(() => undefined);
   }, []);
 
   useEffect(() => {

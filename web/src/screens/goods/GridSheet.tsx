@@ -12,7 +12,7 @@ import { WorkS } from './Work.strings';
 import type { MaterialType, ResolvedSpec, Spec } from './types';
 
 export interface StyleTrim { spec_id: string; per_piece: number; unit: string; spare_pct: number; resolved: ResolvedSpec | null }
-export interface Style { id: string; code: string; name: string | null; size_set: string[]; trims: StyleTrim[] }
+export interface Style { id: string; code: string; name: string | null; size_set: string[]; set_weight_g?: number | null; trims: StyleTrim[] }
 export interface GridLine { spec: ResolvedSpec; qty: number; unit: string; lot: string }
 
 const DEFAULT_SIZES = ['S', 'M', 'L', 'XL', 'XXL'];
@@ -21,7 +21,7 @@ const cellCls = 'h-12 w-full rounded-[12px] border border-line-strong bg-surface
 /** Trim quantity for a number of pieces: rounded up, never fractional. */
 export const trimQty = (pieces: number, t: Pick<StyleTrim, 'per_piece' | 'spare_pct'>) => Math.ceil(pieces * t.per_piece * (1 + t.spare_pct / 100) - 1e-9);
 
-export function GridSheet({ open, onClose, onAdd }: { open: boolean; onClose: () => void; onAdd: (lines: GridLine[]) => void }) {
+export function GridSheet({ open, onClose, onAdd, noTrims = false }: { open: boolean; onClose: () => void; onAdd: (lines: GridLine[]) => void; noTrims?: boolean }) {
   const w = WorkS.use();
   const lang = useSession((st) => st.user?.language || 'en');
   const [types, setTypes] = useState<MaterialType[]>([]);
@@ -51,7 +51,7 @@ export function GridSheet({ open, onClose, onAdd }: { open: boolean; onClose: ()
   const n = (v: string | undefined) => (Number(v) > 0 ? Math.floor(Number(v)) : 0);
   const rowTotal = (c: (typeof colours)[number]) => sizes.reduce((a, z) => a + n(c.q[z]), 0);
   const total = colours.reduce((a, c) => a + rowTotal(c), 0);
-  const trims = style && withTrims && total > 0 ? style.trims.filter((t) => t.resolved) : [];
+  const trims = style && withTrims && !noTrims && total > 0 ? style.trims.filter((t) => t.resolved) : [];
 
   const pickStyle = (s: Style) => {
     setCode(s.code);
@@ -164,7 +164,7 @@ export function GridSheet({ open, onClose, onAdd }: { open: boolean; onClose: ()
           </div>
         </div>
 
-        {style && style.trims.length > 0 && (
+        {style && style.trims.length > 0 && !noTrims && (
           <div className="rounded-[16px] bg-sunken p-3">
             <label className="flex min-h-11 items-center gap-3 text-[15px] font-semibold text-ink">
               <input type="checkbox" className="size-5" checked={withTrims} onChange={(e) => setWithTrims(e.target.checked)} />

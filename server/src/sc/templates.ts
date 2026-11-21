@@ -7,7 +7,7 @@ import type { ConservationKind, Dimension, RateBasis } from '../../../shared/sc/
 type L = { en: string; ta: string; hi: string };
 interface Attr { key: string; role: 'spec' | 'lot' | 'info'; type: 'text' | 'number' | 'enum'; enum?: string[]; required?: boolean }
 interface MaterialType { key: string; form: string; base_dimension: Dimension; allowed_units: string[]; material_class_key: 'weighed' | 'counted'; attributes: Attr[]; labels: L }
-interface ProcessType { key: string; input_forms: string[]; output_forms: string[]; conservation_kind: ConservationKind; rate_basis: RateBasis; billable_grades: string[]; itc04_nature: string; default_turnaround_days: number; rework_turnaround_days: number; loss_norm_pct: number; labels: L }
+interface ProcessType { key: string; input_forms: string[]; output_forms: string[]; conservation_kind: ConservationKind; rate_basis: RateBasis; billable_grades: string[]; itc04_nature: string; default_turnaround_days: number; rework_turnaround_days: number; loss_norm_pct: number; in_house_only?: boolean; labels: L }
 
 const colour: Attr = { key: 'colour', role: 'spec', type: 'text' };
 
@@ -50,6 +50,9 @@ export const MATERIAL_TYPES: MaterialType[] = [
   { key: 'packing_material', form: 'trim', base_dimension: 'count', allowed_units: ['pcs', 'gross'], material_class_key: 'counted',
     attributes: [{ key: 'kind', role: 'spec', type: 'enum', enum: ['polybag', 'carton', 'tag', 'hanger', 'tissue'] }, { key: 'size', role: 'spec', type: 'text' }],
     labels: { en: 'Packing material', ta: 'பேக்கிங் பொருள்', hi: 'पैकिंग सामान' } },
+  { key: 'waste', form: 'waste', base_dimension: 'mass', allowed_units: ['kg', 'g'], material_class_key: 'weighed',
+    attributes: [{ key: 'kind', role: 'spec', type: 'enum', enum: ['cut waste', 'end bits', 'yarn waste', 'fabric rejects'], required: true }, colour],
+    labels: { en: 'Waste', ta: 'வேஸ்ட்', hi: 'वेस्ट' } },
   { key: 'unspecified_mass', form: 'any', base_dimension: 'mass', allowed_units: ['kg', 'g'], material_class_key: 'weighed', attributes: [{ key: 'note', role: 'info', type: 'text' }], labels: { en: 'Other (by weight)', ta: 'மற்றவை (எடை)', hi: 'अन्य (वज़न)' } },
   { key: 'unspecified_count', form: 'any', base_dimension: 'count', allowed_units: ['pcs', 'dozen'], material_class_key: 'counted', attributes: [{ key: 'note', role: 'info', type: 'text' }], labels: { en: 'Other (by pieces)', ta: 'மற்றவை (பீஸ்)', hi: 'अन्य (पीस)' } },
   { key: 'unspecified_length', form: 'any', base_dimension: 'length', allowed_units: ['m'], material_class_key: 'counted', attributes: [{ key: 'note', role: 'info', type: 'text' }], labels: { en: 'Other (by length)', ta: 'மற்றவை (நீளம்)', hi: 'अन्य (लंबाई)' } },
@@ -69,6 +72,9 @@ export const PROCESS_TYPES: ProcessType[] = [
   { key: 'ironing', input_forms: ['garment'], output_forms: ['garment'], conservation_kind: 'count_preserving', rate_basis: 'per_output_piece', billable_grades: ['A', 'B'], itc04_nature: 'ironing', default_turnaround_days: 1, rework_turnaround_days: 1, loss_norm_pct: 0, labels: { en: 'Ironing', ta: 'அயர்னிங்', hi: 'प्रेस' } },
   { key: 'packing', input_forms: ['garment', 'trim'], output_forms: ['pack'], conservation_kind: 'assembling', rate_basis: 'per_output_piece', billable_grades: ['A', 'B'], itc04_nature: 'packing', default_turnaround_days: 1, rework_turnaround_days: 1, loss_norm_pct: 0, labels: { en: 'Packing', ta: 'பேக்கிங்', hi: 'पैकिंग' } },
   { key: 'garment_washing', input_forms: ['garment'], output_forms: ['garment'], conservation_kind: 'count_preserving', rate_basis: 'per_output_piece', billable_grades: ['A', 'B'], itc04_nature: 'washing', default_turnaround_days: 3, rework_turnaround_days: 2, loss_norm_pct: 0.5, labels: { en: 'Garment washing', ta: 'கார்மென்ட் வாஷிங்', hi: 'गारमेंट वॉशिंग' } },
+  // In-house only (Made here, U8): pieces into sets, and sets back into pieces (AD).
+  { key: 'make_sets', input_forms: ['garment', 'pack', 'trim'], output_forms: ['pack'], conservation_kind: 'assembling', rate_basis: 'per_output_piece', billable_grades: ['A', 'B'], itc04_nature: 'packing', default_turnaround_days: 1, rework_turnaround_days: 1, loss_norm_pct: 0, in_house_only: true, labels: { en: 'Make sets', ta: 'செட் செய்', hi: 'सेट बनाना' } },
+  { key: 'unpack', input_forms: ['pack'], output_forms: ['garment', 'pack'], conservation_kind: 'disassembling', rate_basis: 'per_output_piece', billable_grades: ['A', 'B'], itc04_nature: 'packing', default_turnaround_days: 1, rework_turnaround_days: 1, loss_norm_pct: 0, in_house_only: true, labels: { en: 'Unpack', ta: 'பிரி', hi: 'खोलना' } },
 ];
 
 /** Upserts the built-in templates (idempotent). Ids are stable: mt_<key>, pt_<key>. */

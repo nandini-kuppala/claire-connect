@@ -6,7 +6,7 @@ import clsx from 'clsx';
 import { api, errorText } from '../../lib/api';
 import { Button } from '../../components/Button';
 import { Sheet } from '../../components/Sheet';
-import { ArrowDown, ArrowRight, ChevronRight, Plus, Repeat, Settings } from '../../icons';
+import { ArrowDown, ArrowRight, ChevronRight, Plus, Repeat, Settings, Scissors } from '../../icons';
 import { useSession } from '../../store/session';
 import { GoodsS } from './Goods.strings';
 import { SetupS } from './Setup.strings';
@@ -14,11 +14,12 @@ import { RecS } from './Record.strings';
 import { Status, type Late } from './Status';
 import { TwoS } from './Two.strings';
 import { WorkS } from './Work.strings';
+import { JobS } from './Job.strings';
 import { Others } from './Others';
 import { qty as fmtQty, shortDate } from './format';
 
 type Tab = 'out' | 'in' | 'coming';
-interface Job { id: string; performer: { k: string; id: string }; status: string; ready?: boolean; held?: string | null; since: string; expected_at: string; late: Late; dim: string; sent: number; issued: number; issuedBasis: string; outputs: number; pending: number; pendingAsOutput: number | null; lossNormPct: number; inputLabel: string; outputLabel: string | null; lots: string[]; name?: string }
+interface Job { id: string; performer: { k: string; id: string }; status: string; ready?: boolean; cancelled?: boolean; held?: string | null; since: string; expected_at: string; late: Late; dim: string; sent: number; issued: number; issuedBasis: string; outputs: number; pending: number; pendingAsOutput: number | null; lossNormPct: number; inputLabel: string; outputLabel: string | null; lots: string[]; name?: string }
 interface OutRow { party: { k: string; id: string }; name: string; kind: string; onClaire: boolean; since: string; status: Late; jobs: Job[] }
 interface InRow { id: string; label: string; lot: string | null; grade: string; place: string | null; qty: number; dim: string }
 interface Home { chips: { late: number; toConfirm: number; disputes: number }; role: 'owner' | 'staff' }
@@ -42,6 +43,7 @@ export default function Goods() {
   const r = RecS.use();
   const t2 = TwoS.use();
   const wk = WorkS.use();
+  const jb = JobS.use();
   const [sub, setSub] = useState<'mine' | 'others'>(() => {
     try {
       return localStorage.getItem('cc_goods_sub') === 'others' ? 'others' : 'mine';
@@ -253,7 +255,7 @@ export default function Goods() {
                       <td className="px-4 py-3 text-ink">{j.inputLabel}{j.pendingAsOutput !== null && j.outputLabel ? <span className="block text-[13px] text-meta">{r('to_come', { qty: `${r('approx')} ${fmtQty(j.pendingAsOutput, j.dim)}` })}</span> : null}</td>
                       <td className="whitespace-nowrap px-4 py-3 text-ink-2">{shortDate(j.since, lang)}</td>
                       <td className="whitespace-nowrap px-4 py-3 text-ink-2">{shortDate(j.expected_at, lang)}</td>
-                      <td className="px-4 py-3">{j.held ? <span className="inline-flex rounded-full bg-accent-tint px-2.5 py-1 text-[12.5px] font-semibold text-accent-ink">{wk('held')}</span> : j.ready && j.late?.status !== 'late' ? <span className="inline-flex rounded-full bg-primary-tint px-2.5 py-1 text-[12.5px] font-semibold text-primary">{wk('ready')}</span> : <Status late={j.late} />}</td>
+                      <td className="px-4 py-3">{j.cancelled ? <span className="inline-flex rounded-full bg-danger-tint px-2.5 py-1 text-[12.5px] font-semibold text-danger">{jb('st_stopped')}</span> : j.held ? <span className="inline-flex rounded-full bg-accent-tint px-2.5 py-1 text-[12.5px] font-semibold text-accent-ink">{wk('held')}</span> : j.ready && j.late?.status !== 'late' ? <span className="inline-flex rounded-full bg-primary-tint px-2.5 py-1 text-[12.5px] font-semibold text-primary">{wk('ready')}</span> : <Status late={j.late} />}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -266,7 +268,7 @@ export default function Goods() {
                 <button className="flex w-full items-start gap-3 px-4 py-3.5 text-left hover:bg-sunken" onClick={() => nav(`/goods/party/${row.party.k}/${row.party.id}`)}>
                   <span className="min-w-0 flex-1">
                     <span className="block text-[15.5px] font-semibold text-ink">{row.name}</span>
-                    {row.jobs.some((j) => j.held) ? <span className="mt-1 inline-flex rounded-full bg-accent-tint px-2.5 py-1 text-[12.5px] font-semibold text-accent-ink">{wk('held')}</span> : row.jobs.some((j) => j.ready) && row.status.status !== 'late' ? <span className="mt-1 inline-flex rounded-full bg-primary-tint px-2.5 py-1 text-[12.5px] font-semibold text-primary">{wk('ready')}</span> : <Status late={row.status} className="mt-1" />}
+                    {row.jobs.some((j) => j.cancelled) ? <span className="mt-1 inline-flex rounded-full bg-danger-tint px-2.5 py-1 text-[12.5px] font-semibold text-danger">{jb('st_stopped')}</span> : row.jobs.some((j) => j.held) ? <span className="mt-1 inline-flex rounded-full bg-accent-tint px-2.5 py-1 text-[12.5px] font-semibold text-accent-ink">{wk('held')}</span> : row.jobs.some((j) => j.ready) && row.status.status !== 'late' ? <span className="mt-1 inline-flex rounded-full bg-primary-tint px-2.5 py-1 text-[12.5px] font-semibold text-primary">{wk('ready')}</span> : <Status late={row.status} className="mt-1" />}
                     {row.jobs.map((j) => (
                       <span key={j.id} className="mt-1.5 block text-[15px] text-ink">
                         <span className="font-head font-bold tabular-nums">{j.outputs > 0 ? `${r('approx')} ` : ''}{fmtQty(j.pending, j.dim)}</span> {j.inputLabel}
@@ -393,6 +395,14 @@ export default function Goods() {
             <button className="mt-2 flex min-h-16 w-full items-center gap-3 rounded-[18px] border border-line bg-surface px-4 py-3 text-left hover:bg-sunken" onClick={() => nav('/goods/record/receive-first')}>
               <ArrowDown size={22} className="shrink-0 text-primary" aria-hidden />
               <span className="min-w-0 flex-1"><span className="block text-[16px] font-semibold text-ink">{t2('received_first')}</span><span className="block text-[13px] text-meta">{t2('received_first_hint')}</span></span>
+              <ChevronRight size={18} className="text-meta" aria-hidden />
+            </button>
+          </section>
+          <section>
+            <h3 className="mb-2 text-[13px] font-semibold text-ink-2">{jb('made')}</h3>
+            <button className="flex min-h-16 w-full items-center gap-3 rounded-[18px] border border-line bg-surface px-4 py-3 text-left hover:bg-sunken" onClick={() => nav('/goods/record/made')}>
+              <Scissors size={22} className="shrink-0 text-primary" aria-hidden />
+              <span className="min-w-0 flex-1"><span className="block text-[16px] font-semibold text-ink">{jb('made')}</span><span className="block text-[13px] text-meta">{jb('made_hint')}</span></span>
               <ChevronRight size={18} className="text-meta" aria-hidden />
             </button>
           </section>

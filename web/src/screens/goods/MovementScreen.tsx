@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { api, errorText } from '../../lib/api';
 import { Button } from '../../components/Button';
+import { JobS } from './Job.strings';
 import { ArrowLeft } from '../../icons';
 import { useSession } from '../../store/session';
 import { TwoS } from './Two.strings';
@@ -11,7 +12,7 @@ import { qty as fmtQty, shortDate } from './format';
 
 interface Assert { qty: number; evidence: string; by: string | null; at: number; reason?: string | null }
 interface Line { line_id: string; label: string; lot: string | null; dim: string; unit: string | null; settled: { outcome: string } | null; sent: Assert[]; received: Assert[] }
-interface Mv { id: string; action: string; business_date: string; dc_no: string | null; cancelled: boolean; recorder: string; from: { k: string; id: string; name: string }; to: { k: string; id: string; name: string }; terms: { tolerance?: { weighed_pct: number } }; lines: Line[]; photos?: string[] }
+interface Mv { id: string; jobId?: string | null; action: string; business_date: string; dc_no: string | null; cancelled: boolean; recorder: string; from: { k: string; id: string; name: string }; to: { k: string; id: string; name: string }; terms: { tolerance?: { weighed_pct: number } }; lines: Line[]; photos?: string[] }
 
 const best = (list: Assert[]) => (list.length ? list.reduce((a, b) => (b.at > a.at ? b : a)) : null);
 const toUnit = (base: number, dim: string) => (dim === 'mass' ? base / 1000 : dim === 'length' ? base / 100 : base);
@@ -20,6 +21,7 @@ export default function MovementScreen() {
   const s = TwoS.use();
   const r = RecS.use();
   const nav = useNavigate();
+  const jb = JobS.use();
   const { id } = useParams();
   const lang = useSession((st) => st.user?.language || 'en');
   const myBiz = useSession((st) => st.business?.id);
@@ -110,6 +112,7 @@ export default function MovementScreen() {
             {m.photos.map((u) => <a key={u} href={u} target="_blank" rel="noreferrer"><img src={u} alt="DC" className="h-28 w-auto rounded-[12px] border border-line object-cover" /></a>)}
           </div>
         )}
+        {m.jobId && <Button variant="ghost" onClick={() => nav(`/goods/job/${m.jobId}`)}>{jb('open_job')}</Button>}
         {msg && <p className="rounded-[14px] bg-success-tint px-3 py-2 text-[14px] text-success">{msg}</p>}
         {error && <p className="rounded-[14px] bg-danger-tint px-3 py-2 text-[14px] text-danger">{error}</p>}
       </div>

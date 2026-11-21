@@ -56,6 +56,12 @@ export function resolutionPostings(d: any, outcome: Outcome): { postings: Postin
 }
 
 async function resolve(req: ScRequest, d: any, outcome: Outcome, note?: string) {
+  // A claim carried past closing settles later: the job reopens around the resolution and closes again (04 §5.6.3).
+  const { withLateFigure } = await import('./jobs.js');
+  return withLateFigure(req.ctx, [d.refs?.job_id], 'dispute_settled', () => resolveNow(req, d, outcome, note));
+}
+
+async function resolveNow(req: ScRequest, d: any, outcome: Outcome, note?: string) {
   const { postings, resolvedReceived } = resolutionPostings(d, outcome);
   const at = Date.now();
   await post(req.ctx, { type: 'dispute_resolved', ref: { kind: 'dispute', id: d._id }, payload: { outcome }, business_date: todayIST() }, postings, async (session) => {

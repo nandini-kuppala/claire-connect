@@ -87,3 +87,123 @@ export function approxPending(i: PendingInput): Pending {
 /** Loss percentage from the performer's declared outputs (P6), never from the receiver's weighing. */
 export const lossPct = (issued: number, declaredOutputs: number) =>
   issued > 0 ? Math.round(((issued - declaredOutputs) / issued) * 1000) / 10 : 0;
+
+// ── Job closure plan (model §4.2, §5.2; 04 §5.6.7) ───────────────────────────────────────────────
+
+/** One allocated(J) holding row at closure, after leftovers were taken out. */
+export interface ClosureLine {
+  id: string;
+  dim: 'mass' | 'count' | 'length';
+  qty: number;
+  role: 'primary' | 'secondary';
+  /** Lines in one group share outputs (same component); different groups each consume up to the outputs (assembling). */
+  group: string;
+  size?: string | null;
+}
+
+export interface ClosureOutput {
+  dim: 'mass' | 'count' | 'length';
+  qty: number;
+  size?: string | null;
+}
+
+export interface ClosurePlanLine {
+  id: string;
+  consumed: number;
+  intoOutput: number;
+  loss: number;
+  residual: number;
+}
+
+export interface ClosurePlan {
+  lines: ClosurePlanLine[];
+  /** Primary goods not accounted for (counted: missing pieces; cutting: unexplained kg, either sign). */
+  residual: number;
+  /** mass_losing: total process loss (negative = gain). */
+  loss: number;
+  lossPct: number | null;
+  /** Outputs above what the inputs can yield (counted). */
+  overYield: number;
+  /** The split could not be checked (cutting with no weight per piece, unpacking). */
+  unchecked: boolean;
+}
+
+/** Splits `total` across `weights` in proportion, in whole atoms; the last share takes the rounding. */
+function prorate(total: number, weights: number[]): number[] {
+  const sum = weights.reduce((a, w) => a + w, 0);
+  if (sum <= 0) return weights.map(() => 0);
+  let left = total;
+  return weights.map((w, i) => {
+    if (i === weights.length - 1) return left;
+    const share = Math.round((total * w) / sum);
+    left -= share;
+    return share;
+  });
+}
+
+/**
+ * What leaves allocated(J) at closure, line by line: consumed = into_output + loss + residual (model §5.2).
+ * - Secondary lines (trims, packing) are used up: into_output = qty (leftovers were taken out before).
+ * - mass_losing: into_output = outputs in the same dimension, loss = the rest (negative = gain), prorated.
+ * - count_preserving / assembling: outputs matched by size first, then any size; the rest is residual.
+ *   Lines in the same `group` share outputs; for assembling, each group consumes up to the outputs on its own
+ *   (a top and a bottom both go into one set).
+ * - unit_changing (cutting): `estimateInto` (pieces × weight per piece + waste, in input atoms) when known,
+ *   residual = the rest (either sign); unknown → everything into output, unchecked.
+ * - disassembling: everything into output, unchecked.
+ */
+export function planClosure(kind: ConservationKind, lines: ClosureLine[], outputs: ClosureOutput[], opts: { estimateInto?: number | null } = {}): ClosurePlan {
+  const plan: ClosurePlan = { lines: [], residual: 0, loss: 0, lossPct: null, overYield: 0, unchecked: false };
+  const primary = lines.filter((l) => l.role === 'primary' && l.qty > 0);
+  for (const l of lines) if (l.role === 'secondary' && l.qty > 0) plan.lines.push({ id: l.id, consumed: l.qty, intoOutput: l.qty, loss: 0, residual: 0 });
+  if (!primary.length) return plan;
+  const dim = primary[0].dim;
+  const same = primary.filter((l) => l.dim === dim);
+  const consumed = same.reduce((a, l) => a + l.qty, 0);
+  const sameOut = outputs.filter((o) => o.dim === dim);
+  const push = (l: ClosureLine, into: number, loss: number, residual: number) => plan.lines.push({ id: l.id, consumed: l.qty, intoOutput: into, loss, residual });
+
+  if (kind === 'mass_losing') {
+    const out = sameOut.reduce((a, o) => a + o.qty, 0);
+    const into = prorate(out, same.map((l) => l.qty));
+    same.forEach((l, i) => push(l, into[i], l.qty - into[i], 0));
+    plan.loss = consumed - out;
+    plan.lossPct = consumed > 0 ? Math.round((plan.loss / consumed) * 1000) / 10 : null;
+  } else if (kind === 'unit_changing' || kind === 'disassembling') {
+    const est = kind === 'unit_changing' && opts.estimateInto != null ? Math.round(opts.estimateInto) : null;
+    if (est === null) {
+      plan.unchecked = true;
+      same.forEach((l) => push(l, l.qty, 0, 0));
+    } else {
+      const into = prorate(est, same.map((l) => l.qty));
+      same.forEach((l, i) => push(l, into[i], 0, l.qty - into[i]));
+      plan.residual = consumed - est;
+    }
+  } else {
+    // count_preserving, assembling: match outputs to lines, by size first.
+    const groups = new Map<string, ClosureLine[]>();
+    for (const l of same) groups.set(kind === 'assembling' ? l.group : 'all', [...(groups.get(kind === 'assembling' ? l.group : 'all') ?? []), l]);
+    let maxOver = 0;
+    for (const g of groups.values()) {
+      const left = sameOut.map((o) => ({ ...o }));
+      const into = new Map<string, number>(g.map((l) => [l.id, 0]));
+      const take = (l: ClosureLine, pool: typeof left) => {
+        for (const o of pool) {
+          const room = l.qty - into.get(l.id)!;
+          if (room <= 0) break;
+          const n = Math.min(room, o.qty);
+          o.qty -= n;
+          into.set(l.id, into.get(l.id)! + n);
+        }
+      };
+      for (const l of g) if (l.size) take(l, left.filter((o) => o.size === l.size));
+      for (const l of g) take(l, left);
+      for (const l of g) push(l, into.get(l.id)!, 0, l.qty - into.get(l.id)!);
+      maxOver = Math.max(maxOver, left.reduce((a, o) => a + o.qty, 0));
+    }
+    plan.overYield = maxOver;
+    plan.residual = plan.lines.filter((x) => same.some((l) => l.id === x.id)).reduce((a, x) => a + x.residual, 0);
+  }
+  for (const l of primary.filter((l) => l.dim !== dim)) push(l, l.qty, 0, 0);
+  return plan;
+}

@@ -119,7 +119,7 @@ export default function PartyLedger() {
               {d.open.map((j) => (
                 <li key={j.id} className="rounded-[18px] border border-line bg-surface px-4 py-3.5">
                   <div className="flex flex-wrap items-start justify-between gap-2">
-                    <p className="font-head text-[16px] font-semibold text-ink">{j.inputLabel}</p>
+                    <button className="text-left font-head text-[16px] font-semibold text-ink underline-offset-2 hover:underline" onClick={() => nav(`/goods/job/${j.id}`)}>{j.inputLabel}</button>
                     {j.status === 'completed' ? <span className="rounded-full bg-success-tint px-2.5 py-1 text-[12.5px] font-semibold text-success">{s('completed')}</span> : <Status late={j.late} />}
                   </div>
                   <dl className="mt-2 grid grid-cols-[1fr_auto] gap-x-4 gap-y-1 text-[14px]">

@@ -3,7 +3,7 @@
 Governing brief: `docs/supply-chain/BRIEF.md` (re-read at the start of every phase and after any context compaction).
 
 ## Current phase
-**Phase 6 — slices 0, 0.5, 1, 2 and 3 done. Next: slice 4 (Made here, job detail, closing), then slice 4.5; the next DEMO STOP is after slice 4.5 (B2).** Work stays on local branch `supply-chain`. Phase 0 done: `00-current-state.md`.
+**Phase 6 — slices 0, 0.5, 1, 2, 3 and 4 done. Next: slice 4.5 (the other record forms and adjustments); DEMO STOP after slice 4.5 (B2).** Work stays on local branch `supply-chain`. Phase 0 done: `00-current-state.md`.
 
 ## Phase status
 | Phase | Doc | Status |
@@ -14,7 +14,7 @@ Governing brief: `docs/supply-chain/BRIEF.md` (re-read at the start of every pha
 | 3 Product & UX | `03-product-ux.md`, `ui-principles.md`, `mockups/` (16 screens) | Done 2026-11-21, rendered at 375/1280 px en+ta, red-teamed, **approved** (U1–U9 defaults) |
 | 4 Technical design | `04-technical-design.md` | Done 2026-11-21, model check run, red-teamed, **approved** (T1–T9 defaults) |
 | 5 Build plan | `05-build-plan.md` (v2) | Done 2026-11-21, red-teamed, **approved** (B1–B3 defaults) |
-| 6 Implementation | slices on branch `supply-chain` | Slices 0, 0.5, 1, 2, 3 done 2026-11-21; next demo stop after 4.5 |
+| 6 Implementation | slices on branch `supply-chain` | Slices 0, 0.5, 1, 2, 3, 4 done 2026-11-21; next demo stop after 4.5 |
 | 7 Final verification | | Not started |
 
 ## Decisions made
@@ -209,8 +209,81 @@ Governing brief: `docs/supply-chain/BRIEF.md` (re-read at the start of every pha
   - Tamil/Hindi strings for slice 3 are still marked *to verify* (glossary).
   - Screenshots of open sheets in the in-app browser came back stale; sheets were verified through the DOM and zoomed captures instead.
 
+### Slice 4 — Made here, job detail and closing (2026-11-21)
+- **Built:**
+  - **Closure plan (`shared/sc/conservation.ts` → `planClosure`)**, pure and unit-tested:
+    - It splits every allocated(J) line into consumed = into output + loss + residual (model §5.2).
+    - Rules per process kind:
+      - mass-losing: loss prorated over lots, negative = gain;
+      - count-preserving and assembling: outputs matched by size first; a top and a bottom each go into one set;
+      - cutting: pieces × weight per set + waste, either sign;
+      - unpacking: not checked;
+      - trims: used up.
+    - The phone's "Does it add up?" strip runs the same function.
+  - **Server (`jobs.ts`):**
+    - **Close**: one event that first takes leftovers out (kept and adjusted → the job worker's own, with a ₹ bill line; kept for the next job; scrapped), then posts the closure.
+      - It asks first when pieces are missing, cutting is off by more than 2 %, or the loss is well above the norm.
+      - It is blocked by open differences unless the owner chooses **close with the claim carried**.
+    - **Reopen**: reverses the stored closure postings, with a dated reason.
+    - **Late figures (04 §5.6.3)**: a receipt or sender figure on a closed job, or settling a carried claim, reopens the job, applies the change and closes it again (`withLateFigure`). If closing again fails, the job stays open with the reason.
+    - **Stop this work (V)**: lateness stops and "Stopped" shows on Out. What comes back "as sent" now leaves the job on both sides; it previously didn't count as gone.
+    - **Job detail**: conservation bar segments, outputs by spec × grade, sub-contract / hop / rework children, open differences, bill adjustments and a dated bill change, reopen history.
+    - **Made here** (`POST /sc/made`): cut, pack, check, make sets and unpack as an in-house job, recorded and closed in one write. It uses a stock check with the owner override, plus a new **Waste** material type and in-house-only **Make sets / Unpack** processes.
+    - **Smaller additions**:
+      - `rework_of` on Send for work;
+      - styles carry an optional weight per set;
+      - movement detail links to its job for the owner or client;
+      - undo is refused on a closed job.
+  - **Web:**
+    - **Job screen**:
+      - stacked conservation bar with every segment named in text;
+      - What came back / What went / Sent on / Bill / Changes;
+      - **Got back** or **Close job** as the one action;
+      - Reopen and Stop this work;
+      - two panes at ≥ 1024 px.
+    - **Close sheet**: "What happened to the rest?" per trim, the shortage / loss / cutting question, and close with the claim carried.
+    - **Made here form**:
+      - process chips;
+      - taken from stock / what came out (size grid, grades for QC);
+      - cut waste and the live check;
+      - **Save and send for work** hands the kits to Send for work.
+    - **Record sheet** has a Made here entry. The style editor has weight per set. Out shows **Stopped**. The party ledger and movement screen open the job.
+- **Checks:**
+  - typecheck + lint green; 21/21 unit tests (5 new closure tests).
+  - **`scripts/sc-smoke-s4.py`: 32/32**, covering:
+    - cut 100 kg → 400 sets + 7.5 kg waste → 0.5 kg unexplained; the stock check;
+    - send / back / close-preview: shortage 10, buttons as a leftover candidate;
+    - close asks first; Lakshmi can't close; closed with 24 buttons kept at ₹6 → ₹144 bill line and Lakshmi owns them; Sree gets 404;
+    - reopen and close again;
+    - Lakshmi's late sender figure (192) → automatic reopen, the difference carried, closed again; settling it → reopened and closed again: 392 good + 8 unaccounted;
+    - pack, QC (1 unaccounted), make sets (2 + 2), unpack, Made here history;
+    - stop → "as sent" back → nothing left → closes;
+    - dyeing 300 → 280 kg closes at 6.7 %; 300 → 250 kg (16.7 %) needs a yes.
+  - s1, s2 and s3 still pass; `sc:verify` 0 problems after every close and reopen.
+  - **Browser** (Ravi, Tamil, 375 px):
+    - Made here cut with the size grid: trims stay out, and the strip reads "50 kg → about 46 kg in 200 pieces + 3.5 kg waste → about 0.5 kg (1 %) unexplained".
+    - Save and send → Send for work prefilled with S 100 / M 100 kits, with in-house-only processes hidden.
+    - Job screen closed / open; the close sheet asks "7 pcs not accounted for at Lakshmi Garments".
+    - 1280 px two-pane job screen.
+- **Fixed during checks:**
+  - Unprocessed returns weren't subtracted from "still there" for either side.
+  - Re-saving a style without a weight erased it; an omitted weight now keeps it and the editor sends `null` to clear it.
+  - "Record anyway" forgot "and send for work".
+  - The bill list repeated struck-through lines per reopen; it now shows one dated "was ₹X, now ₹Y" line, only when it changed.
+  - Lot codes broke at the hyphen; the desktop action bar overflowed.
+- **Decisions in implementation:**
+  - Closing and reopening are owner-role actions by the job's client.
+  - Made here closes at once. In-house shortages are recorded without a question (they are your own) but shown on the strip before saving.
+  - A shortage at a job worker is recorded against them (`RESIDUAL` attributed) only after the owner says yes. The two-sided shortage discrepancy with the job worker is not built; see known gaps.
+- **Known gaps:**
+  - **Shortage as a two-sided discrepancy** (the job worker accepts or disputes the missing pieces) and **leftovers "coming back"** (use Got back "as sent" instead) are not built.
+  - **Bills** (rate × billable quantity, settlements) remain slice S14; slice 4 records only the leftover adjustments and the dated change.
+  - The **rework chain** links and shows children, but there is no "Send for rework" button yet (Send for work accepts `rework_of` through the API).
+  - "Kept for the next job" goods sit at the job worker as available stock; Out with others lists jobs only, so they don't show there yet.
+  - Cancelled-and-closed jobs and in-house jobs are reached from the Made here history, movement and ledger links. There is no "Closed jobs" list yet.
+
 ## Open questions
 - T8: a separate free Atlas cluster for integration tests needs to be created by the user (not blocking slice 0's pure tests).
 
 ## Next
-Slice 4 (Made here: Cut · Pack · Check · Make sets; job detail; closing a job), then slice 4.5. Demo stop after slice 4.5.
+Slice 4.5 (Buy / Sell, return to supplier, samples, move between my places, sale in place of allocated goods, adjustments). Demo stop after slice 4.5.

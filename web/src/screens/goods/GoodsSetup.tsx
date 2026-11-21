@@ -9,6 +9,7 @@ import { ArrowLeft, Check, Plus } from '../../icons';
 import { SetupS } from './Setup.strings';
 import { SpecPicker } from './SpecPicker';
 import { WorkS } from './Work.strings';
+import { JobS } from './Job.strings';
 import { useSession } from '../../store/session';
 import type { Contact, Place, ResolvedSpec, Spec } from './types';
 import type { Style } from './GridSheet';
@@ -46,12 +47,13 @@ const inputCls = 'min-h-12 w-full rounded-[16px] border border-line-strong bg-su
 export default function GoodsSetup() {
   const s = SetupS.use();
   const wk = WorkS.use();
+  const jb = JobS.use();
   const lang = useSession((st) => st.user?.language || 'en');
   const [procs, setProcs] = useState<{ key: string; labels: Record<string, string>; default_turnaround_days: number }[]>([]);
   const [offers, setOffers] = useState<Record<string, { on: boolean; capacity_per_day?: string; turnaround_days?: string }>>({});
   const [offersSaved, setOffersSaved] = useState(false);
   const [styles, setStyles] = useState<Style[]>([]);
-  const [styleForm, setStyleForm] = useState<{ code: string; sizes: string; trims: { spec: ResolvedSpec; per_piece: string; spare_pct: string }[] } | null>(null);
+  const [styleForm, setStyleForm] = useState<{ code: string; sizes: string; weight?: string; trims: { spec: ResolvedSpec; per_piece: string; spare_pct: string }[] } | null>(null);
   const [trimPick, setTrimPick] = useState(false);
   const nav = useNavigate();
   const [role, setRole] = useState<'owner' | 'staff'>('owner');
@@ -241,8 +243,8 @@ export default function GoodsSetup() {
             {styles.map((st) => (
               <li key={st.id}>
                 <button className="w-full px-4 py-3 text-left disabled:cursor-default" disabled={!owner}
-                  onClick={() => setStyleForm({ code: st.code, sizes: st.size_set.join(', '), trims: st.trims.filter((t) => t.resolved).map((t) => ({ spec: t.resolved!, per_piece: String(t.per_piece), spare_pct: String(t.spare_pct) })) })}>
-                  <p className="text-[15.5px] font-semibold text-ink">{st.code} <span className="font-normal text-meta">· {st.size_set.join(' ')}</span></p>
+                  onClick={() => setStyleForm({ code: st.code, sizes: st.size_set.join(', '), weight: st.set_weight_g ? String(st.set_weight_g) : '', trims: st.trims.filter((t) => t.resolved).map((t) => ({ spec: t.resolved!, per_piece: String(t.per_piece), spare_pct: String(t.spare_pct) })) })}>
+                  <p className="text-[15.5px] font-semibold text-ink">{st.code} <span className="font-normal text-meta">· {st.size_set.join(' ')}{st.set_weight_g ? ` · ${st.set_weight_g} g` : ''}</span></p>
                   {st.trims.length > 0 && <p className="mt-0.5 text-[13px] text-ink-2">{st.trims.map((t) => `${t.resolved?.spec.label_en ?? '—'} × ${t.per_piece}`).join(' · ')}</p>}
                 </button>
               </li>
@@ -257,7 +259,7 @@ export default function GoodsSetup() {
             if (!styleForm) return;
             setBusy(true); setError(null);
             try {
-              await api.post('/api/sc/styles', { code: styleForm.code.trim(), size_set: styleForm.sizes.split(/[\s,]+/).filter(Boolean), trims: styleForm.trims.map((t) => ({ spec_id: t.spec.spec.id, per_piece: Number(t.per_piece), unit: t.spec.units[0] ?? 'pcs', spare_pct: Number(t.spare_pct) || 0 })) });
+              await api.post('/api/sc/styles', { code: styleForm.code.trim(), size_set: styleForm.sizes.split(/[\s,]+/).filter(Boolean), set_weight_g: Number(styleForm.weight) > 0 ? Number(styleForm.weight) : null, trims: styleForm.trims.map((t) => ({ spec_id: t.spec.spec.id, per_piece: Number(t.per_piece), unit: t.spec.units[0] ?? 'pcs', spare_pct: Number(t.spare_pct) || 0 })) });
               setStyleForm(null); void load();
             } catch (e) { setError(errorText(e)); } finally { setBusy(false); }
           }}>{s('save')}</Button>}>
@@ -265,6 +267,7 @@ export default function GoodsSetup() {
           <div className="space-y-4 pb-2">
             <Field label={wk('style')}><input className={inputCls + ' uppercase'} placeholder="RKF-P22" value={styleForm.code} onChange={(e) => setStyleForm({ ...styleForm, code: e.target.value })} /></Field>
             <Field label={wk('sizes')}><input className={inputCls + ' uppercase'} value={styleForm.sizes} onChange={(e) => setStyleForm({ ...styleForm, sizes: e.target.value })} /></Field>
+            <Field label={jb('set_weight')}><input className={inputCls + ' w-32 tabular-nums'} inputMode="decimal" placeholder="230" value={styleForm.weight ?? ''} onChange={(e) => setStyleForm({ ...styleForm, weight: e.target.value.replace(/[^\d.]/g, '') })} /></Field>
             <div>
               <span className="mb-1.5 block text-[13px] font-semibold text-ink-2">{wk('trims')}</span>
               <ul className="space-y-2">

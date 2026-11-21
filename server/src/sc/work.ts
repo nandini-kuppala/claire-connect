@@ -61,7 +61,7 @@ export async function workRows(ctx: Ctx): Promise<WorkRow[]> {
   const jobs = await col('sc_jobs').find({ 'performer_party.k': 'b', 'performer_party.id': ctx.businessId, status: { $in: ['issued', 'in_progress', 'completed'] } } as any).sort({ expected_at: 1 }).limit(300).toArray();
   if (!jobs.length) return [];
   const ids = jobs.map((j: any) => j._id);
-  const movIds = [...new Set(jobs.flatMap((j: any) => [...j.inputs.map((i: any) => i.movement_id), ...(j.returns ?? [])]))];
+  const movIds = [...new Set(jobs.flatMap((j: any) => [...j.inputs.map((i: any) => i.movement_id), ...(j.returns ?? [])]))].filter(Boolean);
   const [movs, children, specs] = await Promise.all([
     col('sc_movements').find({ _id: { $in: movIds }, cancelled_at: null } as any).toArray(),
     col('sc_jobs').find({ $or: [{ parent_job_id: { $in: ids } }, { hop_from_job_id: { $in: ids } }], status: { $ne: 'cancelled' } } as any).toArray(),
@@ -93,11 +93,16 @@ export async function workRows(ctx: Ctx): Promise<WorkRow[]> {
     let returned = 0;
     for (const rid of j.returns ?? []) for (const l of mv.get(rid)?.lines ?? []) if (l.job_id === j._id && l.line_kind !== 'unprocessed_return') returned += winningAssertion(l.sent)?.base_qty ?? 0;
     const sentOn = children.filter((c: any) => c.parent_job_id === j._id || c.hop_from_job_id === j._id);
-    const forwarded = sentOn.reduce((a: number, c: any) => a + (c.sent_inputs ?? c.issued_sent ?? 0), 0);
+    // Unprocessed goods back: mine to the owner leave; a sub-contractor's back to me return to this job (model §3.5).
+    const roleOf = new Map((j.inputs as any[]).map((i) => [i.spec_id, i.role ?? 'primary']));
+    let unprocessedOut = 0;
+    for (const rid of j.returns ?? []) for (const l of mv.get(rid)?.lines ?? []) if (l.job_id === j._id && l.line_kind === 'unprocessed_return' && l.dim === dim && roleOf.get(l.spec_id) !== 'secondary') unprocessedOut += winningAssertion(l.sent)?.base_qty ?? 0;
+    const childBack = sentOn.filter((c: any) => c.parent_job_id === j._id).reduce((a: number, c: any) => a + (c.unprocessed_back ?? 0), 0);
+    const forwarded = Math.max(0, sentOn.reduce((a: number, c: any) => a + (c.sent_inputs ?? c.issued_sent ?? 0), 0) - childBack);
     // Finished work an owner told me to send on has left my unit for good (a hop never comes back here).
     const hoppedOutputs = sentOn.filter((c: any) => c.hop_from_job_id === j._id).reduce((a: number, c: any) => a + (c.sent_outputs ?? 0), 0);
     const kind = j.conservation_kind as ConservationKind;
-    const p = approxPending({ kind, issued: Math.max(0, received - forwarded), outputs: ownOutputs, factor: kind === 'mass_losing' ? (j.loss_norm_pct ?? 0) / 100 : 1 });
+    const p = approxPending({ kind, issued: Math.max(0, received - forwarded - unprocessedOut), outputs: ownOutputs, factor: kind === 'mass_losing' ? (j.loss_norm_pct ?? 0) / 100 : 1 });
     const held = (j.pauses ?? []).find((x: any) => !x.to)?.reason ?? null;
     return {
       id: j._id, client: j.client_party, owner_hidden: !!j.parent_job_id, process_key: j.process_key, status: j.status, since: j.business_date, expected_at: j.expected_at,
@@ -253,7 +258,7 @@ router.post(
     };
     const r = await post(ctx, { type: 'send_back', ref: { kind: 'movement', id: movementId }, payload: { job_id: j._id }, business_date: businessDate, client_id: b.client_id, visible_at: movement.visible_at }, postings, async (session) => {
       await col('sc_movements').insertOne(movement, { session });
-      await col('sc_jobs').updateOne({ _id: j._id } as any, { $push: { outputs: { $each: newOutputs }, returns: movementId } as any, $set: { status: 'in_progress' }, $unset: { ready_at: '' }, $inc: { version: 1 } }, { session });
+      await col('sc_jobs').updateOne({ _id: j._id } as any, { $push: { outputs: { $each: newOutputs }, returns: movementId } as any, $set: { status: 'in_progress' }, $unset: { ready_at: '' }, $inc: { version: 1, unprocessed_back: movLines.filter((l: any) => l.line_kind === 'unprocessed_return' && ((j.inputs as any[]).find((i) => i.spec_id === l.spec_id)?.role ?? 'primary') !== 'secondary').reduce((a: number, l: any) => a + l.sent[0].base_qty, 0) } }, { session });
       // Roll-up (model §3.5): everything a sub-contractor sends back counts for the parent job the owner sees.
       const rolled = movLines.filter((l) => l.line_kind !== 'unprocessed_return').map((l) => ({ movement_id: movementId, line_id: l.line_id, spec_id: l.spec_id, grade: l.grade, lot: l.lot, dim: l.dim, qty: l.sent[0].base_qty, business_date: businessDate, source: 'child', child_job_id: j._id }));
       if (j.parent_job_id && rolled.length) await col('sc_jobs').updateOne({ _id: j.parent_job_id } as any, { $push: { outputs: { $each: rolled } } as any }, { session });
