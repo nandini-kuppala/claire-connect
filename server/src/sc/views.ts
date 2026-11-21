@@ -71,9 +71,13 @@ export async function jobSummaries(ctx: Ctx, opts: { performer?: PartyRef; statu
   const specIds = [...new Set(jobs.flatMap((j: any) => [...j.inputs.map((i: any) => i.spec_id), ...j.outputs.map((o: any) => o.spec_id)]))];
   const labels = new Map((await col('sc_specs').find({ _id: { $in: specIds } } as any, { projection: { label_en: 1 } }).toArray()).map((s: any) => [s._id, s.label_en as string]));
   // Goods the owner had sent on from a job (a hop) left that job: its unprocessed part no longer counts as there.
-  const hops = await col('sc_jobs').find({ hop_from_job_id: { $in: jobs.map((j: any) => j._id) }, status: { $ne: 'cancelled' } } as any, { projection: { hop_from_job_id: 1, sent_inputs: 1, issued_sent: 1 } }).toArray();
+  const ids = jobs.map((j: any) => j._id);
+  const hops = await col('sc_jobs').find({ $or: [{ hop_from_job_id: { $in: ids } }, { split_from_job_id: { $in: ids } }], status: { $ne: 'cancelled' } } as any, { projection: { hop_from_job_id: 1, split_from_job_id: 1, sent_inputs: 1, issued_sent: 1 } }).toArray();
   const hopped = new Map<string, number>();
-  for (const c of hops as any[]) hopped.set(c.hop_from_job_id, (hopped.get(c.hop_from_job_id) ?? 0) + (c.sent_inputs ?? c.issued_sent ?? 0));
+  for (const c of hops as any[]) {
+    const from = c.hop_from_job_id ?? c.split_from_job_id; // hops and sales in place both take goods out of the job
+    hopped.set(from, (hopped.get(from) ?? 0) + (c.sent_inputs ?? c.issued_sent ?? 0));
+  }
   const today = todayIST();
   return jobs.map((j: any) => {
     let sent = 0;
@@ -99,7 +103,7 @@ export async function jobSummaries(ctx: Ctx, opts: { performer?: PartyRef; statu
     const inputRole = new Map((j.inputs as any[]).map((i) => [i.spec_id, i.role ?? 'primary']));
     let unprocessed = 0;
     for (const rid of j.returns ?? []) for (const l of movs.get(rid)?.lines ?? []) if (l.job_id === j._id && l.line_kind === 'unprocessed_return' && l.dim === dim && inputRole.get(l.spec_id) !== 'secondary') unprocessed += winningAssertion(l.sent)?.base_qty ?? 0;
-    const p = approxPending({ kind, issued: Math.max(0, issued - (hopped.get(j._id) ?? 0) - unprocessed), outputs, factor });
+    const p = approxPending({ kind, issued: Math.max(0, issued - (hopped.get(j._id) ?? 0) - unprocessed - (j.casualty_lost ?? 0)), outputs, factor });
     const last = j.outputs.at(-1);
     return {
       id: j._id, process_key: j.process_key, performer: j.performer_party, status: j.status, since: j.business_date, expected_at: j.expected_at,

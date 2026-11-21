@@ -9,7 +9,7 @@ export type PartyRef = { k: 'b'; id: string } | { k: 'c'; id: string };
 
 export type Grade = 'A' | 'B' | 'rework' | 'reject' | 'scrap';
 
-export type HeldReason = 'qc' | 'rejected_on_receipt' | 'dues' | 'detained' | 'customer_hold' | 'found_pending' | 'unmatched';
+export type HeldReason = 'qc' | 'rejected_on_receipt' | 'dues' | 'detained' | 'customer_hold' | 'found_pending' | 'unmatched' | 'casualty';
 
 /** Holding state (model §3.3). `ref` is the movement, job or discrepancy the state belongs to. */
 export type HoldingState =

@@ -60,7 +60,11 @@ export async function movementCard(movementId: string): Promise<{ payload: CardP
   const state = m.cancelled_at ? 'cancelled' : open ? 'disputed' : allConfirmed ? ((m.lines as any[]).some((l) => l.settled?.outcome === 'within') ? 'within_tolerance' : 'confirmed') : 'sent';
   const first = lines[0];
   const summary = `${q(first.sent, first.dim)} ${first.label}${lines.length > 1 ? ` +${lines.length - 1}` : ''}`;
-  const verb = m.action === 'send_for_work' ? ['sent for work', 'வேலைக்கு அனுப்பியது', 'काम के लिए भेजा'] : ['sent back', 'திருப்பி அனுப்பியது', 'वापस भेजा'];
+  const VERBS: Record<string, string[]> = {
+    send_for_work: ['sent for work', 'வேலைக்கு அனுப்பியது', 'काम के लिए भेजा'], sell: ['sold', 'விற்றது', 'बेचा'], return_to_supplier: ['returned', 'திருப்பியது', 'लौटाया'],
+    sample: ['sample', 'சாம்பிள்', 'सैंपल'], returnable_sample: ['sample to return', 'திரும்பத் தர வேண்டிய சாம்பிள்', 'वापसी वाला सैंपल'], collect: ['collected', 'எடுத்துச் சென்றது', 'ले गए'],
+  };
+  const verb = VERBS[m.action] ?? ['sent back', 'திருப்பி அனுப்பியது', 'वापस भेजा'];
   const text = `${name.get(fromId)} → ${name.get(toId)}: ${summary} (${verb[0]} / ${verb[1]} / ${verb[2]})${m.dc_no ? ` · DC ${m.dc_no}` : ''}`;
   return {
     pair: [fromId, toId],

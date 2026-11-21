@@ -51,11 +51,13 @@ export const bearerOf = (t: Terms, roles: { owner: PartyRef; sender: PartyRef; r
   t.weighing_loss_bearer === 'performer' ? roles.performer : t.weighing_loss_bearer === 'sender' ? roles.sender : t.weighing_loss_bearer === 'receiver' ? roles.receiver : roles.owner;
 
 /** Where a movement line's receipt lands: allocated to the job at the performer, or available at the owner. */
-export function destOf(m: any, line: any): { party: PartyRef; state: HoldingState; place: string | null; via: PartyRef | null } {
+export interface Dest { party: PartyRef; state: HoldingState; place: string | null; via: PartyRef | null; ownerAfter: PartyRef | null; external: boolean }
+export function destOf(m: any, line: any): Dest {
   // Work-bound movements land allocated to the (child) job; a sub-contract forward keeps the intermediary as `via`.
-  return m.action === 'send_for_work' || m.action === 'forward'
-    ? { party: m.to.party, state: { s: 'allocated', ref: line.job_id }, place: null, via: m.via ?? null }
-    : { party: m.to.party, state: { s: 'available' }, place: m.to.place_id ?? null, via: null };
+  if (m.action === 'send_for_work' || m.action === 'forward') return { party: m.to.party, state: { s: 'allocated', ref: line.job_id }, place: null, via: m.via ?? null, ownerAfter: null, external: false };
+  // Trade (slice 4.5): a sale passes title on receipt; goods leaving to someone we don't track close through EXTERNAL.
+  const ownerAfter = line.owner_after && !sameParty(line.owner_after, line.owner_before) ? (line.owner_after as PartyRef) : null;
+  return { party: m.to.party, state: { s: 'available' }, place: m.to.place_id ?? null, via: null, ownerAfter: line.dest_external ? null : ownerAfter, external: !!line.dest_external };
 }
 
 export interface SettleCtx {
@@ -139,7 +141,7 @@ async function applyReceiptNow(ctx: Ctx, movementId: string, lineId: string, bas
   const postings: Posting[] = [];
   if (line.settled?.outcome === 'within') postings.push(...reverse(settleLine(goods, line.class, sent, oldRecv, c).postings));
   const delta = Math.min(newWinner.base_qty, sent) - Math.min(oldRecv, sent);
-  if (delta) postings.push(...postReceipt({ goods, owner: c.owner, movementId, transitCustodian: c.transitCustodian, to: { party: dest.party, state: dest.state, place: dest.place, via: dest.via }, delta }));
+  if (delta) postings.push(...postReceipt({ goods, owner: c.owner, movementId, transitCustodian: c.transitCustodian, to: { party: dest.party, state: dest.state, place: dest.place, via: dest.via, external: dest.external }, delta, ...(dest.ownerAfter ? { ownerAfter: dest.ownerAfter } : {}) }));
   let settled: any = line.settled?.outcome === 'within' ? null : line.settled ?? null;
   let dq: any = null;
   if (newWinner.final) {

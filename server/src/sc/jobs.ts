@@ -317,7 +317,7 @@ router.get(
     const ctx = req.ctx;
     const j: any = await col('sc_jobs').findOne({ _id: req.params.id, $or: [{ 'owner_party.k': 'b', 'owner_party.id': ctx.businessId }, { 'client_party.k': 'b', 'client_party.id': ctx.businessId }] } as any);
     if (!j || j.status === 'cancelled') throw new HttpError(404, 'Not found');
-    const children = await col('sc_jobs').find({ $or: [{ parent_job_id: j._id }, { hop_from_job_id: j._id }, { rework_of: j._id }], status: { $ne: 'cancelled' } } as any).toArray();
+    const children = await col('sc_jobs').find({ $or: [{ parent_job_id: j._id }, { hop_from_job_id: j._id }, { split_from_job_id: j._id }, { rework_of: j._id }], status: { $ne: 'cancelled' } } as any).toArray();
     const movIds = [...(await jobMovementIds(j)), ...children.flatMap((c: any) => c.returns ?? [])];
     const movs = new Map((await col('sc_movements').find({ _id: { $in: movIds }, cancelled_at: null } as any).toArray()).map((m: any) => [m._id, m]));
     const meta = await specMeta([...(j.inputs ?? []).map((i: any) => i.spec_id), ...(j.outputs ?? []).map((o: any) => o.spec_id)]);
@@ -329,7 +329,7 @@ router.get(
       const sent = line ? winningAssertion(line.sent)?.base_qty ?? 0 : inp.qty ?? 0;
       const r = line ? winningAssertion(line.received) : null;
       const issued = line ? line.resolved_received ?? Math.min(r?.base_qty ?? sent, sent) : inp.qty ?? 0;
-      return { label: line ? lineLabel(ctx, line) : meta.get(inp.spec_id)?.label ?? '', lot: inp.lot ?? line?.lot ?? null, dim: (inp.dim ?? line?.dim) as Dimension, role: inp.role ?? 'primary', sent, issued };
+      return { spec_id: inp.spec_id, label: line ? lineLabel(ctx, line) : meta.get(inp.spec_id)?.label ?? '', lot: inp.lot ?? line?.lot ?? null, dim: (inp.dim ?? line?.dim) as Dimension, role: inp.role ?? 'primary', sent, issued };
     });
     const primary = inputs.filter((i) => i.role === 'primary');
     const dim: Dimension = primary[0]?.dim ?? 'count';
@@ -340,33 +340,38 @@ router.get(
     for (const rid of j.returns ?? []) for (const l of movs.get(rid)?.lines ?? []) if (l.job_id === j._id && l.line_kind === 'unprocessed_return' && roleOf(l.spec_id) === 'primary' && l.dim === dim) unprocessed += winningAssertion(l.sent)?.base_qty ?? 0;
     const sub = children.filter((c: any) => c.parent_job_id === j._id);
     const hops = children.filter((c: any) => c.hop_from_job_id === j._id);
+    const sales = children.filter((c: any) => c.split_from_job_id === j._id);
     const reworks = children.filter((c: any) => c.rework_of === j._id);
     const sentOnHop = hops.reduce((a: number, c: any) => a + (c.sent_inputs ?? c.issued_sent ?? 0), 0);
+    const soldInPlace = sales.reduce((a: number, c: any) => a + (c.sent_inputs ?? c.issued_sent ?? 0), 0);
+    const lostCasualty = j.casualty_lost ?? 0; // written off after a fire, theft or flood at the unit
     const outs = (j.outputs as any[]).filter((o) => o.dim === dim || j.conservation_kind === 'unit_changing');
     const byGrade: Record<string, number> = {};
     for (const o of outs.filter((o) => o.dim !== 'mass' || dim === 'mass')) byGrade[o.grade ?? 'A'] = (byGrade[o.grade ?? 'A'] ?? 0) + o.qty;
     const outputsTotal = Object.values(byGrade).reduce((a, x) => a + x, 0);
     const kind = j.conservation_kind as ConservationKind;
     const factor = kind === 'mass_losing' ? (j.loss_norm_pct ?? 0) / 100 : 1;
-    const pend = approxPending({ kind: kind === 'unit_changing' ? 'assembling' : kind, issued: Math.max(0, issued - unprocessed - sentOnHop), outputs: kind === 'unit_changing' ? 0 : outputsTotal, factor });
+    const pend = approxPending({ kind: kind === 'unit_changing' ? 'assembling' : kind, issued: Math.max(0, issued - unprocessed - sentOnHop - soldInPlace - lostCasualty), outputs: kind === 'unit_changing' ? 0 : outputsTotal, factor });
 
     // The conservation bar, in the input's unit. Open jobs show an estimate for what is still there.
     const segs: { kind: string; qty: number; grade?: string; approx?: boolean }[] = [];
     if (kind !== 'unit_changing') for (const [g, q] of Object.entries(byGrade).sort((a, b) => GRADE_ORDER.indexOf(a[0]) - GRADE_ORDER.indexOf(b[0]))) segs.push({ kind: 'output', grade: g, qty: q });
     if (unprocessed) segs.push({ kind: 'unprocessed', qty: unprocessed });
     if (sentOnHop) segs.push({ kind: 'sent_on', qty: sentOnHop });
+    if (soldInPlace) segs.push({ kind: 'sold', qty: soldInPlace });
+    if (lostCasualty) segs.push({ kind: 'lost', qty: lostCasualty });
     const closure = j.closure ?? null;
     const leftoverQty = (closure?.leftovers ?? []).reduce((a: number, l: any) => a + (l.dim === dim ? l.base : 0), 0);
     if (j.status === 'closed' && closure) {
-      if (kind === 'unit_changing') segs.push({ kind: 'output_est', qty: Math.max(0, issued - unprocessed - sentOnHop - (closure.residual ?? 0)), approx: true });
+      if (kind === 'unit_changing') segs.push({ kind: 'output_est', qty: Math.max(0, issued - unprocessed - sentOnHop - soldInPlace - lostCasualty - (closure.residual ?? 0)), approx: true });
       if (closure.loss) segs.push({ kind: closure.loss < 0 ? 'gain' : 'loss', qty: Math.abs(closure.loss) });
       if (closure.residual) segs.push({ kind: 'unaccounted', qty: Math.abs(closure.residual) });
     } else {
       if (kind === 'mass_losing') {
-        const lossSoFar = Math.max(0, issued - unprocessed - sentOnHop - outputsTotal - pend.input);
+        const lossSoFar = Math.max(0, issued - unprocessed - sentOnHop - soldInPlace - lostCasualty - outputsTotal - pend.input);
         if (pend.input === 0 && lossSoFar) segs.push({ kind: 'loss', qty: lossSoFar });
       }
-      if (pend.input > 0) segs.push({ kind: 'still_there', qty: kind === 'unit_changing' ? Math.max(0, issued - unprocessed - sentOnHop) : pend.input, approx: true });
+      if (pend.input > 0) segs.push({ kind: 'still_there', qty: kind === 'unit_changing' ? Math.max(0, issued - unprocessed - sentOnHop - soldInPlace - lostCasualty) : pend.input, approx: true });
     }
 
     // Outputs grid: spec × grade.
@@ -395,7 +400,7 @@ router.get(
       },
       dim, issued, segments: segs, pending: j.status === 'closed' ? 0 : pend.input,
       inputs, grid: [...grid.values()],
-      children: [...sub.map((c: any) => ({ kind: 'sub', c })), ...hops.map((c: any) => ({ kind: 'hop', c })), ...reworks.map((c: any) => ({ kind: 'rework', c }))].map(({ kind: ck, c }) => ({
+      children: [...sub.map((c: any) => ({ kind: 'sub', c })), ...hops.map((c: any) => ({ kind: 'hop', c })), ...sales.map((c: any) => ({ kind: 'sold', c })), ...reworks.map((c: any) => ({ kind: 'rework', c }))].map(({ kind: ck, c }) => ({
         kind: ck, id: c._id, name: names.get(pk(c.performer_party))?.name ?? '—', sent: c.sent_inputs ?? c.issued_sent ?? 0, status: c.status, since: c.business_date,
         outputs: (c.outputs as any[]).reduce((acc: Record<string, number>, o: any) => ({ ...acc, [o.grade ?? 'A']: (acc[o.grade ?? 'A'] ?? 0) + o.qty }), {}),
       })),
@@ -407,6 +412,7 @@ router.get(
       reopens: (j.reopens ?? []).map((r: any) => ({ at: r.at, business_date: r.business_date, reason: r.reason, auto: r.auto })),
       reclose_failed: j.reclose_failed ?? null,
       canClose: isMe(ctx, j.client_party) && ctx.role === 'owner' && j.status !== 'closed' && !j.in_house,
+      canSellPart: isMe(ctx, j.client_party) && isMe(ctx, j.owner_party) && ctx.role === 'owner' && j.status !== 'closed' && !j.in_house && !j.cancelled_at && pend.input > 0,
       canReopen: isMe(ctx, j.client_party) && ctx.role === 'owner' && j.status === 'closed',
     });
   }),

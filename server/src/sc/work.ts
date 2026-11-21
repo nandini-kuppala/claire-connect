@@ -64,7 +64,7 @@ export async function workRows(ctx: Ctx): Promise<WorkRow[]> {
   const movIds = [...new Set(jobs.flatMap((j: any) => [...j.inputs.map((i: any) => i.movement_id), ...(j.returns ?? [])]))].filter(Boolean);
   const [movs, children, specs] = await Promise.all([
     col('sc_movements').find({ _id: { $in: movIds }, cancelled_at: null } as any).toArray(),
-    col('sc_jobs').find({ $or: [{ parent_job_id: { $in: ids } }, { hop_from_job_id: { $in: ids } }], status: { $ne: 'cancelled' } } as any).toArray(),
+    col('sc_jobs').find({ $or: [{ parent_job_id: { $in: ids } }, { hop_from_job_id: { $in: ids } }, { split_from_job_id: { $in: ids } }], status: { $ne: 'cancelled' } } as any).toArray(),
     col('sc_specs').find({ _id: { $in: [...new Set(jobs.map((j: any) => j.inputs[0]?.spec_id))] } } as any, { projection: { label_en: 1 } }).toArray(),
   ]);
   const mv = new Map(movs.map((m: any) => [m._id, m]));
@@ -92,7 +92,7 @@ export async function workRows(ctx: Ctx): Promise<WorkRow[]> {
     const ownOutputs = (j.outputs as any[]).filter((o) => o.dim === dim && o.source !== 'child').reduce((a, o) => a + o.qty, 0);
     let returned = 0;
     for (const rid of j.returns ?? []) for (const l of mv.get(rid)?.lines ?? []) if (l.job_id === j._id && l.line_kind !== 'unprocessed_return') returned += winningAssertion(l.sent)?.base_qty ?? 0;
-    const sentOn = children.filter((c: any) => c.parent_job_id === j._id || c.hop_from_job_id === j._id);
+    const sentOn = children.filter((c: any) => c.parent_job_id === j._id || c.hop_from_job_id === j._id || c.split_from_job_id === j._id);
     // Unprocessed goods back: mine to the owner leave; a sub-contractor's back to me return to this job (model §3.5).
     const roleOf = new Map((j.inputs as any[]).map((i) => [i.spec_id, i.role ?? 'primary']));
     let unprocessedOut = 0;
@@ -102,7 +102,7 @@ export async function workRows(ctx: Ctx): Promise<WorkRow[]> {
     // Finished work an owner told me to send on has left my unit for good (a hop never comes back here).
     const hoppedOutputs = sentOn.filter((c: any) => c.hop_from_job_id === j._id).reduce((a: number, c: any) => a + (c.sent_outputs ?? 0), 0);
     const kind = j.conservation_kind as ConservationKind;
-    const p = approxPending({ kind, issued: Math.max(0, received - forwarded - unprocessedOut), outputs: ownOutputs, factor: kind === 'mass_losing' ? (j.loss_norm_pct ?? 0) / 100 : 1 });
+    const p = approxPending({ kind, issued: Math.max(0, received - forwarded - unprocessedOut - (j.casualty_lost ?? 0)), outputs: ownOutputs, factor: kind === 'mass_losing' ? (j.loss_norm_pct ?? 0) / 100 : 1 });
     const held = (j.pauses ?? []).find((x: any) => !x.to)?.reason ?? null;
     return {
       id: j._id, client: j.client_party, owner_hidden: !!j.parent_job_id, process_key: j.process_key, status: j.status, since: j.business_date, expected_at: j.expected_at,

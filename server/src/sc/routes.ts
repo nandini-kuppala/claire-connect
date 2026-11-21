@@ -12,6 +12,8 @@ import { jobSummaries, toConfirmFor } from './views.js';
 import disputes from './disputes.js';
 import work from './work.js';
 import jobs from './jobs.js';
+import trade from './trade.js';
+import adjust from './adjust.js';
 
 const router = Router();
 router.use('/sc', requireAuth, requireSc);
@@ -21,6 +23,8 @@ router.use(views);
 router.use(disputes);
 router.use(work);
 router.use(jobs);
+router.use(trade);
+router.use(adjust);
 
 /** Action chips and the Goods badge (03 §4.2). Late/confirm/dispute counts arrive with slices 1–2. */
 router.get(

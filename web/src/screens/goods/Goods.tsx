@@ -6,7 +6,7 @@ import clsx from 'clsx';
 import { api, errorText } from '../../lib/api';
 import { Button } from '../../components/Button';
 import { Sheet } from '../../components/Sheet';
-import { ArrowDown, ArrowRight, ChevronRight, Plus, Repeat, Settings, Scissors } from '../../icons';
+import { ArrowDown, ArrowRight, ChevronRight, Plus, Repeat, Settings, Scissors, SlidersHorizontal, AlertTriangle } from '../../icons';
 import { useSession } from '../../store/session';
 import { GoodsS } from './Goods.strings';
 import { SetupS } from './Setup.strings';
@@ -15,6 +15,7 @@ import { Status, type Late } from './Status';
 import { TwoS } from './Two.strings';
 import { WorkS } from './Work.strings';
 import { JobS } from './Job.strings';
+import { TradeS } from './Trade.strings';
 import { Others } from './Others';
 import { qty as fmtQty, shortDate } from './format';
 
@@ -44,6 +45,7 @@ export default function Goods() {
   const t2 = TwoS.use();
   const wk = WorkS.use();
   const jb = JobS.use();
+  const tr = TradeS.use();
   const [sub, setSub] = useState<'mine' | 'others'>(() => {
     try {
       return localStorage.getItem('cc_goods_sub') === 'others' ? 'others' : 'mine';
@@ -384,6 +386,31 @@ export default function Goods() {
               <span className="min-w-0 flex-1"><span className="block text-[16px] font-semibold text-ink">{r('send')}</span><span className="block text-[13px] text-meta">{r('send_hint')}</span></span>
               <ChevronRight size={18} className="text-meta" aria-hidden />
             </button>
+            <button className="mt-2 flex min-h-14 w-full items-center gap-3 rounded-[18px] border border-line bg-surface px-4 py-2.5 text-left hover:bg-sunken" onClick={() => nav('/goods/record/t/sell')}>
+              <ArrowRight size={20} className="shrink-0 text-primary" aria-hidden />
+              <span className="min-w-0 flex-1"><span className="block text-[15.5px] font-semibold text-ink">{tr('t_sell')}</span><span className="block text-[12.5px] text-meta">{tr('h_sell')}</span></span>
+              <ChevronRight size={18} className="text-meta" aria-hidden />
+            </button>
+            <button className="mt-2 flex min-h-14 w-full items-center gap-3 rounded-[18px] border border-line bg-surface px-4 py-2.5 text-left hover:bg-sunken" onClick={() => nav('/goods/record/t/return_to_supplier')}>
+              <ArrowRight size={20} className="shrink-0 text-primary" aria-hidden />
+              <span className="min-w-0 flex-1"><span className="block text-[15.5px] font-semibold text-ink">{tr('t_return_to_supplier')}</span><span className="block text-[12.5px] text-meta">{tr('h_return_to_supplier')}</span></span>
+              <ChevronRight size={18} className="text-meta" aria-hidden />
+            </button>
+            <button className="mt-2 flex min-h-14 w-full items-center gap-3 rounded-[18px] border border-line bg-surface px-4 py-2.5 text-left hover:bg-sunken" onClick={() => nav('/goods/record/t/sample')}>
+              <ArrowRight size={20} className="shrink-0 text-primary" aria-hidden />
+              <span className="min-w-0 flex-1"><span className="block text-[15.5px] font-semibold text-ink">{tr('t_sample')}</span><span className="block text-[12.5px] text-meta">{tr('h_sample')}</span></span>
+              <ChevronRight size={18} className="text-meta" aria-hidden />
+            </button>
+            <button className="mt-2 flex min-h-14 w-full items-center gap-3 rounded-[18px] border border-line bg-surface px-4 py-2.5 text-left hover:bg-sunken" onClick={() => nav('/goods/record/t/returnable_sample')}>
+              <ArrowRight size={20} className="shrink-0 text-primary" aria-hidden />
+              <span className="min-w-0 flex-1"><span className="block text-[15.5px] font-semibold text-ink">{tr('t_returnable_sample')}</span><span className="block text-[12.5px] text-meta">{tr('h_returnable_sample')}</span></span>
+              <ChevronRight size={18} className="text-meta" aria-hidden />
+            </button>
+            <button className="mt-2 flex min-h-14 w-full items-center gap-3 rounded-[18px] border border-line bg-surface px-4 py-2.5 text-left hover:bg-sunken" onClick={() => nav('/goods/record/t/move')}>
+              <ArrowRight size={20} className="shrink-0 text-primary" aria-hidden />
+              <span className="min-w-0 flex-1"><span className="block text-[15.5px] font-semibold text-ink">{tr('t_move')}</span><span className="block text-[12.5px] text-meta">{tr('h_move')}</span></span>
+              <ChevronRight size={18} className="text-meta" aria-hidden />
+            </button>
           </section>
           <section>
             <h3 className="mb-2 text-[13px] font-semibold text-ink-2">{r('came_in')}</h3>
@@ -397,16 +424,40 @@ export default function Goods() {
               <span className="min-w-0 flex-1"><span className="block text-[16px] font-semibold text-ink">{t2('received_first')}</span><span className="block text-[13px] text-meta">{t2('received_first_hint')}</span></span>
               <ChevronRight size={18} className="text-meta" aria-hidden />
             </button>
+            <button className="mt-2 flex min-h-14 w-full items-center gap-3 rounded-[18px] border border-line bg-surface px-4 py-2.5 text-left hover:bg-sunken" onClick={() => nav('/goods/record/t/buy')}>
+              <ArrowDown size={20} className="shrink-0 text-primary" aria-hidden />
+              <span className="min-w-0 flex-1"><span className="block text-[15.5px] font-semibold text-ink">{tr('t_buy')}</span><span className="block text-[12.5px] text-meta">{tr('h_buy')}</span></span>
+              <ChevronRight size={18} className="text-meta" aria-hidden />
+            </button>
+            <button className="mt-2 flex min-h-14 w-full items-center gap-3 rounded-[18px] border border-line bg-surface px-4 py-2.5 text-left hover:bg-sunken" onClick={() => nav('/goods/record/t/buyer_returned')}>
+              <ArrowDown size={20} className="shrink-0 text-primary" aria-hidden />
+              <span className="min-w-0 flex-1"><span className="block text-[15.5px] font-semibold text-ink">{tr('t_buyer_returned')}</span><span className="block text-[12.5px] text-meta">{tr('h_buyer_returned')}</span></span>
+              <ChevronRight size={18} className="text-meta" aria-hidden />
+            </button>
+            <button className="mt-2 flex min-h-14 w-full items-center gap-3 rounded-[18px] border border-line bg-surface px-4 py-2.5 text-left hover:bg-sunken" onClick={() => nav('/goods/record/t/collect')}>
+              <ArrowDown size={20} className="shrink-0 text-primary" aria-hidden />
+              <span className="min-w-0 flex-1"><span className="block text-[15.5px] font-semibold text-ink">{tr('t_collect')}</span><span className="block text-[12.5px] text-meta">{tr('h_collect')}</span></span>
+              <ChevronRight size={18} className="text-meta" aria-hidden />
+            </button>
           </section>
           <section>
-            <h3 className="mb-2 text-[13px] font-semibold text-ink-2">{jb('made')}</h3>
+            <h3 className="mb-2 text-[13px] font-semibold text-ink-2">{tr('inside')}</h3>
             <button className="flex min-h-16 w-full items-center gap-3 rounded-[18px] border border-line bg-surface px-4 py-3 text-left hover:bg-sunken" onClick={() => nav('/goods/record/made')}>
               <Scissors size={22} className="shrink-0 text-primary" aria-hidden />
               <span className="min-w-0 flex-1"><span className="block text-[16px] font-semibold text-ink">{jb('made')}</span><span className="block text-[13px] text-meta">{jb('made_hint')}</span></span>
               <ChevronRight size={18} className="text-meta" aria-hidden />
             </button>
+            <button className="mt-2 flex min-h-14 w-full items-center gap-3 rounded-[18px] border border-line bg-surface px-4 py-2.5 text-left hover:bg-sunken" onClick={() => nav('/goods/adjust')}>
+              <SlidersHorizontal size={20} className="shrink-0 text-primary" aria-hidden />
+              <span className="min-w-0 flex-1"><span className="block text-[15.5px] font-semibold text-ink">{tr('stock')}</span><span className="block text-[12.5px] text-meta">{tr('stock_hint')}</span></span>
+              <ChevronRight size={18} className="text-meta" aria-hidden />
+            </button>
+            <button className="mt-2 flex min-h-14 w-full items-center gap-3 rounded-[18px] border border-line bg-surface px-4 py-2.5 text-left hover:bg-sunken" onClick={() => nav('/goods/adjust?fire=1')}>
+              <AlertTriangle size={20} className="shrink-0 text-primary" aria-hidden />
+              <span className="min-w-0 flex-1"><span className="block text-[15.5px] font-semibold text-ink">{tr('fire')}</span><span className="block text-[12.5px] text-meta">{tr('fire_hint')}</span></span>
+              <ChevronRight size={18} className="text-meta" aria-hidden />
+            </button>
           </section>
-          <p className="text-[13px] text-meta">{r('more_soon')}</p>
         </div>
       </Sheet>
 

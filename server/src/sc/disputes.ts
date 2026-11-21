@@ -9,6 +9,7 @@ import { requireOwner, type ScRequest } from './flag.js';
 import { post } from './repo.js';
 import { partyNames } from './views.js';
 import { enqueueCard, processDueCards } from './goodsChat.js';
+import { casualtyPostings } from './adjust.js';
 import { pseudo, real } from '../../../shared/sc/postings.js';
 import { todayIST } from '../../../shared/sc/dates.js';
 import type { PartyRef, Posting } from '../../../shared/sc/types.js';
@@ -25,20 +26,25 @@ async function myDispute(businessId: string, id: string) {
 
 /** The single posting set for an outcome (model §3.7 mapping table; 04 §5.5). */
 export function resolutionPostings(d: any, outcome: Outcome): { postings: Posting[]; resolvedReceived: number } {
+  if (d.kind === 'casualty') return { postings: casualtyPostings(d, outcome), resolvedReceived: 0 };
   const pc = d.posting;
   const g = pc.goods;
   const owner = pc.owner as PartyRef;
-  const dest = real(g, owner, pc.dest.party, pc.dest.state, { place: pc.dest.place, via: pc.dest.via ?? null });
+  // Where the receiver's share lands; a sale passes title (EXTERNAL pair), a sale to someone untracked leaves our books.
+  const after = (pc.dest.ownerAfter ?? null) as PartyRef | null;
+  const destKey = pc.dest.external ? pseudo(g, 'EXTERNAL', `${pc.dest.party.k}:${pc.dest.party.id}`, owner) : real(g, after ?? owner, pc.dest.party, pc.dest.state, { place: pc.dest.place, via: pc.dest.via ?? null });
   const diff = d.difference as number; // sent − received
   const { sent, received } = d.figures;
   const toReceiver = outcome === 'sent' ? Math.abs(diff) : outcome === 'split' ? Math.floor(Math.abs(diff) / 2) : 0;
   const rest = Math.abs(diff) - toReceiver;
   const P = (key: any, delta: number): Posting => ({ key, delta, dim: g.dim });
+  const land = (q: number): Posting[] =>
+    after ? [P(pseudo(g, 'EXTERNAL', `${after.k}:${after.id}`, owner), q), P(pseudo(g, 'EXTERNAL', `${owner.k}:${owner.id}`, after), -q), P(destKey, q)] : [P(destKey, q)];
   const out: Posting[] = [];
   if (diff > 0) {
     // Short: the difference sits in disputed(D) on the in-transit custodian.
     out.push(P(real(g, owner, pc.transit_custodian, { s: 'disputed', ref: d._id }), -diff));
-    if (toReceiver) out.push(P(dest, toReceiver));
+    if (toReceiver) out.push(...land(toReceiver));
     if (rest) {
       // Receiver's figure stands: weighed → weighing loss on the terms' bearer; counted → short-shipped, still the
       // sender's (back to the sender's holding).
@@ -48,7 +54,7 @@ export function resolutionPostings(d: any, outcome: Outcome): { postings: Postin
     // Over-receipt: the excess sits held(found_pending) at the receiver.
     out.push(P(real(g, owner, pc.receiver, { s: 'held', reason: 'found_pending', ref: d._id }), diff));
     const toDest = outcome === 'received' || outcome === 'credit' ? -diff : outcome === 'split' ? Math.floor(-diff / 2) : 0;
-    if (toDest) out.push(P(dest, toDest));
+    if (toDest) out.push(...land(toDest));
     if (-diff - toDest) out.push(P(pseudo(g, 'ADJUSTMENT', 'found_pending', owner), -diff - toDest));
   }
   const resolvedReceived = diff > 0 ? received + toReceiver : outcome === 'sent' ? sent : outcome === 'split' ? sent + Math.floor(-diff / 2) : received;
@@ -66,6 +72,16 @@ async function resolveNow(req: ScRequest, d: any, outcome: Outcome, note?: strin
   const at = Date.now();
   await post(req.ctx, { type: 'dispute_resolved', ref: { kind: 'dispute', id: d._id }, payload: { outcome }, business_date: todayIST() }, postings, async (session) => {
     await col('sc_discrepancies').updateOne({ _id: d._id } as any, { $set: { state: 'resolved', resolution: { outcome, by_business_id: req.ctx.businessId, by_user_id: req.ctx.userId, at, note: note ?? null } } }, { session });
+    if (d.kind === 'casualty') {
+      // Goods of a job written off in a casualty leave that job (they are no longer "still there").
+      const lostByJob = new Map<string, number>();
+      for (const it of d.items as any[]) {
+        if (it.key.state?.s !== 'allocated') continue;
+        const back = outcome === 'sent' ? it.qty : outcome === 'split' ? Math.floor(it.qty / 2) : 0;
+        lostByJob.set(it.key.state.ref, (lostByJob.get(it.key.state.ref) ?? 0) + it.qty - back);
+      }
+      for (const [jobId, lost] of lostByJob) if (lost) await col('sc_jobs').updateOne({ _id: jobId } as any, { $inc: { casualty_lost: lost, version: 1 } }, { session });
+    }
     if (d.refs?.movement_id) {
       await col('sc_movements').updateOne(
         { _id: d.refs.movement_id, 'lines.line_id': d.refs.line_id } as any,
@@ -102,7 +118,7 @@ router.get(
     const side = d.sent_by === me ? 'sender' : d.received_by === me ? 'receiver' : 'recorder';
     const last = d.proposals?.at(-1) ?? null;
     res.json({
-      id: d._id, state: d.state, kind: d.kind, line_label: d.line_label, dim: d.dim, counted: d.posting.counted, allowed: d.allowed, pct: d.pct,
+      id: d._id, state: d.state, kind: d.kind, cause: d.cause ?? null, note: d.note ?? null, line_label: d.line_label, dim: d.dim, counted: d.posting.counted, allowed: d.allowed, pct: d.pct,
       figures: d.figures, difference: d.difference, sender: { ...d.posting.sender, name: nm(d.posting.sender) }, receiver: { ...d.posting.receiver, name: nm(d.posting.receiver) },
       side, twoSided: (d.parties?.length ?? 0) > 1, proposals: d.proposals ?? [], lastProposal: last, mayAccept: !!last && last.by_business_id !== me && d.state !== 'resolved',
       resolution: d.resolution ?? null, refs: d.refs, ticket_id: d.ticket_id ?? null, role: req.ctx.role,

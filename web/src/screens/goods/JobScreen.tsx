@@ -8,6 +8,10 @@ import { Sheet } from '../../components/Sheet';
 import { ArrowDown, ArrowLeft, Check, ChevronRight, Lock, Repeat } from '../../icons';
 import { useSession } from '../../store/session';
 import { JobS } from './Job.strings';
+import { TradeS } from './Trade.strings';
+import { PartyPicker } from './PartyPicker';
+import { clientId } from './format';
+import type { Party } from './types';
 import { RecS } from './Record.strings';
 import { Status, type Late } from './Status';
 import { qty as fmtQty, shortDate } from './format';
@@ -17,16 +21,16 @@ interface Seg { kind: string; qty: number; grade?: string; approx?: boolean }
 interface Detail {
   job: { id: string; process: Record<string, string> | null; kind: string; status: string; in_house: boolean; cancelled: boolean; performerName: string | null; since: string; expected_at: string; closed_at: number | null; late: Late | null; ready: boolean; held: string | null; loss_norm_pct: number };
   dim: Dim; issued: number; segments: Seg[]; pending: number;
-  inputs: { label: string; lot: string | null; dim: Dim; role: string; sent: number; issued: number }[];
+  inputs: { spec_id: string; label: string; lot: string | null; dim: Dim; role: string; sent: number; issued: number }[];
   grid: { label: string; dim: Dim; grades: Record<string, number>; via_sub: number }[];
-  children: { kind: 'sub' | 'hop' | 'rework'; id: string; name: string; sent: number; status: string; since: string; outputs: Record<string, number> }[];
+  children: { kind: 'sub' | 'hop' | 'rework' | 'sold'; id: string; name: string; sent: number; status: string; since: string; outputs: Record<string, number> }[];
   disputes: { id: string; label: string; difference: number; dim: Dim }[];
   closure: { business_date: string; residual: number; loss: number; loss_pct: number | null; unchecked: boolean; accepted: boolean; carried_claims: string[]; auto: string | null } | null;
   adjustments: { label: string; qty: number; unit: string; rate_paise: number; amount_paise: number; date: string }[];
   billChange: { from_paise: number; to_paise: number; business_date: string } | null;
   reopens: { business_date: string; reason: string; auto: boolean }[];
   reclose_failed: { reason: string } | null;
-  canClose: boolean; canReopen: boolean;
+  canClose: boolean; canReopen: boolean; canSellPart: boolean;
 }
 interface Preview {
   needs: { shortage: number; highLoss: number | null; unexplained: number | null };
@@ -38,19 +42,23 @@ type Disp = 'used' | 'kept_adjusted' | 'kept_for_next' | 'scrapped';
 // Segment fills: colour is never the only signal (each segment is named with its number below the bar).
 const FILL: Record<string, string> = {
   A: 'bg-success', B: 'bg-success/60', rework: 'bg-accent', reject: 'bg-danger/70', scrap: 'bg-danger/50', output_est: 'bg-success',
-  unprocessed: 'bg-ink-2/40', sent_on: 'bg-teal/60', loss: 'bg-clay', gain: 'bg-clay/50', unaccounted: 'bg-danger', still_there: 'bg-primary-soft',
+  unprocessed: 'bg-ink-2/40', sent_on: 'bg-teal/60', sold: 'bg-marigold/70', lost: 'bg-ink', loss: 'bg-clay', gain: 'bg-clay/50', unaccounted: 'bg-danger', still_there: 'bg-primary-soft',
 };
 const inr = (paise: number) => `${Math.round(paise / 100).toLocaleString('en-IN')}`;
 
 export default function JobScreen() {
   const s = JobS.use();
+  const tr = TradeS.use();
   const r = RecS.use();
   const nav = useNavigate();
   const { id } = useParams();
   const lang = useSession((st) => st.user?.language || 'en');
   const [d, setD] = useState<Detail | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [sheet, setSheet] = useState<'close' | 'reopen' | null>(null);
+  const [sheet, setSheet] = useState<'close' | 'reopen' | 'sell' | null>(null);
+  const [buyer, setBuyer] = useState<Party | null>(null);
+  const [buyerPick, setBuyerPick] = useState(false);
+  const [sellQty, setSellQty] = useState<Record<string, string>>({});
   const [pv, setPv] = useState<Preview | null>(null);
   const [left, setLeft] = useState<Record<string, { qty: string; disp: Disp; rate: string }>>({});
   const [carry, setCarry] = useState(false);
@@ -253,6 +261,7 @@ export default function JobScreen() {
           {d.canClose && (
             <div className="mx-4 mt-5 flex flex-wrap gap-2">
               <Button variant="ghost" onClick={async () => { await api.post(`/api/sc/jobs/${id}/cancel`, { on: !j.cancelled }); await load(); }}>{j.cancelled ? s('resume') : s('stop')}</Button>
+              {d.canSellPart && <Button variant="ghost" onClick={() => { setBuyer(null); setSellQty({}); setSheet('sell'); }}>{tr('sell_part')}</Button>}
             </div>
           )}
           {error && <p className="mx-4 mt-4 rounded-[14px] bg-danger-tint px-3 py-2 text-[14px] text-danger">{error}</p>}
@@ -318,6 +327,33 @@ export default function JobScreen() {
           </div>
         )}
       </Sheet>
+
+      <Sheet open={sheet === 'sell'} onClose={() => setSheet(null)} title={tr('sell_part')}
+        footer={<Button block size="lg" loading={busy} disabled={!buyer || !Object.values(sellQty).some((v) => Number(v) > 0)} onClick={async () => {
+          setBusy(true);
+          try {
+            const unitOf = (dim: Dim) => (dim === 'mass' ? 'kg' : dim === 'length' ? 'm' : 'pcs');
+            const lines = d.inputs.map((i, k) => ({ i, v: sellQty[k] })).filter((x) => Number(x.v) > 0).map(({ i, v }) => ({ spec_id: i.spec_id, qty: Number(v), unit: unitOf(i.dim), ...(i.lot ? { lot: i.lot } : {}) }));
+            await api.post(`/api/sc/jobs/${id}/sell-part`, { to: buyer!.ref, lines, client_id: clientId() });
+            setSheet(null);
+            await load();
+          } catch (e) { setError(errorText(e)); setSheet(null); } finally { setBusy(false); }
+        }}>{r('save')}</Button>}>
+        <div className="space-y-4 pb-2">
+          <p className="text-[14px] text-ink-2">{tr('sell_part_hint', { name: j.performerName ?? '' })}</p>
+          <button className="flex min-h-12 w-full items-center rounded-[16px] border border-line-strong bg-surface px-3.5 text-left text-[15px]" onClick={() => setBuyerPick(true)}>{buyer?.name ?? <span className="text-meta">{tr('buyer')}</span>}</button>
+          <ul className="space-y-2">
+            {d.inputs.map((i, k) => i.role === 'primary' && (
+              <li key={k} className="flex items-center gap-3">
+                <span className="min-w-0 flex-1 text-[14.5px] text-ink">{i.label}{i.lot ? <span className="whitespace-nowrap text-meta"> · {s('lot')} {i.lot}</span> : null}</span>
+                <input className="h-11 w-24 rounded-[12px] border border-line-strong px-2 text-right tabular-nums" inputMode="decimal" aria-label={i.label} placeholder="0" value={sellQty[k] ?? ''} onChange={(e) => setSellQty((x) => ({ ...x, [k]: e.target.value.replace(/[^\d.]/g, '') }))} />
+                <span className="w-8 text-[13px] text-meta">{i.dim === 'mass' ? 'kg' : i.dim === 'length' ? 'm' : 'pcs'}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </Sheet>
+      <PartyPicker open={buyerPick} onClose={() => setBuyerPick(false)} onPick={setBuyer} />
 
       <Sheet open={sheet === 'reopen'} onClose={() => setSheet(null)} title={s('reopen_title')}
         footer={<Button block size="lg" loading={busy} disabled={why.trim().length < 2} onClick={async () => { setBusy(true); try { await api.post(`/api/sc/jobs/${id}/reopen`, { reason: why.trim() }); setSheet(null); await load(); } catch (e) { setError(errorText(e)); } finally { setBusy(false); } }}>{s('reopen')}</Button>}>

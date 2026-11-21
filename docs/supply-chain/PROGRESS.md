@@ -3,7 +3,7 @@
 Governing brief: `docs/supply-chain/BRIEF.md` (re-read at the start of every phase and after any context compaction).
 
 ## Current phase
-**Phase 6 — slices 0, 0.5, 1, 2, 3 and 4 done. Next: slice 4.5 (the other record forms and adjustments); DEMO STOP after slice 4.5 (B2).** Work stays on local branch `supply-chain`. Phase 0 done: `00-current-state.md`.
+**Phase 6 — slices 0, 0.5, 1, 2, 3, 4 and 4.5 done. DEMO STOP after slice 4.5 (B2): waiting for the user's go-ahead to continue with slice 5 (personal Claire).** Work stays on local branch `supply-chain`. Phase 0 done: `00-current-state.md`.
 
 ## Phase status
 | Phase | Doc | Status |
@@ -14,7 +14,7 @@ Governing brief: `docs/supply-chain/BRIEF.md` (re-read at the start of every pha
 | 3 Product & UX | `03-product-ux.md`, `ui-principles.md`, `mockups/` (16 screens) | Done 2026-11-21, rendered at 375/1280 px en+ta, red-teamed, **approved** (U1–U9 defaults) |
 | 4 Technical design | `04-technical-design.md` | Done 2026-11-21, model check run, red-teamed, **approved** (T1–T9 defaults) |
 | 5 Build plan | `05-build-plan.md` (v2) | Done 2026-11-21, red-teamed, **approved** (B1–B3 defaults) |
-| 6 Implementation | slices on branch `supply-chain` | Slices 0, 0.5, 1, 2, 3, 4 done 2026-11-21; next demo stop after 4.5 |
+| 6 Implementation | slices on branch `supply-chain` | Slices 0–4.5 done 2026-11-21 — demo stop |
 | 7 Final verification | | Not started |
 
 ## Decisions made
@@ -282,8 +282,68 @@ Governing brief: `docs/supply-chain/BRIEF.md` (re-read at the start of every pha
   - "Kept for the next job" goods sit at the job worker as available stock; Out with others lists jobs only, so they don't show there yet.
   - Cancelled-and-closed jobs and in-house jobs are reached from the Made here history, movement and ledger links. There is no "Closed jobs" list yet.
 
+### Slice 4.5 — The other record forms and adjustments (2026-11-21)
+- **Built:**
+  - **Server (`trade.ts`):** one `POST /sc/movements/trade` for eight kinds.
+    - **Who records**: whoever has the goods.
+    - **Outgoing** (sell, return to supplier, give or lend a sample, move between my places) draws from a picked stock row with the never-negative check and the owner override.
+      - A business on CLAIRE confirms what arrived, and **title passes on its receipt**. `destOf` now carries `ownerAfter`; confirmations and dispute outcomes post the EXTERNAL pair.
+      - Selling to someone not on CLAIRE closes the goods out of my books through EXTERNAL.
+    - **Incoming** (buy, buyer returned) and **collect** are for parties not on CLAIRE. A business on CLAIRE gets `409 they_record`: it records its own sale and I confirm it, so nobody draws down a stock they can't see.
+    - **In place**:
+      - **N**: bought, kept at the seller (mine, at Sri Amman), then collected in parts.
+      - Sold and kept for the buyer at my unit: the buyer's goods sit at my unit.
+    - **AA**: sell my goods from a job worker's premises. **Z**: grade per line. **AD**: a lent sample stays mine at their unit; a given one is theirs once confirmed.
+    - The rate is stored apart from the movement (owner only, never shown to the buyer). `GET /sc/stock` lists my goods at my unit and with others.
+  - **Sale in place of allocated goods (04 §5.6.6)**: `POST /sc/jobs/:id/sell-part` splits off a child job (`split_from_job_id`).
+    - The buyer is its owner and client; the performer is unchanged.
+    - The parent's allocation shrinks, and every summary (owner, job worker, job detail) counts the sold share as gone.
+    - The buyer sees only the child job and the sold lines. Undo cancels the child job.
+  - **Adjustments (`adjust.ts`, model §3.6)**: change grade, change material (respec, same measure only, E2), change or split lot, found, write off (reason required), and count against the book.
+    - Counts and found goods apply only at my own unit.
+    - Respec, found and write off are owner-only.
+  - **Casualty**: fire, theft or flood at my unit.
+    - My own goods are written off.
+    - Each other owner's goods move to `held(casualty)`, with **one difference per owner**. Under a sub-contract it is per client I work for, never the owner behind it.
+    - A casualty difference blocks closing that owner's job. "Accept the loss" writes the goods off against the unit where it happened and records `casualty_lost` on the job, so "still there" drops. "Not lost" puts them back.
+  - **Web:**
+    - **Record sheet**: Went out (Send, Sell, Return to supplier, Give / Lend a sample, Move); Came in (Got back, Received for work, Buy, Buyer returned, Collect); Inside my unit (Made here, Correct stock, Fire / theft / flood).
+    - **One trade form** for all eight kinds: party, pick from stock (one place at a time) or name the material, grade per line, "their bill says", kept-in-place toggle, give-back date for lent samples, DC no., owner-only rate, owner override with reason.
+    - **Correct stock screen**: tap a row for count (live "3 pcs less than the book"), grade, lot, material, write off; Found goods; the fire / theft / flood sheet listing everything at my unit, with "for {name}" on others' goods.
+    - **Job screen**: "Sell part of this", plus "sold where it is" and "lost" segments.
+    - **Dispute screen** for a casualty: "Lost (flood) · 2 kg", Accept the loss / They were not lost.
+    - The party ledger and chat cards name the new record types.
+- **Checks:**
+  - typecheck + lint green; 21/21 unit tests; build OK (new screens 3.4 KB and 3.9 KB gzipped).
+  - **`scripts/sc-smoke-s45.py`: 39/39**, covering:
+    - N: buy 200 kg kept at Sri Amman → collect 60 → 140 there; can't collect more than is there; buying from a business on CLAIRE is refused.
+    - M: buy zips (bill 102, counted 100 → difference), return 20 → 80.
+    - Z: buyer returned 50 pcs grade B.
+    - Selling to Lakshmi: 29.8 of 30 kg confirmed, hers now, weighing loss within tolerance, and she never sees the rate. Selling to Mani and keeping 5 kg for Mani: Mani's 5 kg show at my unit "for Mani Exports".
+    - AD lend / AA sell 5 from Lakshmi's premises / AD give to Sree; AB move.
+    - Sale in place of 40 of 100 kg at the dyer: Ravi 60, Sree 40 as her own job, Lakshmi holds 60 for Ravi and 40 for Sree, and Sree gets 404 on Ravi's job.
+    - E2 found → respec; respec across measures refused; regrade; lot split; write off needs a reason; count −3; counting goods with others refused.
+    - Fire at Lakshmi's unit: her own written off, one difference each for Ravi and Sree; neither sees the other's; Ravi's job can't close; Ravi accepts → bar 40 sold + 10 lost + about 50 still there; Sree says not lost → Lakshmi accepts → restored.
+  - s1–s4 still pass; `sc:verify` 0 problems (570 holdings).
+  - **Browser** (Ravi, Tamil, 375 px): Record sheet with all entries; sold 7.5 kg cut waste to Mani from the form with a rate; the stock picker includes goods at Lakshmi; the count sheet's live difference; the casualty dispute screen.
+- **Fixed during checks:**
+  - A casualty loss didn't reduce "still there" on the job.
+  - "Made here" appeared as both a section heading and a row; the section is now "Inside my unit".
+  - A Tamil case ending was glued onto a noun.
+- **Decisions in implementation:**
+  - Selling in place and buying in place post at once. The buyer's acceptance step (model §4.1 "posts nothing until accepted") is not built; the buyer can dispute instead.
+  - Collect works with parties not on CLAIRE only.
+  - The rate is in `sc_prices`, apart from the shared movement.
+- **Known gaps:**
+  - **`correct_line`** (re-point a posted line's owner, job or counterparty, acknowledged by both sides) is not built. Undo within 10 minutes and a difference on the line cover the common cases today.
+  - A business on CLAIRE handing over goods it keeps for someone (the counterpart of Collect) is not built.
+  - Unconfirmed given samples are not yet written off after 30 days.
+  - Casualty differences are not yet forwarded upstream (a sub-contractor's fire reaches the intermediary, not the owner).
+  - Casualty doesn't flag a GST input-credit review.
+  - Stopped jobs are not moved to `cancelled_awaiting_resolution`; the open difference blocks closing instead.
+
 ## Open questions
 - T8: a separate free Atlas cluster for integration tests needs to be created by the user (not blocking slice 0's pure tests).
 
 ## Next
-Slice 4.5 (Buy / Sell, return to supplier, samples, move between my places, sale in place of allocated goods, adjustments). Demo stop after slice 4.5.
+**Demo stop.** Then slice 5 (personal Claire: one-call tool selection, templated answers in en/ta/hi, record drafts, voice).

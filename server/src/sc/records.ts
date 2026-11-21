@@ -29,7 +29,7 @@ const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 const partyRef = z.object({ k: z.enum(['b', 'c']), id: z.string().min(1).max(64) });
 
 /** A counterparty this business may record with: its own contact, or another business on the platform. */
-async function counterparty(ctx: Ctx, p: PartyRef) {
+export async function counterparty(ctx: Ctx, p: PartyRef) {
   if (p.k === 'c') {
     const c = await col('sc_contacts').findOne({ _id: p.id, owner_business_id: ctx.businessId } as any);
     if (!c) throw new HttpError(404, 'Not found');
@@ -41,7 +41,7 @@ async function counterparty(ctx: Ctx, p: PartyRef) {
   return { party: p, onPlatform: true };
 }
 
-const bizIds = (...ps: PartyRef[]) => [...new Set(ps.filter((p) => p.k === 'b').map((p) => p.id))];
+export const bizIds = (...ps: PartyRef[]) => [...new Set(ps.filter((p) => p.k === 'b').map((p) => p.id))];
 
 // ── Send for work ────────────────────────────────────────────────────────────────────────────────
 
@@ -462,6 +462,10 @@ router.post(
       await col('sc_movements').updateOne({ _id: m._id } as any, { $set: { cancelled_at: Date.now() }, $inc: { version: 1 } }, { session });
       await col('sc_discrepancies').updateMany({ 'refs.movement_id': m._id, state: { $ne: 'resolved' } } as any, { $set: { state: 'cancelled' } }, { session });
       if (m.action === 'send_for_work' && jobId) await col('sc_jobs').updateOne({ _id: jobId } as any, { $set: { status: 'cancelled' }, $inc: { version: 1 } }, { session });
+      if (m.purpose === 'sale_allocated' && jobId) {
+        await col('sc_jobs').updateOne({ _id: jobId } as any, { $set: { status: 'cancelled' }, $inc: { version: 1 } }, { session });
+        await col('sc_jobs').updateOne({ _id: m.parent_job_id } as any, { $pull: { splits: { movement_id: m._id } } as any }, { session });
+      }
       if (m.action === 'return_from_work' && jobId) {
         const back = (m.lines as any[]).filter((l) => l.line_kind === 'unprocessed_return').reduce((x: number, l: any) => x + (winningAssertion(l.sent)?.base_qty ?? 0), 0);
         await col('sc_jobs').updateOne({ _id: jobId } as any, { $pull: { outputs: { movement_id: m._id }, returns: m._id } as any, $set: { status: 'in_progress', completed_at: null }, $inc: { version: 1, unprocessed_back: -back } }, { session });

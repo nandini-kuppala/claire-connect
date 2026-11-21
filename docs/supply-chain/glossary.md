@@ -47,3 +47,12 @@ This fixes one word per concept before UI strings and Claire's templates are wri
 | Made here | Made here | இங்கே செய்தது | यहाँ बना | in-house work group |
 | Cut · Pack · Check | Cut · Pack · Check | கட்டிங் · பேக்கிங் · செக்கிங் | कटिंग · पैकिंग · चेकिंग | |
 | Statement (link) | statement | கணக்கு விவரம் | हिसाब | |
+| Sell / Sold | Sell | விற்பனை / விற்றது | बेचें / बेचा | |
+| Buy / Bought | Buy | வாங்கியது | खरीदा | |
+| Return to supplier | Return to supplier | சப்ளையருக்குத் திருப்பு | सप्लायर को लौटाएँ | |
+| Sample (given / lent) | Sample | சாம்பிள் / சாம்பிள் (திரும்பத் தர) | सैंपल / सैंपल (वापसी वाला) | |
+| Kept at the supplier | Kept at the supplier | சப்ளையரிடமே உள்ளது | सप्लायर के पास रखा | N |
+| Correct stock | Correct stock | ஸ்டாக் திருத்தம் | स्टॉक सुधार | |
+| Write off | Write off | வீணானது எனப் பதி | बट्टे खाते डालें | *alt.* நஷ்டம் எழுது |
+| Count (vs the book) | Count | எண்ணு (கணக்கில்) | गिनें (हिसाब में) | |
+| Fire / theft / flood | Fire, theft or flood | தீ, திருட்டு, வெள்ளம் | आग, चोरी, बाढ़ | casualty |
