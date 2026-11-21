@@ -1,5 +1,5 @@
 // Router, auth guards and the single chat connection for the signed-in user.
-import { useEffect, type ReactNode } from 'react';
+import { lazy, Suspense, useEffect, type ReactNode } from 'react';
 import { Navigate, Route, Routes, useLocation, useParams } from 'react-router-dom';
 import { Loader2 } from './icons';
 import { useSession, isAgent, isOnboarded } from './store/session';
@@ -22,6 +22,15 @@ import Results from './screens/Results';
 import Compare from './screens/Compare';
 import IconGallery from './icons/Gallery';
 import { CallLayer } from './call/CallLayer';
+
+// Supply-chain screens are lazy routes: they add nothing to the first load (docs/supply-chain/04 §6.3).
+const Goods = lazy(() => import('./screens/goods/Goods'));
+
+/** The Goods routes exist only for businesses with the supply-chain flag; others go Home. */
+function RequireGoods({ children }: { children: ReactNode }) {
+  const on = useSession((s) => s.features?.supplyChain === true);
+  return on ? <>{children}</> : <Navigate to="/" replace />;
+}
 
 function Splash() {
   return (
@@ -165,6 +174,20 @@ export default function App() {
               <AppShell>
                 <Orders />
               </AppShell>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/goods"
+          element={
+            <RequireAuth agentOk={false}>
+              <RequireGoods>
+                <AppShell>
+                  <Suspense fallback={<Splash />}>
+                    <Goods />
+                  </Suspense>
+                </AppShell>
+              </RequireGoods>
             </RequireAuth>
           }
         />

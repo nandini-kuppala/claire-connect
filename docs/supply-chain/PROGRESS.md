@@ -3,7 +3,7 @@
 Governing brief: `docs/supply-chain/BRIEF.md` (re-read at the start of every phase and after any context compaction).
 
 ## Current phase
-**Phase 6 — Implementation, slice 0 (Foundations) in progress** on local branch `supply-chain`. Phase 0 done: `00-current-state.md`.
+**Phase 6 — slice 0 done; next slice 0.5 (setup data)** on local branch `supply-chain`. Phase 0 done: `00-current-state.md`.
 
 ## Phase status
 | Phase | Doc | Status |
@@ -14,7 +14,7 @@ Governing brief: `docs/supply-chain/BRIEF.md` (re-read at the start of every pha
 | 3 Product & UX | `03-product-ux.md`, `ui-principles.md`, `mockups/` (16 screens) | Done 2026-11-21, rendered at 375/1280 px en+ta, red-teamed, **approved** (U1–U9 defaults) |
 | 4 Technical design | `04-technical-design.md` | Done 2026-11-21, model check run, red-teamed, **approved** (T1–T9 defaults) |
 | 5 Build plan | `05-build-plan.md` (v2) | Done 2026-11-21, red-teamed, **approved** (B1–B3 defaults) |
-| 6 Implementation | slices on branch `supply-chain` | In progress: slice 0 |
+| 6 Implementation | slices on branch `supply-chain` | Slice 0 done 2026-11-21 |
 | 7 Final verification | | Not started |
 
 ## Decisions made
@@ -44,6 +44,22 @@ Governing brief: `docs/supply-chain/BRIEF.md` (re-read at the start of every pha
 - 2026-11-21: Phase 4: tool-calling check of the configured OpenRouter models (`research/llm-toolcall-check.mjs`, results json): Nemotron blocked for this key (6/6 404), ERNIE 6/6 correct, Ling 2/2 correct but 4/6 HTTP 429, Gemma 6/6 HTTP 429. → Claire design = one call that picks a tool + templated answers; optional Haiku 5.5 tier (~$0.0003/question, $1/day cap). Design: event log + postings + materialized holdings in one Mongo transaction, `sc_` collections, prices in a separate collection, pure domain core in `shared/sc/`, Goods conversation per pair. Red team 29 findings (13 high), all accepted (04 §16). Build plan v2: 13 slices, ~9–11 weeks, every scenario assigned.
 
 - 2026-11-21: **Phases 4+5 checkpoint: user approved T1–T9 and B1–B3 defaults**: Haiku 5.5 paid fallback for Claire ($1/day cap; re-verify on the 7-tool schema in slice 5 first); one-call tool picking + templated answers; event log + postings + materialized holdings; node:test; GridFS photos with caps; per-person staff login + optional PIN; local branch, nothing pushed/merged/deployed without asking; separate free Atlas test cluster (user to create; until then pure tests only and integration tests after the deadline); object storage before real users; slice order, demo stops after S1/S2/S4.5/S5; ~9–11 weeks accepted.
+
+## Slice reports
+### Slice 0 — Foundations (2026-11-21)
+- **Built:**
+  - `shared/sc/` pure domain core: types, units, postings (Σ = 0 per dimension), tolerance, evidence, conservation (closure split, read-time approx pending), plausibility (unit slip, ×10, never-negative), dates (IST, working days, closed days, lateness), vocab (v1 actions → purposes), mask (sub-contract key-level grouping).
+  - `server/src/sc/`: the flag, Ctx and `requireSc`/`requireOwner`; `repo.post()` (one Mongo transaction: event + postings + materialized holdings; idempotent on `client_id`; never-negative aborts the whole write); `positions()`; indexes; 16 material + 13 process built-in templates; `/api/sc/home|goods|templates`; the `sc:flag` dev CLI.
+  - Web: Goods tab (nav U1) and lazy `/goods` route behind `features.supplyChain`, with tabs and the first-run guide in en/ta/hi.
+  - `.nvmrc` 24, `npm test`, `npm run lint` (`scripts/sc-lint.mjs`), `glossary.md`. `BUILD_CONTRACT.md` updated.
+- **Checks:**
+  - typecheck + lint green; 12/12 domain tests incl. a 200-seed property test (Σ = 0, holdings = postings, never negative); the J-0412 figures reproduce (≈ 95 kg grey / ≈ 89 kg navy).
+  - Against Atlas (`nexconn_sc_dev`): idempotent retry, overdraw refused with no partial write, positions read; smoke data removed afterwards.
+  - API: flagged Ravi 200; unflagged Lakshmi 404 (and `features.supplyChain:false`); no auth 401.
+  - Build: Goods chunk 3.2 KB gz, lazy; main bundle unchanged (407.6 KB gz).
+  - Browser at 375 px in ta and en.
+- **Not done here (by plan):** integration tests on a separate cluster (T8, waiting); the desktop wide layout (slice 3).
+- **Local dev now runs with** `SC_ENABLED=1 MONGODB_DB=nexconn_sc_dev npm run dev`, with Ravi (`b_ravi`) flagged in the dev database only.
 
 ## Open questions
 - T8: a separate free Atlas cluster for integration tests needs to be created by the user (not blocking slice 0's pure tests).

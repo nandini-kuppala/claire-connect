@@ -12,6 +12,8 @@
     "build": "npm run build -w web",
     "start": "npm run start -w server",
     "typecheck": "tsc --noEmit -p server && tsc --noEmit -p web",
+    "lint": "npm run typecheck && node scripts/sc-lint.mjs",
+    "test": "npm run test -w server",
     "i18n:extract": "node scripts/i18n-extract.mjs",
     "i18n:check": "node scripts/i18n-check.mjs"
   },

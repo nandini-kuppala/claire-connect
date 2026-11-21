@@ -71,6 +71,13 @@ async function main() {
     await seed();
   }
   await ensureBots();
+  if (features.supplyChain) {
+    const [{ ensureScIndexes }, { ensureTemplates }] = await Promise.all([import('./sc/indexes.js'), import('./sc/templates.js')]);
+    await ensureScIndexes();
+    await ensureTemplates();
+    app.use('/api', (await import('./sc/routes.js')).default);
+    console.log('[sc] supply-chain module on (per-business flag)');
+  }
 
   for (const r of [misc, auth, onboarding, claire, catalog, business, voice, dev, webhooks]) app.use('/api', r);
   for (const path of EXTERNAL_ROUTES) {

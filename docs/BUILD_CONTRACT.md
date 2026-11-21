@@ -92,6 +92,14 @@ Misc: `GET /api/health`, `GET /api/stats` (public traction counters: businesses 
 ## Design tokens (Nexconn-compatible; see UI brief in docs/04 + agent brief)
 primary `#0047FF`, primary-tint `#ECF1FF`, primary-hover `#D0DDFF`, bubble-own `#D2E1FE`, bubble-other `#F3F5FA`, surface `#FFFFFF`, page `#F7F8FB`, ink `#020814`, ink-2 `#41464F`, meta `#5B6270`, border `#E4E7ED`, chip-border `#6E8CF0`, success `#15803D`, danger `#D92D20`, warning `#B45309`, note `#FFF7E0`, Claire accent marigold `#F59E0B` (fill only). CLAIRE brand mark: teal `#0D9488` tag shape. Fonts: Poppins (headings), Inter (body), Noto Sans Tamil/Devanagari/Bengali/Telugu fallbacks. Radius: 8 / 12 / 16 / 20 (bubbles, composer) / full (chips). 4px spacing scale. Targets ≥ 44px, chips 44–48px. Bubbles max 78% width. Lucide icons only, no emoji icons. ₹ with Indian grouping (`toLocaleString('en-IN')`). Mobile-first (max-width 480px app column centred on desktop), desktop layout only for `/desk`.
 
+## Supply-chain module (behind a flag; docs/supply-chain/04-technical-design.md)
+- Server env `SC_ENABLED=1` turns the module on; then only businesses with `businesses.flags.sc = true` get it (dev: `npm run sc:flag -w server -- <businessId|phone> on`, refuses non-dev databases).
+- `GET /api/me` → `features.supplyChain` (env && business flag). Web shows the Goods tab and `/goods` route only when it is true.
+- Routes under `/api/sc/*` (requireAuth + requireSc; 404 when off): `GET /api/sc/home` → `{today, chips:{late,toConfirm,disputes}, badge, role}`; `GET /api/sc/goods?tab=out|in|coming` → `{tab, rows}`; `GET /api/sc/templates` → `{materials, processes}`. More routes land slice by slice (04 §7).
+- Collections are prefixed `sc_`; all writes go through `server/src/sc/repo.ts` `post()` (one transaction: event + postings + holdings).
+- Shared domain core: `shared/sc/*` (pure TypeScript; server imports it with relative `.js` paths, web with `@shared/sc`).
+- Tests: `npm test` (node:test via tsx, Node 24 — see `.nvmrc`). Lint: `npm run lint` (typecheck + `scripts/sc-lint.mjs`).
+
 ## Rules for builders
 - Stay inside your owned files. If you need something from another area, code against the interface above.
 - Never print or log secrets from `server/.env`. Don't commit or push (no git operations).

@@ -1,6 +1,7 @@
 // Phone + demo OTP sign-in, the signed-in user's profile, and the Nexconn chat credentials.
 import { Router } from 'express';
 import { cfg, features } from '../config.js';
+import { scOn } from '../sc/flag.js';
 import { chat, chatMode } from '../chat.js';
 import { byId, findOne, insert, update } from '../db/index.js';
 import { getUser, publicBiz, type UserRow } from '../biz.js';
@@ -93,7 +94,7 @@ router.get(
       chatInfo(user),
       user.business_id ? trustOf(user.business_id).catch(() => null) : Promise.resolve(null),
     ]);
-    res.json({ user: publicUser(user), business, trust, chat: chatCreds, features });
+    res.json({ user: publicUser(user), business, trust, chat: chatCreds, features: { ...features, supplyChain: features.supplyChain && !!user.business_id && scOn(await byId<any>('businesses', user.business_id)) } });
   }),
 );
 

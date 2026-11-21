@@ -6,7 +6,9 @@
     "dev": "tsx watch --clear-screen=false src/index.ts",
     "start": "tsx src/index.ts",
     "seed": "tsx src/db/seed.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test --test-concurrency=1 'src/**/*.test.ts' '../shared/sc/**/*.test.ts'",
+    "sc:flag": "tsx src/sc/flag-cli.ts"
   },
   "dependencies": {
     "cors": "^2.8.6",

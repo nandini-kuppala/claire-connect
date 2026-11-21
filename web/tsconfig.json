@@ -19,5 +19,6 @@
     "paths": { "@shared/*": ["../shared/*"] }
   },
   "include": ["src", "../shared"],
+  "exclude": ["../shared/**/*.test.ts"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }
