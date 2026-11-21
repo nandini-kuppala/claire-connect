@@ -267,6 +267,9 @@ router.post(
     });
     if (r.duplicate) return res.json({ duplicate: true });
     if (client.k === 'b') await enqueueCard('movement', movementId, 'sent', movement.visible_at);
+    // A job-work order is delivered when the work back covers it, whoever records the return (8b).
+    const orderOf = j.order_id ?? (j.parent_job_id ? (await col('sc_jobs').findOne({ _id: j.parent_job_id } as any, { projection: { order_id: 1 } }))?.order_id : null);
+    if (orderOf) void import('./orders.js').then((o) => o.orderCoverage(orderOf)).catch((e) => console.warn('[sc] order coverage', (e as Error).message));
     res.status(201).json({ movement, undo_until: movement.visible_at });
   }),
 );

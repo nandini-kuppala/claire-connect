@@ -96,7 +96,7 @@ export default function GoodsSetup() {
     const [t, o] = await Promise.all([api.get<{ processes: { key: string; labels: Record<string, string>; default_turnaround_days: number }[] }>('/api/sc/templates'), api.get<{ offerings: { process_key: string; capacity_per_day?: number; turnaround_days?: number }[] }>('/api/sc/offerings')]);
     setProcs(t.processes);
     setStyles((await api.get<{ styles: Style[] }>('/api/sc/styles')).styles);
-    setLinks((await api.get<{ links: typeof links }>('/api/sc/links')).links);
+    setLinks((await api.get<{ links: typeof links }>('/api/sc/links').catch(() => ({ links: [] as typeof links }))).links); // owner-only list
     if (h.role === 'owner') setStaff((await api.get<{ staff: typeof staff }>('/api/sc/staff')).staff);
     setOffers(Object.fromEntries(o.offerings.map((x) => [x.process_key, { on: true, capacity_per_day: x.capacity_per_day ? String(x.capacity_per_day) : '', turnaround_days: x.turnaround_days ? String(x.turnaround_days) : '' }])));
   }, []);

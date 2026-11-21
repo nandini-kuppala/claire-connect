@@ -76,6 +76,7 @@ ownerRouter.post(
 ownerRouter.get(
   '/sc/links',
   h(async (req: ScRequest, res) => {
+    if (req.ctx.role !== 'owner') throw new HttpError(403, 'Only the owner can see shared statements.'); // contact phones
     const rows = await col('sc_statement_links').find({ recorder_business_id: req.ctx.businessId } as any).sort({ created_at: -1 }).limit(100).toArray();
     const names = await partyNames(req.ctx, rows.map((r: any) => r.party));
     res.json({ links: rows.map((r: any) => ({ id: r._id, party: r.party, name: names.get(pk(r.party))?.name ?? '—', seen_at: r.seen_at, last_action_at: r.last_action_at ?? null, stopped_at: r.stopped_at, stopped_by: r.stopped_by, created_at: r.created_at })) });
@@ -119,6 +120,12 @@ ownerRouter.post(
     const specId = asked ?? job?.outputs?.at(-1)?.spec_id ?? null;
     if (!job || !specId) return res.status(409).json({ error: 'Record it in Got back: pick what came back.', code: 'pick', job_id: p.job_id });
     const info = await specInfo(specId);
+    // They gave the figure in the unit the link showed (the job's input unit). If what comes back is counted differently
+    // (fabric in kg, cut kits in pcs), never convert one into the other: the owner records it in Got back.
+    if (p.dim && info.dim !== p.dim) {
+      const shown = p.dim === 'mass' ? `${p.qty_base / 1000} kg` : p.dim === 'length' ? `${p.qty_base / 100} m` : `${p.qty_base} pcs`;
+      return res.status(409).json({ error: `They said ${shown} came back. Record it in Got back with what came back.`, code: 'pick', job_id: p.job_id });
+    }
     const unit = info.dim === 'mass' ? 'kg' : info.dim === 'length' ? 'm' : 'pcs';
     const qty = info.dim === 'mass' ? p.qty_base / 1000 : info.dim === 'length' ? p.qty_base / 100 : p.qty_base;
     const r = await gotBack(ctx, { lines: [{ spec_id: specId, qty, unit, they_sent: qty }], client_id: p._id }, job._id);
@@ -246,7 +253,7 @@ function render(o: { lang: L; token: string; biz: string; name: string; data: Aw
 ${o.flash ? `<p class="ok" role="status">${esc(o.flash)}</p>` : ''}${o.viewOnly ? `<p class="n">${fill(t.view_only, v)}</p>` : ''}${o.stopped ? `<p class="n">${fill(t.stopped, v)}</p>` : ''}
 ${open.slice(0, 20).map(card).join('\n') || `<p class="m">${t.nothing}</p>`}${open.length > 20 ? `<p class="m">${fill(t.older, { ...v, n: String(open.length - 20) })}</p>` : ''}
 ${(o.data?.withYou ?? []).slice(0, 12).map((w) => `<section class="c"><p>${fill(t.with_you, { ...v, qty: `${w.approx ? `${t.about} ` : ''}${esc(fq(w.qty, w.dim))}`, label: esc(w.label) })}</p>
-<details><summary>${t.returned_some}</summary><form method="post" action="${act('propose')}"><input type="hidden" name="j" value="${esc(w.jobId)}"><label>${t.how_many} <input name="qty" inputmode="decimal" required size="6"> ${esc(w.dim === 'mass' ? 'kg' : 'pcs')}</label> <button${dis}>${t.send}</button></form></details>
+<details><summary>${t.returned_some}</summary><form method="post" action="${act('propose')}"><input type="hidden" name="j" value="${esc(w.jobId)}"><label>${t.how_many} <input name="qty" inputmode="decimal" required size="6"> ${esc(w.dim === 'mass' ? 'kg' : w.dim === 'length' ? 'm' : 'pcs')}</label> <button${dis}>${t.send}</button></form></details>
 ${w.ready ? `<p class="m">✓ ${t.ready_done}</p>` : `<form method="post" action="${act('ready')}"><input type="hidden" name="j" value="${esc(w.jobId)}"><button class="g"${dis}>${t.ready}</button></form>`}</section>`).join('\n')}
 ${done.length ? `<ul class="d">${done.map((i) => `<li>${esc(fq(i.qty, i.dim))} ${esc(i.label)} · ${fill(t.confirmed, { date: sdate(i.confirmed!, o.lang) })}</li>`).join('')}</ul>` : ''}
 <footer><h2>${t.what}</h2><p>${fill(t.what_body, v)}</p><p>${t.no_prices}</p><p>${fill(t.dpdp, v)}</p>

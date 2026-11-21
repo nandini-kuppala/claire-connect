@@ -3,15 +3,19 @@
 import { useEffect, useState } from 'react';
 import { api } from '../../lib/api';
 import { useSession } from '../../store/session';
+import { tokenTag } from '../../lib/offline';
 
 export interface History { jobs: number; usual_days: number | null; loss_pct: number | null; processes: string[] }
+// Private per login: keyed by the user, and dropped when someone else logs in on the same tab.
 const cache = new Map<string, History | null>();
+let cacheOwner = '';
 const pending = new Set<string>();
 const inflight = new Set<string>();
 const listeners = new Set<() => void>();
 let timer: ReturnType<typeof setTimeout> | null = null;
 
 function flush() {
+  if (tokenTag() !== cacheOwner) { cache.clear(); cacheOwner = tokenTag(); }
   timer = null;
   const ids = [...pending];
   pending.clear();
@@ -25,6 +29,8 @@ function flush() {
 
 export function useGoodsHistory(businessId: string | null | undefined): History | null {
   const on = useSession((st) => !!st.features?.supplyChain && st.user?.role !== 'staff');
+  const who = useSession((st) => st.user?.id ?? '');
+  if (who && cacheOwner && tokenTag() !== cacheOwner) { cache.clear(); cacheOwner = tokenTag(); }
   const [, bump] = useState(0);
   useEffect(() => {
     if (!on || !businessId) return;

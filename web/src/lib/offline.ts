@@ -74,9 +74,19 @@ export async function cachedGet<T>(path: string): Promise<{ data: T; staleAt: nu
     throw e;
   }
 }
-/** Copies are per login, so a shared phone never shows one person's cached goods to another. */
-function tokenTag() {
-  try { return (localStorage.getItem('cc_token') ?? '').slice(-12); } catch { return ''; }
+/**
+ * Copies and the queue belong to a person, not a login: tagged with the user id inside the token (a new login keeps
+ * the same user id, so records queued before logging out are still sent; another person on the phone never sees them).
+ */
+export function tokenTag(): string {
+  try {
+    const t = localStorage.getItem('cc_token') ?? '';
+    const seg = t.split('.')[0] ?? '';
+    const json = JSON.parse(atob(seg.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((seg.length + 3) % 4)));
+    return String(json.uid ?? '');
+  } catch {
+    return '';
+  }
 }
 
 // ── Outbox ──────────────────────────────────────────────────────────────────────────────────────

@@ -596,6 +596,9 @@
     "rate_order": "Rate this order"
   },
   "goods": {
+    "st_in_transit": "On the way, not received yet",
+    "st_disputed": "Difference open",
+    "st_held": "On hold",
     "title": "Goods",
     "tab_out": "Out with others",
     "tab_in": "In my unit",
@@ -787,6 +790,7 @@
     "voided": "Marked as a wrong entry.",
     "no_rate": "no rate",
     "leftover_kept": "leftover kept",
+    "returned_line": "returned",
     "perf_hint": "Judged against fixed yardsticks: the promised days (or the usual for the process), the usual loss and the best unit. Days they were held up by you are not counted.",
     "jobs": "{n} jobs",
     "not_enough": "Not enough history yet ({n} of 3 jobs)",

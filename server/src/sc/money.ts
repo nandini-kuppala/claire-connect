@@ -126,6 +126,38 @@ export async function billItems(ctx: Ctx, party?: PartyRef): Promise<BillItem[]>
     const neg = pr.kind === 'return_to_supplier' || pr.kind === 'buyer_returned';
     items.push({ party: other, dir, date: m.business_date, label: line?.label_en ?? '', qty: fmt(base, line?.dim ?? 'count'), rate_paise: pr.rate_paise, amount_paise: neg ? -amount : amount, source: { kind: 'movement', id: m._id } });
   }
+  // A return without its own price (the usual case) is valued at the latest price I recorded with that party for the
+  // same item: a buyer's return reduces what they owe me, my return to a supplier reduces what I owe.
+  const lastPrice = new Map<string, { rate: number; unit: string; date: string }>();
+  for (const pr of prices) {
+    const m = tmov.get(pr.movement_id);
+    if (!m || m.order_id || !['sell', 'buy'].includes(pr.kind)) continue;
+    const other = (isMe(ctx, m.from.party) ? m.to.party : m.from.party) as PartyRef;
+    for (const l of m.lines as any[]) {
+      const k = `${pr.kind}|${pk(other)}|${l.spec_id}`;
+      const cur = lastPrice.get(k);
+      if (!cur || cur.date <= m.business_date) lastPrice.set(k, { rate: pr.rate_paise, unit: pr.unit, date: m.business_date });
+    }
+  }
+  const priced = new Set(prices.map((p) => p.movement_id));
+  const nowMs = Date.now();
+  const rets = ((await col('sc_movements').find({ party_business_ids: ctx.businessId, action: { $in: ['return_to_supplier', 'buyer_returned'] }, order_id: { $exists: false }, cancelled_at: null } as any,
+    { projection: { from: 1, to: 1, lines: 1, business_date: 1, action: 1, visible_at: 1, recorder_business_id: 1 } }).limit(1500).toArray()) as any[])
+    .filter((m) => !priced.has(m._id) && (m.recorder_business_id === ctx.businessId || m.visible_at <= nowMs));
+  for (const m of rets) {
+    const fromMe = isMe(ctx, m.from.party);
+    const other = (fromMe ? m.to.party : m.from.party) as PartyRef;
+    if (party && pk(other) !== pk(party)) continue;
+    const iBought = m.action === 'return_to_supplier' && fromMe; // I send back what I bought
+    for (const l of m.lines as any[]) {
+      const lp = lastPrice.get(`${iBought ? 'buy' : 'sell'}|${pk(other)}|${l.spec_id}`);
+      if (!lp) continue;
+      const base = winningAssertion(l.received)?.base_qty ?? winningAssertion(l.sent)?.base_qty ?? 0;
+      const per = toBase(1, lp.unit ?? unitOf(l.dim ?? 'count'), l.dim ?? 'count');
+      const amount = Math.round((base / (per.ok && per.base > 0 ? per.base : 1)) * lp.rate);
+      items.push({ party: other, dir: iBought ? 'i_owe' : 'they_owe', date: m.business_date, label: l.label_en ?? '', qty: fmt(base, l.dim ?? 'count'), rate_paise: lp.rate, amount_paise: -amount, source: { kind: 'movement', id: m._id }, note: 'return' });
+    }
+  }
   // Goods sent against a marketplace order (8b): billed to both sides at the agreed order price, GST added, on what
   // arrived (or what was sent, until it arrives). Returns on the order are negative lines.
   const now = Date.now();
@@ -272,6 +304,9 @@ router.post(
     }), req.body);
     if (b.party.k === 'b' && b.party.id === ctx.businessId) throw new HttpError(400, 'Pick the other party.');
     if (b.party.k === 'c' && !(await col('sc_contacts').findOne({ _id: b.party.id, owner_business_id: ctx.businessId } as any))) throw new HttpError(404, 'Not found');
+    // A payment shows in the other business's Bills, so it may only be recorded with a business you actually trade with
+    // (a shared record or order); otherwise anyone could write figures into a stranger's books.
+    if (b.party.k === 'b' && !(await tradesWith(ctx.businessId, b.party.id))) throw new HttpError(404, 'Not found');
     const dup = await col('sc_settlements').findOne({ recorder_business_id: ctx.businessId, client_id: b.client_id } as any);
     if (dup) return res.json({ settlement: { id: dup._id }, duplicate: true });
     if (b.direction === 'setoff') {
@@ -288,6 +323,13 @@ router.post(
     res.status(201).json({ settlement: { id } });
   }),
 );
+
+async function tradesWith(me: string, other: string): Promise<boolean> {
+  const both = { party_business_ids: { $all: [me, other] } };
+  if (await col('sc_movements').findOne({ ...both, cancelled_at: null } as any, { projection: { _id: 1 } })) return true;
+  if (await col('sc_jobs').findOne(both as any, { projection: { _id: 1 } })) return true;
+  return !!(await col('orders').findOne({ $or: [{ buyer_business_id: me, seller_business_id: other }, { buyer_business_id: other, seller_business_id: me }] } as any, { projection: { _id: 1 } }));
+}
 
 /** A wrong entry is voided (dated), never deleted. Only the business that recorded it. */
 router.post(

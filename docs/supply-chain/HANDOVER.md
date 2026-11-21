@@ -21,7 +21,8 @@ Read this first in a new session, then `PROGRESS.md` (a report per slice), `BUIL
 | 7 | 20c3b64 | Staff: provisioning, PIN, staff guard on every route, count approvals, suggestions |
 | 8a | 0ec68b3 | Reports and money: derived bills, record payment / set-off, balances and oldest unpaid, performance, GST clock, CSV |
 | 8b | ff628ea | Orders ↔ goods: deliveries as movements, auto-delivered, returns, Send material, order prices in Bills, history in search, work profile, migration |
-| 9 | see `git log` | Offline outbox + Last updated, retry idempotency, all Goods strings in 7 more languages, bundle budget, accessibility pass |
+| 9 | 1018c9c | Offline outbox + Last updated, retry idempotency, all Goods strings in 7 more languages, bundle budget, accessibility pass |
+| Phase 7 | see `git log` | Scenarios A and B seeded and run end to end from 15 demo accounts; independent audit; 9 fixes + minor; design token docs |
 
 ## Slice 7 (staff): done
 Server, web, the 34-check smoke (`scripts/sc-smoke-s7.py`) and a browser pass are all complete; see the slice 7 report in `PROGRESS.md`. The demo staff user on the dev DB is **Kavitha, 9600000001, PIN 2468**, staff of Ravi.
@@ -35,13 +36,24 @@ Server `sc/orders.ts`, web `OrderGoodsScreen` (+ Orders line, chat card link, wo
 ## Slice 9 (offline, translations, polish): done
 See the slice 9 report in `PROGRESS.md` (gaps: no CPU-throttled pass, no service worker, overlay translations need native review).
 
-## Next: Phase 7 (from `05-build-plan.md`)
-- Seed scenarios A and B from `mockups/DATA.md` and run both end to end from every account.
-- An independent audit (correctness, isolation, UX, regressions); fix what it finds.
-- Update `HANDOVER.md`, `BUILD_CONTRACT.md`, `DESIGN_SYSTEM.md`.
-- The Flow view (S9 in the UX doc) is still unbuilt.
+## Phase 7: done
+See the Phase 7 report in `PROGRESS.md`.
+- **Demo accounts** (dev DB, OTP 123456), Scenario A:
+  - Velan Fabrics 9000001001, Kongu Dyeing 9000001002;
+  - Selvam Trims 9000001003, Annai Threads 9000001004;
+  - **Murali Garments 9000001005** (the garment maker);
+  - Priya Stitching 9000001006, Bharathi Stitching 9000001007;
+  - sellers Kolkata Hosiery 9000001008, Chennai Retail 9000001009, Delhi Fashion Traders 9000001010.
+- Scenario B:
+  - **Nila Knitwear 9000002001**, Kumar Cutting 9000002002;
+  - Sakthi Stitching 9000002003, Ganga Tailoring 9000002004, Vel Garments 9000002005.
+- Re-seed or replay with `python3 scripts/sc-demo-scenarios.py` (dev server running). Each run adds a fresh set of records with its own lot codes.
 
-Demo stops agreed: after S1, S2, S4.5 and S5 (all passed).
+## What is left
+- **Flow view** (S9 in `03-product-ux.md`): the one-screen view of a whole order or run.
+- **Nightly demo reset;** the demo businesses on the login demo list.
+- Service worker (cold start offline); a 4× CPU-throttled pass on a real device.
+- The gaps listed per slice in `PROGRESS.md` (e.g. Record payment replacing order milestone buttons, closed days, bill share).
 
 ## Open items needing the owner
 - **Claude Haiku tier for personal Claire is off.** `ANTHROPIC_API_KEY` in `server/.env` is empty, and it's not in `render.yaml`. To enable it:
@@ -61,7 +73,7 @@ SC_ENABLED=1 MONGODB_DB=nexconn_sc_dev npm run dev   # API :8787, web :5173 (pro
 - Flag a business: `MONGODB_DB=nexconn_sc_dev npm run sc:flag -w server -- <id|phone> on` (refuses non-dev DBs).
 - Checks:
   - `npm run lint` (typecheck + `scripts/sc-lint.mjs`); `npm test` (24 unit tests);
-  - smokes `python3 scripts/sc-smoke-s{1,2,3,4,45,6,7,8a,8b,9}.py` (dev server running);
+  - smokes `python3 scripts/sc-smoke-s{1,2,3,4,45,6,7,8a,8b,9}.py` and `python3 scripts/sc-smoke-audit.py`; the scenarios `python3 scripts/sc-demo-scenarios.py` (dev server running);
   - `cd server && MONGODB_DB=nexconn_sc_dev SC_ENABLED=1 npx tsx src/sc/claire/smoke.mts`;
   - `MONGODB_DB=nexconn_sc_dev npm run sc:verify -w server` (ledger: every event balances, every holding equals its postings);
   - `npm run sc:budget` (after a build) and `npm run i18n:check -- all`;

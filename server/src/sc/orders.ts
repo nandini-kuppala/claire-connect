@@ -251,6 +251,7 @@ export async function historyWith(ctx: Ctx, ids: string[]) {
 router.get(
   '/sc/history',
   h(async (req: ScRequest, res) => {
+    if (req.ctx.role !== 'owner') return res.json({ history: {} }); // analytics are the owner's (04 §10.3b)
     const ids = String(req.query.ids ?? '').split(',').map((s) => s.trim()).filter((s) => /^[\w-]{1,64}$/.test(s)).slice(0, 50);
     res.json({ history: ids.length ? await historyWith(req.ctx, ids) : {} });
   }),

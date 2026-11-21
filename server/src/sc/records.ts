@@ -358,7 +358,11 @@ router.post(
 /** After a confirmation or figure: refresh the movement card and post any new dispute card now. */
 async function afterChange(movementId: string, results: { disputeId?: string | null }[]) {
   const m = await col('sc_movements').findOne({ _id: movementId } as any, { projection: { lines: 1, party_business_ids: 1, order_id: 1 } });
-  if (m?.order_id) void import('./orders.js').then((o) => o.orderCoverage(m.order_id)).catch((e) => console.warn('[sc] order coverage', (e as Error).message));
+  // Order coverage: a movement sent against an order, or a return on a job that belongs to one (8b).
+  const orderIds = new Set<string>(m?.order_id ? [m.order_id] : []);
+  const jobIds = [...new Set(((m?.lines ?? []) as any[]).map((l) => l.job_id).filter(Boolean))];
+  if (!m?.order_id && jobIds.length) for (const jx of (await col('sc_jobs').find({ _id: { $in: jobIds }, order_id: { $exists: true } } as any, { projection: { order_id: 1 } }).toArray()) as any[]) orderIds.add(jx.order_id);
+  for (const oid of orderIds) void import('./orders.js').then((o) => o.orderCoverage(oid)).catch((e) => console.warn('[sc] order coverage', (e as Error).message));
   if ((m?.party_business_ids?.length ?? 0) < 2) return;
   const stamp = Date.now();
   await enqueueCard('movement', movementId, `update_${stamp}`, stamp);

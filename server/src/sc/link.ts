@@ -51,6 +51,7 @@ router.post(
 router.get(
   '/sc/linking/requests',
   h(async (req: ScRequest, res) => {
+    if (req.ctx.role !== 'owner') return res.json({ requests: [] }); // owner-only: names and phones of who asked
     const rows = await col('sc_contacts').find({ owner_business_id: req.ctx.businessId, link_state: 'pending_recorder' } as any).toArray();
     const bizs = new Map((await col('businesses').find({ _id: { $in: rows.map((r: any) => r.link_requested_by) } } as any, { projection: { name: 1, city: 1, area: 1, role_label: 1 } }).toArray()).map((b: any) => [b._id, b]));
     res.json({
@@ -93,6 +94,14 @@ export async function linkRekey(ctx: Ctx, contactId: string) {
       await col('sc_jobs').updateMany({ party_business_ids: ctx.businessId, [`${f}.k`]: 'c', [`${f}.id`]: contactId } as any, { $set: { [f]: to, [`${f}_linked_from`]: from }, $addToSet: { party_business_ids: to.id } } as any, { session });
     }
     await col('sc_discrepancies').updateMany({ parties: ctx.businessId, $or: [{ 'posting.sender.id': contactId }, { 'posting.receiver.id': contactId }] } as any, { $addToSet: { parties: to.id } } as any, { session });
+    // Money and terms follow the party too, so Bills keeps one row and the rate card still prices its jobs.
+    await col('sc_settlements').updateMany({ recorder_business_id: ctx.businessId, 'party.k': 'c', 'party.id': contactId } as any, { $set: { party: to, party_linked_from: from }, $addToSet: { parties: to.id } } as any, { session });
+    await col('sc_rate_cards').updateMany({ business_id: ctx.businessId, 'party.k': 'c', 'party.id': contactId } as any, { $set: { party: to, party_linked_from: from } } as any, { session });
+    const oldRel: any = await col('sc_relationships').findOne({ _id: `rel_${ctx.businessId}_c_${contactId}` } as any, { session });
+    if (oldRel && !(await col('sc_relationships').findOne({ _id: `rel_${ctx.businessId}_b_${to.id}` } as any, { session }))) {
+      const { _id: _old, ...rest } = oldRel;
+      await col('sc_relationships').insertOne({ ...rest, _id: `rel_${ctx.businessId}_b_${to.id}`, party: to, linked_from: from, updated_at: now } as any, { session });
+    }
     await col('sc_contacts').updateOne({ _id: contactId } as any, { $set: { link_state: 'linked', linked_business_id: to.id, linked_at: now } }, { session });
     if (dupes.length) await col('sc_contacts').updateMany({ _id: { $in: dupes.map((d: any) => d._id) } } as any, { $set: { merged_into: to, archived_at: now } }, { session });
     // Both sides use accounts now: the statement link retires (model §6.4).

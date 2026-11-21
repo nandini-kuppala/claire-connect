@@ -70,8 +70,10 @@ async function resolve(req: ScRequest, d: any, outcome: Outcome, note?: string) 
 async function resolveNow(req: ScRequest, d: any, outcome: Outcome, note?: string) {
   const { postings, resolvedReceived } = resolutionPostings(d, outcome);
   const at = Date.now();
+  // Settles once: a double tap, or both sides conceding at the same moment, finds it no longer open and aborts.
   await post(req.ctx, { type: 'dispute_resolved', ref: { kind: 'dispute', id: d._id }, payload: { outcome }, business_date: todayIST() }, postings, async (session) => {
-    await col('sc_discrepancies').updateOne({ _id: d._id } as any, { $set: { state: 'resolved', resolution: { outcome, by_business_id: req.ctx.businessId, by_user_id: req.ctx.userId, at, note: note ?? null } } }, { session });
+    const u = await col('sc_discrepancies').updateOne({ _id: d._id, state: { $in: OPEN } } as any, { $set: { state: 'resolved', resolution: { outcome, by_business_id: req.ctx.businessId, by_user_id: req.ctx.userId, at, note: note ?? null } } }, { session });
+    if (!u.modifiedCount) throw new HttpError(409, 'This difference is already settled.');
     if (d.kind === 'casualty') {
       // Goods of a job written off in a casualty leave that job (they are no longer "still there").
       const lostByJob = new Map<string, number>();

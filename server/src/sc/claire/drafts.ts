@@ -77,7 +77,10 @@ async function linesFor(ctx: Ctx, args: DraftArgs, notes: string[], prefer: (lab
     const sizes = l.sizes?.map((x) => ({ size: x.size.toUpperCase(), qty: x.qty })) ?? [];
     if (sizes.length && ranked.length) {
       // Same style and colour as the best match, one line per size; quantities said per size, else split evenly.
-      const base = ranked.find((s) => s.attrs.size) ?? ranked[0];
+      // Several styles can fit "polo kit S M": take the one whose stock in those sizes covers the most, then the best rank.
+      const sized = ranked.filter((s) => s.attrs.size);
+      const cover = (c: (typeof ranked)[number]) => sizes.reduce((a, z) => a + (specs.find((s) => s.mtId === c.mtId && s.attrs.style === c.attrs.style && s.attrs.colour === c.attrs.colour && String(s.attrs.size).toUpperCase() === z.size)?.stock?.qty ?? 0), 0);
+      const base = sized.length ? sized.reduce((best, c) => (cover(c) > cover(best) ? c : best), sized[0]) : ranked[0];
       const given = sizes.every((x) => x.qty);
       const even = Math.floor(l.qty / sizes.length);
       if (!given) notes.push('n_split');

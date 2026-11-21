@@ -127,7 +127,7 @@ export default function BillScreen() {
                 <button className="flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-sunken" onClick={() => go(it)}>
                   <span className="min-w-0 flex-1">
                     <span className="block text-[14.5px] font-semibold text-ink">{it.label}</span>
-                    <span className="block text-[12.5px] text-meta">{[shortDate(it.date, lang), it.qty, it.rate_paise !== null ? `@ ${inr(it.rate_paise)}` : null, it.note === 'no_rate' ? m('no_rate') : it.note === 'leftover_kept' ? m('leftover_kept') : null, it.dir === 'they_owe' ? m('they_owe') : m('i_owe')].filter(Boolean).join(' · ')}</span>
+                    <span className="block text-[12.5px] text-meta">{[shortDate(it.date, lang), it.qty, it.rate_paise !== null ? `@ ${inr(it.rate_paise)}` : null, it.note === 'no_rate' ? m('no_rate') : it.note === 'leftover_kept' ? m('leftover_kept') : it.note === 'return' || it.note === 'order_return' ? m('returned_line') : null, it.dir === 'they_owe' ? m('they_owe') : m('i_owe')].filter(Boolean).join(' · ')}</span>
                   </span>
                   <span className={clsx('shrink-0 font-head font-bold tabular-nums', it.note === 'no_rate' ? 'text-meta' : 'text-ink')}>{it.note === 'no_rate' ? '—' : inr(it.amount_paise)}</span>
                 </button>

@@ -675,8 +675,46 @@ Governing brief: `docs/supply-chain/BRIEF.md` (re-read at the start of every pha
   - The offline queue lives in one browser profile; clearing site data loses records not yet sent.
   - **Translations of the seven overlay languages are machine-made and need native review**, like Tamil and Hindi.
 
+### Phase 7 — Final verification (2026-11-21)
+- **Demo data and end-to-end runs** (`scripts/sc-demo-scenarios.py`, `server/src/sc/demo-cli.ts`):
+  - 15 demo businesses onboarded through the normal flow, flagged and marked demo (`is_seed: 1`, `sc_demo: 'A' | 'B'`) on the dev DB only.
+  - **Scenario A** (BRIEF §3): fabric shop Velan → dyer Kongu → garment maker Murali; trims from Selvam (buttons, zips) and Annai (thread); in-house cutting; S/M to Priya Stitching, L/XL to Bharathi Stitching, back in parts with rejects; in-house packing; three sellers in Kolkata, Chennai and Delhi.
+  - **Scenario B:** Nila Knitwear → Kumar Cutting (cutting only) → one stitcher per colour + size (Sakthi navy S/M, Ganga navy L/XL, Vel black S/M) → packing in-house.
+  - **Every step is recorded by the participant who would record it, through the API.** 43 checks: exact quantities at every step (500 kg bought, 7 % dyeing loss, 165 / 300 kg after the sale, 1,100 kits, 25 cones left, 1,085 packed, 500 / 350 / 235 to the sellers with a 2-piece difference at Delhi, 940 kits and 938 packed in B).
+  - **Isolation from every account:** the fabric shop, dyer, trims shops, stitchers and sellers each see only their own records; no one sees another's prices; scenario B can't see A.
+  - The ledger check is clean afterwards. Each run uses its own lot and style codes, so it can be re-run (it passed twice in a row).
+  - Logins: phones 9000001001–9000001010 (A) and 9000002001–9000002005 (B), OTP 123456 on the dev server. See HANDOVER.
+- **Independent audit** (a reviewer agent; correctness, isolation, regressions, UX). **No regressions with the flag off.** Found and fixed:
+  1. **Any business could write a payment into another business's Bills.** Now only with a business you trade with (a shared record or order); otherwise 404.
+  2. **An undisclosed sub-contractor's name leaked to the owner** (job detail children, and the child job itself). Now masked ("Sub-contract", no name or link), and the owner gets 404 on the child job.
+  3. **"I returned some" on a statement link could be booked in the wrong unit** (2 kg of a cutting job became 2,000 kits). Accepting now refuses to convert between units and asks the owner to record it in Got back; the metres label is fixed.
+  4. **Approving one staff count several times at once posted it several times** (book 100 → 20 instead of 80). The approval now has a unique client id and changes state inside the transaction; dispute resolution has the same guard (settles once).
+  5. **Job-work orders weren't marked delivered when the worker sent the work back.** Coverage now also runs on send-back and on confirmations of returns on an order's job.
+  6. **Staff could read leftover rates** in job closures. Now stripped for staff and non-parties.
+  7. **Linking a contact split its Bills.** Payments, rate cards and agreed terms now move to the business in the same transaction.
+  8. **The offline queue was lost after logging in again** (tagged by token). It's now tagged by user id; tested in the browser: queued, then sent about 1 s after reconnecting.
+  9. **Returns on ordinary sales and purchases didn't reduce the bill.** An unpriced return is valued at the latest price recorded with that party for the same item.
+  10. **Minor:**
+      - Search history is cached per login.
+      - Staff can no longer list statement links, link requests (phones) or history.
+- **Also fixed:** the In my unit list showed goods on the way or in dispute as "Your goods here". Each now carries a status (text + colour + icon): "On the way, not received yet", "Difference open", "On hold".
+- **Found in the final regression:**
+  - **Claire's draft picked a style it couldn't send.** "Send 400 polo kits, S and M" took the newest matching style even with too little stock. It now takes the style whose stock in the requested sizes covers the most (rule fixtures still 48/48).
+  - The s2 receive-first match check waited a fixed 3 s; under load the background match can take longer, so it now polls up to 10 s.
+- **Docs:** `DESIGN_SYSTEM.md` §1 and `BUILD_CONTRACT.md` "Design tokens" now list the tokens `index.css` actually ships (the "Tiruppur cotton" and blue palettes are removed), plus Goods UI rules.
+- **Checks:**
+  - **`scripts/sc-smoke-audit.py`: 15/15**, one or more checks per finding.
+  - **Browser:** Murali's In my unit with the new status labels, Priya's (stitcher) empty own stock, the offline retest.
+  - Full regression in the commit message.
+- **Not done / known gaps:**
+  - **No nightly demo reset:** demo data accumulates per run.
+  - The **Flow view** (S9) is still unbuilt.
+  - The demo businesses aren't on the login screen's demo list (that list is fixed in `routes/misc.ts`); log in by phone.
+  - The order card's Goods link shows even when the other side doesn't use Goods (the page then says so).
+  - All overlay and ta/hi translations need native review.
+
 ## Open questions
 - T8: a separate free Atlas cluster for integration tests needs to be created by the user (not blocking slice 0's pure tests).
 
 ## Next
-Phase 7 (seed scenarios A and B, end-to-end from every account, independent audit). Optional: add the Anthropic key and verify the Haiku tier.
+All slices and Phase 7 are done. Remaining, with the owner: native review of strings, the Anthropic key for the Haiku tier, the Flow view, the T8 test cluster, and the decision to merge or enable the flag for real users.

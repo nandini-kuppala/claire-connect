@@ -155,6 +155,15 @@ When you and the other business both use Goods, a marketplace order and its good
 - **Needs the network:** settling differences, payments and approvals.
 - **Languages:** Goods screens are now in all ten app languages. Telugu, Kannada, Malayalam, Bengali, Odia, Marathi and Gujarati still need a native speaker's check.
 
+### 4.14 Try the two demo scenarios
+Two complete supply chains are loaded as demo businesses (log in with the phone and OTP 123456 on the dev server):
+- **Scenario A:** fabric shop **Velan Fabrics** (9000001001) buys grey fabric, has it dyed at **Kongu Dyeing** (9000001002) and sells it to **Murali Garments** (9000001005). Murali buys trims from **Selvam Trims** (9000001003) and **Annai Threads** (9000001004), cuts in-house, and sends S/M to **Priya Stitching** (9000001006) and L/XL to **Bharathi Stitching** (9000001007). The stitched pieces come back in parts with some rejects; Murali packs them and sends them to three sellers: **Kolkata Hosiery** (9000001008), **Chennai Retail** (9000001009) and **Delhi Fashion Traders** (9000001010). Delhi counted 2 fewer, so a difference is open.
+- **Scenario B:** **Nila Knitwear** (9000002001) has fabric cut at **Kumar Cutting** (9000002002), then sends each colour and size group to its own stitcher: **Sakthi** (9000002003), **Ganga** (9000002004) and **Vel** (9000002005). Nila packs in-house.
+
+**Try it:**
+1. Log in as Murali and look at **In my unit**: goods on the way show "On the way, not received yet".
+2. Log in as Priya: she sees only her own work for Murali, never where the fabric came from or what the sellers got.
+
 ## 5. What is not built yet
 - **Money extras:** reminders for unpaid bills, sharing a bill, closed days and per-receipt rate changes.
 - **Orders:** replacing the order's advance and balance buttons with Record payment, and using "what work you do" in search ranking.
@@ -164,24 +173,26 @@ When you and the other business both use Goods, a marketplace order and its good
 
 ## 6. How it is tested
 - **Automatic checks:** typecheck and style rules, unit tests, and one walkthrough script per slice that plays the stories above against the dev server:
-  - `scripts/sc-smoke-s1.py`, `s2`, `s3`, `s4`, `s45`, `s6`, `s7`, `s8a`, `s8b`, `s9`;
+  - `scripts/sc-smoke-s1.py`, `s2`, `s3`, `s4`, `s45`, `s6`, `s7`, `s8a`, `s8b`, `s9`, `audit`;
+  - the two demo scenarios end to end (`scripts/sc-demo-scenarios.py`);
   - Claire's script.
 - **Ledger check** (`npm run sc:verify -w server`): every record balances, and every stock figure equals its history.
 - See **Test results** below for the latest run.
 
 ## Test results
-**Retest on 21 Nov 2026**, local dev server on the dev database, with slices 0–9 active. **Everything passed:**
+**Retest on 21 Nov 2026**, local dev server on the dev database, with slices 0–9 and the Phase 7 fixes active. **Everything passed:**
 
 | Check | Result |
 |---|---|
-| Typecheck + style rules (`npm run lint`) | 92 files, 0 problems |
+| Typecheck + style rules (`npm run lint`) | 93 files, 0 problems |
 | Unit tests (`npm test`) | 24 pass, 0 fail |
 | Slice 1 walkthrough | no errors |
-| Slices 2, 3, 4, 4.5, 6, 7, 8a, 8b, 9 walkthroughs | all pass |
+| Slices 2, 3, 4, 4.5, 6, 7, 8a, 8b, 9 walkthroughs + the audit checks | all pass |
+| Scenarios A and B end to end (15 demo accounts, 43 checks) | all pass |
 | Claire walkthrough | all pass |
-| Ledger check (`sc:verify`) | 1494 event groups, 1406 stock rows, 0 problems |
+| Ledger check (`sc:verify`) | 2151 event groups, 2609 stock rows, 0 problems |
 | Web build | OK |
-| Goods size budget (`sc:budget`) | largest route 41.3 KB gz of 150 KB |
+| Goods size budget (`sc:budget`) | largest route 41.6 KB gz of 150 KB |
 | Translations (`i18n:check all`) | 7 languages × web + server, 100 % |
 
 Browser passes were done per slice as each was built (slice 8a: Ravi at phone width, English and Tamil; slice 8b: Ravi in English, Lakshmi in Tamil).

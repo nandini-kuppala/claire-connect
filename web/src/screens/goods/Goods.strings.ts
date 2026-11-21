@@ -3,6 +3,7 @@ import { defineStrings } from '../../lib/localStrings';
 
 export const GoodsS = defineStrings('goods', {
   en: {
+    st_in_transit: 'On the way, not received yet', st_disputed: 'Difference open', st_held: 'On hold',
     title: 'Goods',
     tab_out: 'Out with others',
     tab_in: 'In my unit',
@@ -25,6 +26,7 @@ export const GoodsS = defineStrings('goods', {
     retry: 'Try again',
   },
   ta: {
+    st_in_transit: 'வழியில், இன்னும் பெறவில்லை', st_disputed: 'வேறுபாடு திறந்துள்ளது', st_held: 'நிறுத்தி வைத்தது',
     title: 'சரக்கு',
     tab_out: 'வெளியே உள்ளது',
     tab_in: 'என் யூனிட்டில்',
@@ -47,6 +49,7 @@ export const GoodsS = defineStrings('goods', {
     retry: 'மீண்டும் முயலு',
   },
   hi: {
+    st_in_transit: 'रास्ते में, अभी मिला नहीं', st_disputed: 'अंतर खुला है', st_held: 'रोका गया',
     title: 'माल',
     tab_out: 'दूसरों के पास',
     tab_in: 'मेरी यूनिट में',

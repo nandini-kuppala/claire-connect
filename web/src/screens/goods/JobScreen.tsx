@@ -23,7 +23,7 @@ interface Detail {
   dim: Dim; issued: number; segments: Seg[]; pending: number;
   inputs: { spec_id: string; label: string; lot: string | null; dim: Dim; role: string; sent: number; issued: number }[];
   grid: { label: string; dim: Dim; grades: Record<string, number>; via_sub: number }[];
-  children: { kind: 'sub' | 'hop' | 'rework' | 'sold'; id: string; name: string; sent: number; status: string; since: string; outputs: Record<string, number> }[];
+  children: { kind: 'sub' | 'hop' | 'rework' | 'sold'; id: string | null; name: string | null; masked?: boolean; sent: number; status: string; since: string; outputs: Record<string, number> }[];
   disputes: { id: string; label: string; difference: number; dim: Dim }[];
   closure: { business_date: string; residual: number; loss: number; loss_pct: number | null; unchecked: boolean; accepted: boolean; carried_claims: string[]; auto: string | null } | null;
   adjustments: { label: string; qty: number; unit: string; rate_paise: number; amount_paise: number; date: string }[];
@@ -219,9 +219,9 @@ export default function JobScreen() {
             <>
               <h2 className="mx-4 mt-5 font-head text-[17px] font-semibold text-ink">{s('sent_on_title')}</h2>
               <ul className="mx-4 mt-2 divide-y divide-line overflow-hidden rounded-[18px] border border-line bg-surface">
-                {d.children.map((c) => (
-                  <li key={c.id} className="px-4 py-3 text-[14.5px]">
-                    <p className="font-semibold text-ink">{s(`k_${c.kind}` as 'k_sub')} · {c.name}</p>
+                {d.children.map((c, i) => (
+                  <li key={c.id ?? `${c.kind}-${i}`} className="px-4 py-3 text-[14.5px]">
+                    <p className="font-semibold text-ink">{s(`k_${c.kind}` as 'k_sub')}{c.name ? ` · ${c.name}` : ''}</p>
                     <p className="text-ink-2"><span className="tabular-nums">{fmtQty(c.sent, d.dim)}</span> · {shortDate(c.since, lang)}{Object.keys(c.outputs).length ? ` → ${Object.entries(c.outputs).map(([g, q]) => `${fmtQty(q, d.dim)} ${s(`seg_${g}` as 'seg_A')}`).join(' · ')}` : ''}</p>
                   </li>
                 ))}

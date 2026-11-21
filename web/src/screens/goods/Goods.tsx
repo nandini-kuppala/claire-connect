@@ -6,7 +6,7 @@ import clsx from 'clsx';
 import { api, errorText } from '../../lib/api';
 import { Button } from '../../components/Button';
 import { Sheet } from '../../components/Sheet';
-import { ArrowDown, ArrowRight, BarChart3, ChevronRight, Plus, Repeat, Settings, Scissors, SlidersHorizontal, AlertTriangle } from '../../icons';
+import { ArrowDown, ArrowRight, BarChart3, ChevronRight, Plus, Repeat, Settings, Scissors, SlidersHorizontal, AlertTriangle, Clock, Pause } from '../../icons';
 import { MoneyS } from './Money.strings';
 import { useSession } from '../../store/session';
 import { GoodsS } from './Goods.strings';
@@ -28,7 +28,7 @@ import { qty as fmtQty, shortDate } from './format';
 type Tab = 'out' | 'in' | 'coming';
 interface Job { id: string; performer: { k: string; id: string }; status: string; ready?: boolean; cancelled?: boolean; held?: string | null; since: string; expected_at: string; late: Late; dim: string; sent: number; issued: number; issuedBasis: string; outputs: number; pending: number; pendingAsOutput: number | null; lossNormPct: number; inputLabel: string; outputLabel: string | null; lots: string[]; name?: string }
 interface OutRow { party: { k: string; id: string }; name: string; kind: string; onClaire: boolean; since: string; status: Late; jobs: Job[] }
-interface InRow { id: string; label: string; lot: string | null; grade: string; place: string | null; qty: number; dim: string }
+interface InRow { id: string; label: string; lot: string | null; grade: string; place: string | null; qty: number; dim: string; state?: string }
 interface Home { chips: { late: number; toConfirm: number; disputes: number }; role: 'owner' | 'staff' }
 interface ToConfirm { movementId: string; action: string; role: 'receiver' | 'sender'; business_date: string; dc_no: string | null; name: string; lines: { line_id: string; label: string; dim: string; sent: number; received: number | null }[] }
 interface Unmatched { id: string; from: string; business_date: string; lines: { label_en: string; qty: number; dim: string }[] }
@@ -383,6 +383,10 @@ export default function Goods() {
                 <p className="text-[15.5px] font-semibold text-ink">{m.label}</p>
                 <p className="mt-0.5 text-[15px] text-ink"><span className="font-head font-bold tabular-nums">{fmtQty(m.qty, m.dim)}</span>{m.grade !== 'A' ? ` · ${r(`g_${m.grade}` as 'g_B')}` : ''}</p>
                 <p className="text-[13px] text-meta">{[m.place, m.lot ? `Lot ${m.lot}` : null].filter(Boolean).join(' · ')}</p>
+                {/* Goods that have left (on the way) or are in question are still mine on the books, but not "here": say so. */}
+                {m.state === 'in_transit' && <p className="mt-1 inline-flex items-center gap-1.5 rounded-full bg-accent-tint px-2.5 py-0.5 text-[13px] font-semibold text-accent-ink"><Clock size={14} aria-hidden />{s('st_in_transit')}</p>}
+                {m.state === 'disputed' && <button onClick={() => setSheet('disputes')} className="mt-1 inline-flex min-h-8 items-center gap-1.5 rounded-full bg-danger-tint px-2.5 py-0.5 text-[13px] font-semibold text-danger"><AlertTriangle size={14} aria-hidden />{s('st_disputed')}</button>}
+                {m.state && /^held/.test(m.state) && <p className="mt-1 inline-flex items-center gap-1.5 rounded-full bg-sunken px-2.5 py-0.5 text-[13px] font-semibold text-ink-2"><Pause size={14} aria-hidden />{s('st_held')}</p>}
               </li>
             ))}
           </ul>

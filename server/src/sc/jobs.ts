@@ -317,6 +317,8 @@ router.get(
     const ctx = req.ctx;
     const j: any = await col('sc_jobs').findOne({ _id: req.params.id, $or: [{ 'owner_party.k': 'b', 'owner_party.id': ctx.businessId }, { 'client_party.k': 'b', 'client_party.id': ctx.businessId }] } as any);
     if (!j || j.status === 'cancelled') throw new HttpError(404, 'Not found');
+    // D2: an undisclosed sub-contract is between the intermediary and its sub-contractor; the owner never opens it.
+    if (j.disclosed === false && !isMe(ctx, j.client_party)) throw new HttpError(404, 'Not found');
     const children = await col('sc_jobs').find({ $or: [{ parent_job_id: j._id }, { hop_from_job_id: j._id }, { split_from_job_id: j._id }, { rework_of: j._id }], status: { $ne: 'cancelled' } } as any).toArray();
     const movIds = [...(await jobMovementIds(j)), ...children.flatMap((c: any) => c.returns ?? [])];
     const movs = new Map((await col('sc_movements').find({ _id: { $in: movIds }, cancelled_at: null } as any).toArray()).map((m: any) => [m._id, m]));
@@ -401,11 +403,12 @@ router.get(
       dim, issued, segments: segs, pending: j.status === 'closed' ? 0 : pend.input,
       inputs, grid: [...grid.values()],
       children: [...sub.map((c: any) => ({ kind: 'sub', c })), ...hops.map((c: any) => ({ kind: 'hop', c })), ...sales.map((c: any) => ({ kind: 'sold', c })), ...reworks.map((c: any) => ({ kind: 'rework', c }))].map(({ kind: ck, c }) => ({
-        kind: ck, id: c._id, name: names.get(pk(c.performer_party))?.name ?? '—', sent: c.sent_inputs ?? c.issued_sent ?? 0, status: c.status, since: c.business_date,
+        // An undisclosed sub-contractor is named only to the one who sub-contracted (D2).
+        ...(c.disclosed === false && !isMe(ctx, c.client_party) ? { id: null, name: null, masked: true } : { id: c._id, name: names.get(pk(c.performer_party))?.name ?? '—' }), kind: ck, sent: c.sent_inputs ?? c.issued_sent ?? 0, status: c.status, since: c.business_date,
         outputs: (c.outputs as any[]).reduce((acc: Record<string, number>, o: any) => ({ ...acc, [o.grade ?? 'A']: (acc[o.grade ?? 'A'] ?? 0) + o.qty }), {}),
       })),
       disputes: disputes.map((d: any) => ({ id: d._id, label: d.line_label, difference: d.difference, dim: d.dim })),
-      closure: closure && { at: closure.at, business_date: closure.business_date, residual: closure.residual, loss: closure.loss, loss_pct: closure.loss_pct, over_yield: closure.over_yield, unchecked: closure.unchecked, accepted: closure.accepted, carried_claims: closure.carried_claims, leftovers: closure.leftovers, auto: closure.auto, leftoverQty },
+      closure: closure && { at: closure.at, business_date: closure.business_date, residual: closure.residual, loss: closure.loss, loss_pct: closure.loss_pct, over_yield: closure.over_yield, unchecked: closure.unchecked, accepted: closure.accepted, carried_claims: closure.carried_claims, leftovers: isOwnerOrClient && ctx.role === 'owner' ? closure.leftovers : (closure.leftovers ?? []).map(({ rate_paise: _r, amount_paise: _a, ...l }: any) => l), auto: closure.auto, leftoverQty },
       adjustments: isOwnerOrClient && ctx.role === 'owner' ? closure?.adjustments ?? [] : [],
       // A dated bill change against the figure locked before the last reopen (model §4.2), only when it differs.
       billChange: isOwnerOrClient && ctx.role === 'owner' ? billChange(j) : null,

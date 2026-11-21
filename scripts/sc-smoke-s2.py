@@ -62,8 +62,10 @@ s,rf = call('POST','/api/sc/movements/receive-first',{'from':{'k':'b','id':'b_ra
 check('receiver-first saved as unmatched', rf['receiveFirst']['status']=='unmatched', rf['receiveFirst']['status'])
 s,o = call('GET','/api/sc/goods/out',tok=R); check('owner never sees the unmatched row', all(j['inputLabel'] for row in o['rows'] for j in row['jobs']))
 m3 = send(fab, 100, 'kg', proc='dyeing'); mv3=m3['movement']['id']; call('POST',f'/api/sc/movements/{mv3}/share-now',{},R)
-import time; time.sleep(3)
-s,mv = call('GET',f'/api/sc/movements/{mv3}',tok=R)
+import time
+for _ in range(20):  # matching runs in the background; under load it can take a few seconds
+    time.sleep(0.5); s,mv = call('GET',f'/api/sc/movements/{mv3}',tok=R)
+    if any(a['evidence']=='account' for a in mv['lines'][0]['received']): break
 check('matched: receiver figure attached as account', any(a['evidence']=='account' and a['qty']==100000 for a in mv['lines'][0]['received']), mv['lines'][0]['received'])
 s,c = call('GET','/api/sc/goods/coming',tok=L); check('unmatched list now empty', not any(u['id']==rf['receiveFirst']['id'] for u in c['unmatched']))
 # 6. Return recorded by Ravi; Lakshmi gives her own (sender) figure; counted mismatch → dispute → she concedes

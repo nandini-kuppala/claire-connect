@@ -1,0 +1,242 @@
+[
+ {
+  "id": "en-ask-at",
+  "rules": "query_holdings",
+  "rulesOk": true
+ },
+ {
+  "id": "en-with",
+  "rules": "query_holdings",
+  "rulesOk": true
+ },
+ {
+  "id": "en-late",
+  "rules": "query_jobs",
+  "rulesOk": true
+ },
+ {
+  "id": "en-ready",
+  "rules": "query_jobs",
+  "rulesOk": true
+ },
+ {
+  "id": "en-came",
+  "rules": "query_movements",
+  "rulesOk": true
+ },
+ {
+  "id": "en-stock",
+  "rules": "query_holdings",
+  "rulesOk": true
+ },
+ {
+  "id": "en-loss",
+  "rules": "compute_analytics",
+  "rulesOk": true
+ },
+ {
+  "id": "en-days",
+  "rules": "compute_analytics",
+  "rulesOk": true
+ },
+ {
+  "id": "en-send",
+  "rules": "draft_record",
+  "rulesOk": true
+ },
+ {
+  "id": "en-back",
+  "rules": "draft_record",
+  "rulesOk": true
+ },
+ {
+  "id": "en-kits",
+  "rules": "draft_record",
+  "rulesOk": true
+ },
+ {
+  "id": "en-q-sent",
+  "rules": "query_holdings",
+  "rulesOk": true
+ },
+ {
+  "id": "en-plan",
+  "rules": "draft_record",
+  "rulesOk": true
+ },
+ {
+  "id": "en-buy",
+  "rules": "draft_record",
+  "rulesOk": true
+ },
+ {
+  "id": "en-sell",
+  "rules": "draft_record",
+  "rulesOk": true
+ },
+ {
+  "id": "en-want",
+  "rules": null,
+  "rulesOk": true
+ },
+ {
+  "id": "en-find",
+  "rules": null,
+  "rulesOk": true
+ },
+ {
+  "id": "en-explain",
+  "rules": "explain_job",
+  "rulesOk": true
+ },
+ {
+  "id": "en-moves",
+  "rules": "query_movements",
+  "rulesOk": true
+ },
+ {
+  "id": "en-cross",
+  "rules": null,
+  "rulesOk": true
+ },
+ {
+  "id": "ta-ask-at",
+  "rules": "query_holdings",
+  "rulesOk": true
+ },
+ {
+  "id": "ta-kits",
+  "rules": "draft_record",
+  "rulesOk": true
+ },
+ {
+  "id": "ta-q-sent",
+  "rules": "query_holdings",
+  "rulesOk": true
+ },
+ {
+  "id": "ta-back",
+  "rules": "draft_record",
+  "rulesOk": true
+ },
+ {
+  "id": "ta-yday",
+  "rules": "draft_record",
+  "rulesOk": true
+ },
+ {
+  "id": "ta-ready",
+  "rules": "query_jobs",
+  "rulesOk": true
+ },
+ {
+  "id": "ta-loss",
+  "rules": "compute_analytics",
+  "rulesOk": true
+ },
+ {
+  "id": "ta-plan",
+  "rules": "draft_record",
+  "rulesOk": true
+ },
+ {
+  "id": "ta-buy",
+  "rules": "draft_record",
+  "rulesOk": true
+ },
+ {
+  "id": "ta-came",
+  "rules": "query_movements",
+  "rulesOk": true
+ },
+ {
+  "id": "ta-want",
+  "rules": null,
+  "rulesOk": true
+ },
+ {
+  "id": "ta-with",
+  "rules": "query_holdings",
+  "rulesOk": true
+ },
+ {
+  "id": "ta-words",
+  "rules": "draft_record",
+  "rulesOk": true
+ },
+ {
+  "id": "ta-words-500",
+  "rules": "draft_record",
+  "rulesOk": true
+ },
+ {
+  "id": "hi-back",
+  "rules": "draft_record",
+  "rulesOk": true
+ },
+ {
+  "id": "hi-kits",
+  "rules": "draft_record",
+  "rulesOk": true
+ },
+ {
+  "id": "hi-ask",
+  "rules": "query_holdings",
+  "rulesOk": true
+ },
+ {
+  "id": "hi-q-sent",
+  "rules": "query_holdings",
+  "rulesOk": true
+ },
+ {
+  "id": "hi-plan",
+  "rules": "draft_record",
+  "rulesOk": true
+ },
+ {
+  "id": "hi-loss",
+  "rules": "compute_analytics",
+  "rulesOk": true
+ },
+ {
+  "id": "hi-want",
+  "rules": null,
+  "rulesOk": true
+ },
+ {
+  "id": "hi-sent-week",
+  "rules": "query_movements",
+  "rulesOk": true
+ },
+ {
+  "id": "hi-buy",
+  "rules": "draft_record",
+  "rulesOk": true
+ },
+ {
+  "id": "adv-inject",
+  "rules": null,
+  "rulesOk": true
+ },
+ {
+  "id": "adv-price",
+  "rules": "query_holdings",
+  "rulesOk": true
+ },
+ {
+  "id": "adv-sql",
+  "rules": null,
+  "rulesOk": true
+ },
+ {
+  "id": "adv-question-record",
+  "rules": "query_holdings",
+  "rulesOk": true
+ },
+ {
+  "id": "adv-number",
+  "rules": "draft_record",
+  "rulesOk": true
+ }
+]

@@ -144,9 +144,13 @@ router.post(
     const h0: any = await col('sc_holdings').findOne({ key: a.key } as any);
     const book = h0?.qty_base ?? 0;
     const postings = postCount(a.key as RealKey, a.dim, book, a.qty, 'count');
-    await post(ctx, { type: 'adjust_count', ref: { kind: 'adjustment', id: a._id }, payload: { op: 'count', approved: true }, business_date: a.business_date }, postings, async (session) => {
-      await col('sc_adjustments').updateOne({ _id: a._id } as any, { $set: { state: 'approved', decided_by: ctx.userId, decided_at: Date.now(), book_at_approval: book } }, { session });
+    // Two taps (or two owners) at once must post once: the client id is unique per business, and the state flip inside
+    // the same transaction only succeeds while the count is still pending.
+    const r = await post(ctx, { type: 'adjust_count', ref: { kind: 'adjustment', id: a._id }, payload: { op: 'count', approved: true }, business_date: a.business_date, client_id: `approve_${a._id}` }, postings, async (session) => {
+      const u = await col('sc_adjustments').updateOne({ _id: a._id, state: 'pending' } as any, { $set: { state: 'approved', decided_by: ctx.userId, decided_at: Date.now(), book_at_approval: book } }, { session });
+      if (!u.modifiedCount) throw new HttpError(409, 'Already decided.');
     });
+    if ((r as { duplicate?: boolean } | undefined)?.duplicate) throw new HttpError(409, 'Already decided.');
     res.json({ approved: true, difference: a.qty - book });
   }),
 );
