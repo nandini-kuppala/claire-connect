@@ -7,6 +7,11 @@ export function qty(base: number, dim: Dimension | string): string {
   return `${f.value} ${f.unit}`;
 }
 
+/** Just the number, for "400 of 600 pcs". */
+export function qtyNum(base: number, dim: Dimension | string): string {
+  return String(formatQty(base, dim as Dimension).value);
+}
+
 /** "14 Nov" / "14 நவ." / "14 नव॰" from a YYYY-MM-DD business date. */
 export function shortDate(d: string | null | undefined, lang: string): string {
   if (!d) return '';

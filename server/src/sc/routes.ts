@@ -19,6 +19,7 @@ import { ownerRouter as statements } from './statement.js';
 import linking from './link.js';
 import staff from './staff.js';
 import money from './money.js';
+import orders from './orders.js';
 
 const router = Router();
 router.use('/sc', requireAuth, requireSc);
@@ -35,6 +36,7 @@ router.use(statements);
 router.use(linking);
 router.use(staff);
 router.use(money);
+router.use(orders);
 
 /** Action chips and the Goods badge (03 §4.2). Late/confirm/dispute counts arrive with slices 1–2. */
 router.get(

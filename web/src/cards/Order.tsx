@@ -1,4 +1,7 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useSession } from '../store/session';
+import { OrderGoodsS } from '../screens/goods/OrderGoods.strings';
 import clsx from 'clsx';
 import {
   AlertTriangle,
@@ -69,6 +72,9 @@ function actionsFor(role: 'buyer' | 'seller' | 'viewer', p: OrderPayload): Actio
 }
 
 export function OrderCard({ payload, ctx }: CardProps<'order'>) {
+  const nav = useNavigate();
+  const goodsOn = useSession((st) => !!st.features?.supplyChain && st.user?.role !== 'staff');
+  const og = OrderGoodsS.use();
   const t = strings(ctx.lang);
   const dt = dealT(ctx.lang);
   const role: 'buyer' | 'seller' | 'viewer' =
@@ -184,6 +190,12 @@ export function OrderCard({ payload, ctx }: CardProps<'order'>) {
               <div className="h-full rounded-full bg-primary" style={{ width: `${Math.min(100, (payload.qtyDone / payload.qty) * 100)}%` }} />
             </div>
           </div>
+        )}
+
+        {goodsOn && role !== 'viewer' && !cancelled && (
+          <button className="mt-3 inline-flex min-h-10 items-center gap-1.5 rounded-full border border-line-strong px-3.5 text-[13.5px] font-semibold text-ink hover:bg-sunken" onClick={() => nav(`/goods/order/${encodeURIComponent(payload.orderId)}`)}>
+            <Truck size={15} aria-hidden />{og('open_goods')}
+          </button>
         )}
 
         {!cancelled && (

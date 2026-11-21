@@ -1,6 +1,7 @@
 // Record → Send for work (03 S4): counterparties on or off Claire; lines one by one or from a size × colour grid.
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { OrderGoodsS } from './OrderGoods.strings';
 import clsx from 'clsx';
 import { api, errorText, ApiError } from '../../lib/api';
 import { Button } from '../../components/Button';
@@ -34,6 +35,7 @@ function Label({ children, hint }: { children: React.ReactNode; hint?: string })
 export default function SendForm() {
   const s = RecS.use();
   const w = WorkS.use();
+  const og = OrderGoodsS.use();
   const [gridOpen, setGridOpen] = useState(false);
   const nav = useNavigate();
   const lang = useSession((st) => st.user?.language || 'en');
@@ -68,6 +70,16 @@ export default function SendForm() {
 
   // Claire's draft → "Change" opens this form with what was said (party, work, lines).
   const draftId = useSearchParams()[0].get('draft');
+  // J15: "Send material" on a job-work order opens this form with the order's seller, and saves against the order.
+  const orderId = useSearchParams()[0].get('order');
+  const [forOrder, setForOrder] = useState<{ code: string } | null>(null);
+  useEffect(() => {
+    if (!orderId) return;
+    void api.get<{ order: { code: string; seller: string; seller_id: string } }>(`/api/sc/orders/${orderId}/goods`).then((r) => {
+      setForOrder({ code: r.order.code });
+      setParty({ ref: { k: 'b', id: r.order.seller_id }, name: r.order.seller, kind: 'business', sub: null, onClaire: true });
+    }).catch(() => undefined);
+  }, [orderId]);
   const [draftProc, setDraftProc] = useState<string | null>(null);
   useEffect(() => {
     if (!draftId) return;
@@ -102,7 +114,7 @@ export default function SendForm() {
         lines: lines.map((l) => ({ spec_id: l.spec!.spec.id, qty: Number(l.qty), unit: l.unit, lot: l.lot.trim() || undefined, they_got: Number(l.theyGot) > 0 ? Number(l.theyGot) : undefined })),
         ...(override ? { allow_untracked: true, untracked_reason: override.reason } : {}),
       };
-      const r = await api.post<{ movement: { id: string }; undo_until: number }>('/api/sc/movements/send', body);
+      const r = await api.post<{ movement: { id: string }; undo_until: number }>(orderId ? `/api/sc/orders/${orderId}/send-material` : '/api/sc/movements/send', body);
       nav(`/goods?saved=${r.movement.id}&until=${r.undo_until}`, { replace: true });
     } catch (e) {
       const body = (e as ApiError).body as { code?: string; lines?: { index: number; available: number; needed: number; dim: string }[] } | undefined;
@@ -122,6 +134,7 @@ export default function SendForm() {
           <ArrowLeft size={20} />
         </button>
         <h1 className="font-head text-[20px] font-bold text-ink">{s('send')}</h1>
+        {forOrder && <span className="ml-auto mr-2 rounded-full bg-primary-tint px-3 py-1 text-[13px] font-semibold text-ink">{og('for_order', { code: forOrder.code })}</span>}
       </header>
 
       <div className="space-y-5 px-4 pt-4">

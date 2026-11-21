@@ -19,7 +19,8 @@ Read this first in a new session, then `PROGRESS.md` (a report per slice), `BUIL
 | 5 | ab6a656 | Personal Claire: tools, model chain, cross-script names, answers, record drafts |
 | 6 | 9ecc75e | Statement links (`/l/:token`), WhatsApp share, contact linking (`link_rekey`) |
 | 7 | 20c3b64 | Staff: provisioning, PIN, staff guard on every route, count approvals, suggestions |
-| 8a | see `git log` | Reports and money: derived bills, record payment / set-off, balances and oldest unpaid, performance, GST clock, CSV |
+| 8a | 0ec68b3 | Reports and money: derived bills, record payment / set-off, balances and oldest unpaid, performance, GST clock, CSV |
+| 8b | see `git log` | Orders ↔ goods: deliveries as movements, auto-delivered, returns, Send material, order prices in Bills, history in search, work profile, migration |
 
 ## Slice 7 (staff): done
 Server, web, the 34-check smoke (`scripts/sc-smoke-s7.py`) and a browser pass are all complete; see the slice 7 report in `PROGRESS.md`. The demo staff user on the dev DB is **Kavitha, 9600000001, PIN 2468**, staff of Ravi.
@@ -27,8 +28,10 @@ Server, web, the 34-check smoke (`scripts/sc-smoke-s7.py`) and a browser pass ar
 ## Slice 8a (reports and money): done
 Server `sc/money.ts`, web `ReportsScreen` / `BillScreen`, the 27-check smoke (`scripts/sc-smoke-s8a.py`) and a browser pass; see the slice 8a report in `PROGRESS.md` for its known gaps (closed days, rate override, due reminders, bill share).
 
-## After slice 8a (from `05-build-plan.md`)
-- **8b** orders ↔ goods (job-work orders, deliveries)
+## Slice 8b (orders ↔ goods): done
+Server `sc/orders.ts`, web `OrderGoodsScreen` (+ Orders line, chat card link, work card, history in search), the 34-check smoke (`scripts/sc-smoke-s8b.py`) and a browser pass; gaps in the slice 8b report in `PROGRESS.md`. The qty_done migration (`npm run sc:migrate-orders -w server`, dry run by default) has **not** been run on production; that's the owner's call at deploy time.
+
+## After slice 8b (from `05-build-plan.md`)
 - **9** flow view
 - Then Phase 7 (field test, polish).
 
@@ -52,7 +55,7 @@ SC_ENABLED=1 MONGODB_DB=nexconn_sc_dev npm run dev   # API :8787, web :5173 (pro
 - Flag a business: `MONGODB_DB=nexconn_sc_dev npm run sc:flag -w server -- <id|phone> on` (refuses non-dev DBs).
 - Checks:
   - `npm run lint` (typecheck + `scripts/sc-lint.mjs`); `npm test` (24 unit tests);
-  - smokes `python3 scripts/sc-smoke-s{1,2,3,4,45,6,7,8a}.py` (dev server running);
+  - smokes `python3 scripts/sc-smoke-s{1,2,3,4,45,6,7,8a,8b}.py` (dev server running);
   - `cd server && MONGODB_DB=nexconn_sc_dev SC_ENABLED=1 npx tsx src/sc/claire/smoke.mts`;
   - `MONGODB_DB=nexconn_sc_dev npm run sc:verify -w server` (ledger: every event balances, every holding equals its postings);
   - Claire fixtures: `npm run sc:claire-fixtures -w server` (`SC_LLM_OFF=1` = rules only).

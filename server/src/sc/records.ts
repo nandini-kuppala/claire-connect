@@ -64,7 +64,7 @@ const sendBody = z.object({
   rework_of: z.string().max(40).optional(),
 });
 
-export async function sendForWork(ctx: Ctx, raw: unknown): Promise<Reply> {
+export async function sendForWork(ctx: Ctx, raw: unknown, extra: { order_id?: string } = {}): Promise<Reply> {
     const b = parse(sendBody, raw);
     const cp = await counterparty(ctx, b.to);
     const proc = await col('sc_process_types').findOne({ key: b.process_key, owner_business_id: { $in: [null, ctx.businessId] } } as any);
@@ -128,6 +128,8 @@ export async function sendForWork(ctx: Ctx, raw: unknown): Promise<Reply> {
       terms_snapshot: terms, dc_no: b.dc_no ?? null, photo_ids: b.photo_ids ?? [], note: b.note ?? null, untracked_reason: b.allow_untracked ? b.untracked_reason ?? null : null,
       business_date: businessDate, recorded_at: now, recorded_by_user_id: ctx.userId, recorder_business_id: ctx.businessId,
       visible_at: visibleAt, cancelled_at: null, party_business_ids: parties, version: 1,
+
+      ...(extra.order_id ? { order_id: extra.order_id } : {}),
     };
     const discrepancies: any[] = [];
     for (const s of settleQueue) {
@@ -142,7 +144,7 @@ export async function sendForWork(ctx: Ctx, raw: unknown): Promise<Reply> {
       _id: jobId, id: jobId, process_key: proc.key, process_type_id: proc._id, conservation_kind: proc.conservation_kind, loss_norm_pct: proc.loss_norm_pct, rate_basis: proc.rate_basis,
       owner_party: owner, client_party: owner, performer_party: performer, status: 'issued', rework_of: reworkOf,
       inputs: movLines.map((l) => ({ movement_id: movementId, line_id: l.line_id, spec_id: l.spec_id, dim: l.dim, lot: l.lot, role: l.role ?? 'primary' })),
-      outputs: [] as unknown[], returns: [] as string[], promised_at: null, expected_at: expected, business_date: businessDate, pauses: [],
+      outputs: [] as unknown[], returns: [] as string[], promised_at: null, expected_at: expected, business_date: businessDate, pauses: [], ...(extra.order_id ? { order_id: extra.order_id } : {}),
       party_business_ids: parties, created_at: now, version: 1,
     };
     const result = await post(ctx, { type: 'send_for_work', ref: { kind: 'movement', id: movementId }, payload: { job_id: jobId }, business_date: businessDate, client_id: b.client_id, visible_at: visibleAt }, postings, async (session) => {
@@ -257,6 +259,7 @@ export async function gotBack(ctx: Ctx, raw: unknown, jobId: string): Promise<Re
     });
     if (result.duplicate) return reply(200, { duplicate: true });
     if (onPlatform) await enqueueCard('movement', movementId, 'sent', movement.visible_at);
+    if (job.order_id) void import('./orders.js').then((o) => o.orderCoverage(job.order_id)).catch((e) => console.warn('[sc] order coverage', (e as Error).message));
     return reply(201, { movement, undo_until: movement.visible_at });
 }
 
@@ -354,7 +357,8 @@ router.post(
 
 /** After a confirmation or figure: refresh the movement card and post any new dispute card now. */
 async function afterChange(movementId: string, results: { disputeId?: string | null }[]) {
-  const m = await col('sc_movements').findOne({ _id: movementId } as any, { projection: { lines: 1, party_business_ids: 1 } });
+  const m = await col('sc_movements').findOne({ _id: movementId } as any, { projection: { lines: 1, party_business_ids: 1, order_id: 1 } });
+  if (m?.order_id) void import('./orders.js').then((o) => o.orderCoverage(m.order_id)).catch((e) => console.warn('[sc] order coverage', (e as Error).message));
   if ((m?.party_business_ids?.length ?? 0) < 2) return;
   const stamp = Date.now();
   await enqueueCard('movement', movementId, `update_${stamp}`, stamp);

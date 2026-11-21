@@ -12,8 +12,16 @@ import { todayIST, workingDaysBetween } from '../../../shared/sc/dates.js';
 import { winningAssertion } from '../../../shared/sc/evidence.js';
 import type { PartyRef } from '../../../shared/sc/types.js';
 import { toBase } from '../../../shared/sc/units.js';
+import { orderUnit } from './orders.js';
+import { advanceAmount, balanceAmount } from '../money.js';
 
 const router = Router();
+
+const parse = <T>(schema: z.ZodType<T>, body: unknown): T => {
+  const r = schema.safeParse(body);
+  if (!r.success) throw new HttpError(400, 'Please check the details and try again.');
+  return r.data;
+};
 const pk = (p: PartyRef) => `${p.k}:${p.id}`;
 const isMe = (ctx: Ctx, p: PartyRef | null | undefined) => !!p && p.k === 'b' && p.id === ctx.businessId;
 function owner(ctx: Ctx) {
@@ -30,7 +38,16 @@ const fmt = (base: number, dim: string) => `${Math.round(toUnit(base, dim) * 100
 type Rate = { basis: string; value_paise: number };
 
 /** The rate for a job: the one agreed on it, else the client's rate card in force on its date (most specific first). */
-function jobRate(j: any, agreed: Map<string, Rate>, cards: any[]): Rate | null {
+/** An order's agreed price (₹ per order unit, GST added) as paise per kg / m / pc. */
+function orderRate(o: any): number {
+  const u = orderUnit(o);
+  const display = u.dim === 'mass' ? 1000 : u.dim === 'length' ? 100 : 1;
+  return Math.round((o.unit_price * 100 * (1 + (o.gst_pct ?? 0) / 100) * display) / u.perUnitBase);
+}
+
+function jobRate(j: any, agreed: Map<string, Rate>, cards: any[], orders: Map<string, any> = new Map()): Rate | null {
+  const o = j.order_id ? orders.get(j.order_id) : null;
+  if (o) return { basis: orderUnit(o).dim === 'mass' ? 'per_input_mass' : 'per_output_piece', value_paise: orderRate(o) };
   const p = agreed.get(j._id);
   if (p) return p;
   const fits = cards.filter((c) => c.business_id === j.client_party.id && c.party?.k === j.performer_party.k && c.party?.id === j.performer_party.id
@@ -64,7 +81,7 @@ export async function billItems(ctx: Ctx, party?: PartyRef): Promise<BillItem[]>
   // Jobs either way: work I gave (I owe the performer) and work I did (the client owes me). In-house work is free.
   const pf: any = party ? { $or: [{ 'performer_party.k': party.k, 'performer_party.id': party.id }, { 'client_party.k': party.k, 'client_party.id': party.id }] } : {};
   const jobs = (await col('sc_jobs').find({ party_business_ids: ctx.businessId, in_house: { $ne: true }, status: { $nin: ['cancelled'] }, $and: [{ $or: [{ 'client_party.id': ctx.businessId }, { 'performer_party.id': ctx.businessId }] }, pf] } as any,
-    { projection: { client_party: 1, performer_party: 1, process_key: 1, status: 1, business_date: 1, inputs: 1, outputs: 1, 'closure.business_date': 1, 'closure.adjustments': 1 } }).sort({ business_date: -1 }).limit(1500).toArray()) as any[];
+    { projection: { client_party: 1, performer_party: 1, process_key: 1, status: 1, business_date: 1, inputs: 1, outputs: 1, order_id: 1, 'closure.business_date': 1, 'closure.adjustments': 1 } }).sort({ business_date: -1 }).limit(1500).toArray()) as any[];
   const ids = jobs.map((j) => j._id);
   const [procList, priceList, cards] = await Promise.all([
     col('sc_process_types').find({} as any, { projection: { key: 1, labels: 1, billable_grades: 1 } }).toArray(),
@@ -73,7 +90,8 @@ export async function billItems(ctx: Ctx, party?: PartyRef): Promise<BillItem[]>
   ]);
   const procs = new Map((procList as any[]).map((p) => [p.key, p]));
   const agreed = new Map<string, Rate>((priceList as any[]).map((p) => [p.record.id, { basis: p.basis, value_paise: p.value_paise }])); // latest wins
-  const rated = jobs.map((j) => ({ j, rate: isMe(ctx, j.client_party) && isMe(ctx, j.performer_party) ? null : jobRate(j, agreed, cards) }));
+  const jobOrders = new Map(((await col('orders').find({ _id: { $in: [...new Set(jobs.map((j) => j.order_id).filter(Boolean))] } } as any, { projection: { unit: 1, unit_price: 1, gst_pct: 1 } }).toArray()) as any[]).map((o) => [o._id, o]));
+  const rated = jobs.map((j) => ({ j, rate: isMe(ctx, j.client_party) && isMe(ctx, j.performer_party) ? null : jobRate(j, agreed, cards, jobOrders) }));
   const movIds = [...new Set(rated.filter((x) => x.rate?.basis === 'per_input_mass').flatMap((x) => (x.j.inputs as any[]).map((i) => i.movement_id).filter(Boolean)))];
   const movements = new Map(((await col('sc_movements').find({ _id: { $in: movIds } } as any, { projection: { lines: 1 } }).toArray()) as any[]).map((m) => [m._id, m]));
   const label = (k: string) => procs.get(k)?.labels?.[ctx.language] ?? procs.get(k)?.labels?.en ?? k;
@@ -94,10 +112,10 @@ export async function billItems(ctx: Ctx, party?: PartyRef): Promise<BillItem[]>
   }
   // Sales and purchases recorded with a rate (a return is a negative line on the same side).
   const prices = (await col('sc_prices').find({ business_id: ctx.businessId, movement_id: { $exists: true } } as any).limit(1500).toArray()) as any[];
-  const tmov = new Map(((await col('sc_movements').find({ _id: { $in: prices.map((p) => p.movement_id) }, cancelled_at: null } as any, { projection: { from: 1, to: 1, lines: 1, business_date: 1 } }).toArray()) as any[]).map((m) => [m._id, m]));
+  const tmov = new Map(((await col('sc_movements').find({ _id: { $in: prices.map((p) => p.movement_id) }, cancelled_at: null } as any, { projection: { from: 1, to: 1, lines: 1, business_date: 1, order_id: 1 } }).toArray()) as any[]).map((m) => [m._id, m]));
   for (const pr of prices) {
     const m = tmov.get(pr.movement_id);
-    if (!m) continue;
+    if (!m || m.order_id) continue; // an order's goods are billed at the order's price below
     const other = (isMe(ctx, m.from.party) ? m.to.party : m.from.party) as PartyRef;
     if (party && pk(other) !== pk(party)) continue;
     const line = m.lines?.[0];
@@ -107,6 +125,26 @@ export async function billItems(ctx: Ctx, party?: PartyRef): Promise<BillItem[]>
     const dir = pr.kind === 'sell' || pr.kind === 'buyer_returned' ? 'they_owe' : 'i_owe';
     const neg = pr.kind === 'return_to_supplier' || pr.kind === 'buyer_returned';
     items.push({ party: other, dir, date: m.business_date, label: line?.label_en ?? '', qty: fmt(base, line?.dim ?? 'count'), rate_paise: pr.rate_paise, amount_paise: neg ? -amount : amount, source: { kind: 'movement', id: m._id } });
+  }
+  // Goods sent against a marketplace order (8b): billed to both sides at the agreed order price, GST added, on what
+  // arrived (or what was sent, until it arrives). Returns on the order are negative lines.
+  const now = Date.now();
+  const omov = ((await col('sc_movements').find({ party_business_ids: ctx.businessId, order_id: { $exists: true }, action: { $in: ['sell', 'return_to_supplier'] }, cancelled_at: null } as any,
+    { projection: { from: 1, to: 1, lines: 1, business_date: 1, order_id: 1, action: 1, visible_at: 1, recorder_business_id: 1 } }).limit(1500).toArray()) as any[])
+    .filter((m) => m.recorder_business_id === ctx.businessId || m.visible_at <= now);
+  const ords = new Map(((await col('orders').find({ _id: { $in: [...new Set(omov.map((m) => m.order_id))] } } as any, { projection: { code: 1, unit: 1, unit_price: 1, gst_pct: 1, buyer_business_id: 1, seller_business_id: 1 } }).toArray()) as any[]).map((o) => [o._id, o]));
+  for (const m of omov) {
+    const o = ords.get(m.order_id);
+    if (!o) continue;
+    const other = (isMe(ctx, m.from.party) ? m.to.party : m.from.party) as PartyRef;
+    if (party && pk(other) !== pk(party)) continue;
+    const u = orderUnit(o);
+    const lines = (m.lines as any[]).filter((l) => l.dim === u.dim);
+    const base = lines.reduce((a, l) => a + (l.resolved_received ?? winningAssertion((l.received as any[]).filter((x) => x.evidence !== 'implied'))?.base_qty ?? winningAssertion(l.sent)?.base_qty ?? 0), 0);
+    const rate = orderRate(o);
+    const amount = Math.round(toUnit(base, u.dim) * rate);
+    const iSell = o.seller_business_id === ctx.businessId;
+    items.push({ party: other, dir: iSell ? 'they_owe' : 'i_owe', date: m.business_date, label: `${o.code} · ${lines[0]?.label_en ?? ''}`, qty: fmt(base, u.dim), rate_paise: rate, amount_paise: m.action === 'return_to_supplier' ? -amount : amount, source: { kind: 'movement', id: m._id }, note: m.action === 'return_to_supplier' ? 'order_return' : 'order' });
   }
   return items.sort((a, b) => a.date.localeCompare(b.date));
 }
@@ -122,7 +160,36 @@ async function settlementsWith(ctx: Ctx, party?: PartyRef) {
       const dir = s.direction === 'setoff' ? 'setoff' : mine ? s.direction : s.direction === 'paid' ? 'received' : 'paid';
       return { id: s._id as string, party: other, dir: dir as 'paid' | 'received' | 'setoff', amount_paise: s.amount_paise as number, mode: s.mode as string, ref: s.ref as string | null, business_date: s.business_date as string, mine };
     })
-    .filter((s) => !party || pk(s.party) === pk(party));
+    .filter((s) => !party || pk(s.party) === pk(party))
+    .concat(await mirroredOrderPayments(ctx, party));
+}
+
+/**
+ * D1: an order whose goods are recorded here may still have its advance / balance marked with the order buttons. Those
+ * taps show as read-only payments (never stored twice), so Bills never counts an order's money twice or misses it.
+ */
+async function mirroredOrderPayments(ctx: Ctx, party?: PartyRef) {
+  if (party && party.k !== 'b') return [];
+  const mine = { $or: [{ buyer_business_id: ctx.businessId }, { seller_business_id: ctx.businessId }] };
+  const orders = (await col('orders').find({ ...mine, $and: [{ $or: [{ advance_paid_at: { $ne: null } }, { paid_at: { $ne: null } }] }, ...(party ? [{ $or: [{ buyer_business_id: party.id }, { seller_business_id: party.id }] }] : [])] } as any,
+    { projection: { code: 1, total: 1, gst_pct: 1, advance_pct: 1, advance_paid_at: 1, paid_at: 1, buyer_business_id: 1, seller_business_id: 1 } }).limit(500).toArray()) as any[];
+  if (!orders.length) return [];
+  const ids = orders.map((o) => o._id);
+  const linked = new Set<string>([
+    ...((await col('sc_movements').distinct('order_id', { order_id: { $in: ids } } as any)) as string[]),
+    ...((await col('sc_jobs').distinct('order_id', { order_id: { $in: ids } } as any)) as string[]),
+    ...((await col('sc_order_openings').distinct('_id', { _id: { $in: ids } } as any)) as string[]),
+  ]);
+  const ist = (ms: number) => new Date(ms + 5.5 * 3600e3).toISOString().slice(0, 10);
+  const out: { id: string; party: PartyRef; dir: 'paid' | 'received' | 'setoff'; amount_paise: number; mode: string; ref: string | null; business_date: string; mine: boolean; mirrored?: boolean }[] = [];
+  for (const o of orders.filter((x) => linked.has(x._id))) {
+    const iBuy = o.buyer_business_id === ctx.businessId;
+    const other: PartyRef = { k: 'b', id: iBuy ? o.seller_business_id : o.buyer_business_id };
+    const dir = iBuy ? 'paid' : 'received';
+    if (o.advance_paid_at && advanceAmount(o) > 0) out.push({ id: `order:${o._id}:advance`, party: other, dir, amount_paise: advanceAmount(o) * 100, mode: 'order', ref: o.code, business_date: ist(o.advance_paid_at), mine: false, mirrored: true });
+    if (o.paid_at && balanceAmount(o) > 0) out.push({ id: `order:${o._id}:balance`, party: other, dir, amount_paise: balanceAmount(o) * 100, mode: 'order', ref: o.code, business_date: ist(o.paid_at), mine: false, mirrored: true });
+  }
+  return out;
 }
 
 export interface PartyBalance { party: PartyRef; name: string; i_owe: number; they_owe: number; paid: number; received: number; setoff: number; balance_i_owe: number; balance_they_owe: number; net: number; oldest_unpaid_days: number | null; unpriced: number }
@@ -193,7 +260,7 @@ router.post(
   h(async (req: ScRequest, res) => {
     const ctx = req.ctx;
     owner(ctx);
-    const b = z.object({
+    const b = parse(z.object({
       party: z.object({ k: z.enum(['b', 'c']), id: z.string().max(64) }),
       direction: z.enum(['paid', 'received', 'setoff']),
       amount_paise: z.number().int().positive().max(10_000_000_000),
@@ -202,7 +269,7 @@ router.post(
       note: z.string().trim().max(200).optional(),
       business_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
       client_id: z.string().min(8).max(40),
-    }).parse(req.body);
+    }), req.body);
     if (b.party.k === 'b' && b.party.id === ctx.businessId) throw new HttpError(400, 'Pick the other party.');
     if (b.party.k === 'c' && !(await col('sc_contacts').findOne({ _id: b.party.id, owner_business_id: ctx.businessId } as any))) throw new HttpError(404, 'Not found');
     const dup = await col('sc_settlements').findOne({ recorder_business_id: ctx.businessId, client_id: b.client_id } as any);

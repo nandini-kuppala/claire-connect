@@ -40,6 +40,7 @@ const TradeForm = lazy(() => import('./screens/goods/TradeForm'));
 const AdjustScreen = lazy(() => import('./screens/goods/AdjustScreen'));
 const ReportsScreen = lazy(() => import('./screens/goods/ReportsScreen'));
 const BillScreen = lazy(() => import('./screens/goods/BillScreen'));
+const OrderGoodsScreen = lazy(() => import('./screens/goods/OrderGoodsScreen'));
 
 /** The Goods routes exist only for businesses with the supply-chain flag; others go Home. */
 function RequireGoods({ children }: { children: ReactNode }) {
@@ -303,6 +304,20 @@ export default function App() {
                 <AppShell variant="wide">
                   <Suspense fallback={<Splash />}>
                     <BillScreen />
+                  </Suspense>
+                </AppShell>
+              </RequireGoods>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/goods/order/:id"
+          element={
+            <RequireAuth agentOk={false}>
+              <RequireGoods>
+                <AppShell variant="wide">
+                  <Suspense fallback={<Splash />}>
+                    <OrderGoodsScreen />
                   </Suspense>
                 </AppShell>
               </RequireGoods>

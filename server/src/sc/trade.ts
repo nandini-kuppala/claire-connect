@@ -71,7 +71,7 @@ async function sourceKey(ctx: Ctx, goods: Goods, holder: PartyRef, place: string
   return { key, have: Math.max(0, h0?.qty_base ?? 0) };
 }
 
-export async function recordTrade(ctx: Ctx, raw: unknown): Promise<Reply> {
+export async function recordTrade(ctx: Ctx, raw: unknown, extra: { order_id?: string } = {}): Promise<Reply> {
     const b = parse(tradeBody, raw);
     const self = me(ctx);
     const kind = b.kind;
@@ -175,6 +175,7 @@ export async function recordTrade(ctx: Ctx, raw: unknown): Promise<Reply> {
       untracked_reason: b.allow_untracked ? b.untracked_reason ?? null : null,
       business_date: businessDate, recorded_at: now, recorded_by_user_id: ctx.userId, recorder_business_id: ctx.businessId,
       visible_at: shared ? now + UNDO_MS : now, cancelled_at: null, party_business_ids: viewers, version: 1,
+      ...(extra.order_id ? { order_id: extra.order_id } : {}),
     };
     const discrepancies: any[] = [];
     for (const x of settleQueue) {

@@ -135,31 +135,43 @@ In Claire's chat (Home → ask box, or the chat tab), type or speak in any of th
 
 **Try it:** as Ravi, open Reports → Noyyal Dyeing, then **Record payment** → I paid them → ₹1,000 → UPI. The net drops by ₹1,000.
 
+### 4.12 Orders and goods
+When you and the other business both use Goods, a marketplace order and its goods are joined up:
+- **Seller:** open the order (the **Goods** link on the order card in chat) and tap **Send goods** for each dispatch: 400 today, 200 next week.
+- **Buyer:** tap **Received** as each lot arrives. The Orders tab shows "400 of 600 pcs received · 200 pcs on the way". When everything has arrived, the order is marked delivered by itself, and the rating card appears.
+- **Return some:** the buyer returns part of an order, with a reason (wrong size, defect, other).
+- **Job work:** on a job-work order, **Send material** opens Send for work already filled in. As the work comes back, the order fills up, and it's marked delivered when it's all back.
+- **Money:** these goods appear in **Bills** at the order's agreed price with GST, for both of you. Advance or balance marked on the order shows there too, read-only.
+- **Search:** when you search for a supplier you have worked with, the card shows your own history: "You: 4 jobs · usually 6 days".
+- **Your work:** the Goods home asks owners once **What work does your unit do?**
+
+**Try it:** as Ravi, open Orders: the recent "Navy tees LG-T10 M" order shows "600 of 600 pcs received · 12 pcs returned". Tap the Goods link on its card in chat to see each delivery.
+
 ## 5. What is not built yet
 - **Money extras:** reminders for unpaid bills, sharing a bill, closed days and per-receipt rate changes.
-- **Orders:** linking marketplace orders to goods (8b).
+- **Orders:** replacing the order's advance and balance buttons with Record payment, and using "what work you do" in search ranking.
 - **Flow view** of a whole order (9).
 - **Claire's paid backup model:** needs an Anthropic key.
 - **Language:** Tamil and Hindi wording still needs a native speaker's check.
 
 ## 6. How it is tested
 - **Automatic checks:** typecheck and style rules, unit tests, and one walkthrough script per slice that plays the stories above against the dev server:
-  - `scripts/sc-smoke-s1.py`, `s2`, `s3`, `s4`, `s45`, `s6`, `s7`, `s8a`;
+  - `scripts/sc-smoke-s1.py`, `s2`, `s3`, `s4`, `s45`, `s6`, `s7`, `s8a`, `s8b`;
   - Claire's script.
 - **Ledger check** (`npm run sc:verify -w server`): every record balances, and every stock figure equals its history.
 - See **Test results** below for the latest run.
 
 ## Test results
-**Retest on 21 Nov 2026**, local dev server on the dev database, with slices 0–8a active. **Everything passed:**
+**Retest on 21 Nov 2026**, local dev server on the dev database, with slices 0–8b active. **Everything passed:**
 
 | Check | Result |
 |---|---|
-| Typecheck + style rules (`npm run lint`) | 84 files, 0 problems |
+| Typecheck + style rules (`npm run lint`) | 90 files, 0 problems |
 | Unit tests (`npm test`) | 24 pass, 0 fail |
 | Slice 1 walkthrough | no errors |
-| Slices 2, 3, 4, 4.5, 6, 7, 8a walkthroughs | all pass |
+| Slices 2, 3, 4, 4.5, 6, 7, 8a, 8b walkthroughs | all pass |
 | Claire walkthrough | all pass |
-| Ledger check (`sc:verify`) | 1173 event groups, 1133 stock rows, 0 problems |
+| Ledger check (`sc:verify`) | 1330 event groups, 1269 stock rows, 0 problems |
 | Web build | OK |
 
-Browser passes were done per slice as each was built (slice 8a: Ravi at phone width, English and Tamil).
+Browser passes were done per slice as each was built (slice 8a: Ravi at phone width, English and Tamil; slice 8b: Ravi in English, Lakshmi in Tamil).

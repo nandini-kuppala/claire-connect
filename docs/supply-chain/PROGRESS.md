@@ -583,8 +583,59 @@ Governing brief: `docs/supply-chain/BRIEF.md` (re-read at the start of every pha
     - Claire answers about money.
   - Performance days are 0 in the demo data (smokes send and return on the same day).
 
+### Slice 8b — Orders ↔ goods, history and the work profile (2026-11-21)
+- **Built** (`sc/orders.ts`; everything only when **both** businesses use Goods, otherwise the order works exactly as before):
+  - **Deliveries as movements (J8):** the seller's **Send goods** on an order records a sale movement linked to it (`order_id`).
+    - Each dispatch is its own movement; receipts add up. The buyer confirms with the usual Received.
+    - The first dispatch moves the order to `dispatched` through the existing order flow, in the background.
+    - **When receipts cover the order**, the existing `orderEvent('delivered')` runs once (a claim guards two receipts landing together). It sets `delivered_at` and the balance due date, and posts the rating card, so Trade Desk's overdue checks keep working unchanged.
+    - The hook is in `afterChange` (confirmations, figures, dispute outcomes) and in `gotBack`.
+  - **Return some (J8):** the buyer returns part of an order, with a reason (wrong size, defect, other). It's a movement back, linked to the order.
+  - **Job-work orders (J15):**
+    - **Send material** opens Send for work with the order's seller filled in, and saves through `/sc/orders/:id/send-material`. The server forces the recipient to be the seller, whatever the body says.
+    - The job carries `order_id`. When the work back covers the order, it's marked delivered.
+  - **Order prices in Bills (D1):**
+    - Goods sent against an order are billed **to both sides** at the agreed order price with GST added, on what arrived (or what was sent, until it arrives). Returns are negative lines; job-work order jobs use the order price.
+    - Advance and balance taps on the order buttons show in Bills as **read-only mirrored payments** (never stored, can't be voided). Nothing is counted twice.
+  - **Orders tab:** "600 of 600 pcs received · 12 pcs returned", from one `goods-summary` call.
+  - **Chat order card:** a **Goods** link.
+  - **Order Goods page** `/goods/order/:id`: progress bar, deliveries with state, returns, the job-work order's jobs and opening position, and Send goods / Return some / Send material.
+  - **Your history with them (J15):** `GET /sc/history?ids=` returns my own jobs with each business: count, usual days (≥ 2 finished), loss % (≥ 2 closed).
+    - Search result supplier cards show "You: 4 jobs · usually 6 days · 7.1% loss". It's private to the viewer, and requests are batched per screen.
+  - **"What work does your unit do?" (S18):** a one-time owner card on the Goods home: twelve chips, Save or Not now. Stored as `businesses.sc_work`.
+  - **Migration** (`npm run sc:migrate-orders -w server`, dry run by default, `--apply` to write; refuses non-dev databases):
+    - Open job-work orders where both use Goods get an **opening position** from `qty_done` in `sc_order_openings`. Later work adds to it, so nothing is counted twice.
+    - `orders` is never written (qty_done is only read). Idempotent by order id.
+- **Checks:**
+  - typecheck + lint green.
+  - **`scripts/sc-smoke-s8b.py`: 34/34, and again on a second run.** Orders are created through the real deal → offer → accept flow:
+    - the Goods view and who can do what; the buyer can't dispatch;
+    - 400 sent → "dispatched", "400 on the way" → Received → 400 of 600, not delivered;
+    - 200 more → delivered, with the due date and the rating card; the Orders summary;
+    - return 12 (wrong size); the seller can't return;
+    - both sides billed ₹92,610 (588 × ₹150 + 5 %); the advance mirrored as ₹28,350 and not voidable;
+    - job-work order: Send material goes to the seller even when the body names someone else; 60 back → not delivered; 100 → delivered; billed ₹1,260;
+    - history is private and per business; the work profile saves, bad keys → 400;
+    - migration dry run, then apply twice → the second creates nothing.
+  - **Browser:**
+    - Ravi: the Orders line, the order Goods page (600 of 600, deliveries, the return), the work card on Goods.
+    - Lakshmi (Tamil): an order's Send goods (picker → 20 → the short-stock notice → record anyway → "20 pcs on the way").
+- **Fixed during checks:**
+  - **New routes returned 500 on bad input** (zod used directly); they now give 400. The 8a money routes had the same problem.
+  - **The first dispatch waited about 8 s** for the order's chat card; it now runs in the background.
+  - "600 pcs of 600 pcs" now reads "600 of 600 pcs".
+  - The history hook requested the same business twice.
+  - **Smoke fixes:**
+    - A re-run reused the deal conversation, whose job-work requirement made the next offer job work; the smoke now offers a product listing.
+    - The buyer's return sat in the 10-minute undo window, so the seller's bill didn't include it yet. That's correct behaviour; the smoke now shares it first.
+- **Known gaps:**
+  - New orders still show the legacy advance and balance buttons (mirrored into Bills); replacing them with Record payment for "new" orders is not done.
+  - Process offerings (`sc_work`) are stored but not yet used by marketplace search ranking.
+  - Not built: the onboarding step itself (the card covers existing businesses), the store listing stock label, the Home "Today" strip, and the exchange flow for a wrong-size return (send the right size as a new dispatch).
+  - History shows on single-supplier cards only, not on combined (split) cards. In the demo data no search lists a business Ravi has jobs with, so it was checked through the API and the request, not on screen.
+
 ## Open questions
 - T8: a separate free Atlas cluster for integration tests needs to be created by the user (not blocking slice 0's pure tests).
 
 ## Next
-Slice 8b (orders ↔ goods). Optional: add the Anthropic key and verify the Haiku tier.
+Slice 9 (offline outbox, polish, performance), then Phase 7. Optional: add the Anthropic key and verify the Haiku tier.

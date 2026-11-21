@@ -18,6 +18,7 @@ import { WorkS } from './Work.strings';
 import { JobS } from './Job.strings';
 import { TradeS } from './Trade.strings';
 import { LinkBanners } from './LinkBanners';
+import { WorkCard } from './WorkCard';
 import { Others } from './Others';
 import { qty as fmtQty, shortDate } from './format';
 
@@ -205,6 +206,7 @@ export default function Goods() {
         </div>
       </header>
 
+      {home?.role === 'owner' && <WorkCard />}
       <LinkBanners owner={home?.role === 'owner'} onChange={() => void load()} />
 
       {tab === 'in' && (othersCount > 0 || sub === 'others') && (

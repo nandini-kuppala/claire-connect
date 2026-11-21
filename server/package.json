@@ -10,6 +10,7 @@
     "test": "node --import tsx --test --test-concurrency=1 'src/**/*.test.ts' '../shared/sc/**/*.test.ts'",
     "sc:flag": "tsx src/sc/flag-cli.ts",
     "sc:verify": "tsx src/sc/verify.ts",
+    "sc:migrate-orders": "tsx src/sc/migrate-cli.ts",
     "sc:claire-fixtures": "tsx src/sc/claire/fixtures.mts",
     "sc:claire-smoke": "tsx src/sc/claire/smoke.mts"
   },
