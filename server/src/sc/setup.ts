@@ -142,6 +142,18 @@ async function materialType(ctx: ScRequest['ctx'], id: string): Promise<Material
 
 const specId = (identity: string) => `sp_${crypto.createHash('sha1').update(identity).digest('base64url').slice(0, 20)}`;
 
+/** Content-addressed spec for a material type + attributes (also used by Claire's drafts). Null when incomplete. */
+export async function upsertSpec(ctx: ScRequest['ctx'], materialTypeId: string, attrs: Record<string, unknown>): Promise<{ id: string; label_en: string } | null> {
+  const mt = await materialType(ctx, materialTypeId);
+  const n = normaliseSpec(mt, attrs);
+  if (!n.ok) return null;
+  const id = specId(n.identity);
+  const family_key = `${mt.key}|${n.attrs.structure ?? n.attrs.kind ?? n.attrs.style ?? ''}`;
+  const label_en = specLabel(mt, n.attrs);
+  await col('sc_specs').updateOne({ _id: id } as any, { $set: { label_en }, $setOnInsert: { id, material_type_id: mt.id, attrs: n.attrs, family_key, created_at: Date.now() } }, { upsert: true });
+  return { id, label_en };
+}
+
 router.post(
   '/sc/specs/resolve',
   h(async (req: ScRequest, res) => {

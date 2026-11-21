@@ -76,7 +76,14 @@ export type CardPayload =
       date: string; dcNo?: string | null; processKey?: string | null; lines: { lineId: string; label: string; dim: string; sent: number; received?: number | null; final?: boolean }[];
       state: 'sent' | 'confirmed' | 'within_tolerance' | 'disputed' | 'cancelled'; disputeId?: string | null }
   | { kind: 'dispute'; disputeId: string; text: string; movementId?: string | null; lineLabel: string; dim: string; sentBy: string; receivedBy: string;
-      sent: number; received: number; difference: number; allowed: number; state: string; proposal?: { by: string; outcome: string } | null; outcome?: string | null };
+      sent: number; received: number; difference: number; allowed: number; state: string; proposal?: { by: string; outcome: string } | null; outcome?: string | null }
+  /** Personal Claire's answer about goods (04 §9.2): rows are the records behind it, each tappable; `source` says
+   *  what it is based on and as of when. Text is already in the reader's language. */
+  | { kind: 'goods_answer'; title: string; rows: { label: string; value: string; sub?: string; href?: string; tone?: 'late' | 'ready' | 'held' | 'due' | null }[];
+      source: string; note?: string; chips?: Chip[] }
+  /** A record Claire drafted from what the user said; nothing is saved until Save. */
+  | { kind: 'record_draft'; draftId: string; header: string; readBack: string; partyName: string | null; lines: { label: string; qty: string }[];
+      notes: string[]; state: 'draft' | 'saved' | 'cancelled' | 'expired'; canSave: boolean; formHref: string; movementId?: string | null; chips?: Chip[] };
 
 export interface HintPayload {
   text: string;

@@ -1,5 +1,6 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { DisputeCard, MovementCard } from './ScCards';
+import { GoodsAnswerCard, RecordDraftCard } from './ClaireGoodsCards';
 import clsx from 'clsx';
 import { TriangleExclamationPoint } from '../icons';
 import type { CardPayload } from '@shared/cards';
@@ -72,6 +73,8 @@ function renderCard({ message, payload, ctx }: CardRendererProps): ReactNode {
     case 'job_split': return <JobSplitCard message={message} payload={payload} ctx={ctx} />;
     case 'movement': return <MovementCard payload={payload} ctx={ctx} />;
     case 'dispute': return <DisputeCard payload={payload} />;
+    case 'goods_answer': return <GoodsAnswerCard payload={payload} ctx={ctx} />;
+    case 'record_draft': return <RecordDraftCard payload={payload} ctx={ctx} />;
     default: return <Fallback />;
   }
 }

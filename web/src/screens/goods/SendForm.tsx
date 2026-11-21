@@ -1,6 +1,6 @@
 // Record → Send for work (03 S4): counterparties on or off Claire; lines one by one or from a size × colour grid.
 import { useEffect, useMemo, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import clsx from 'clsx';
 import { api, errorText, ApiError } from '../../lib/api';
 import { Button } from '../../components/Button';
@@ -57,13 +57,29 @@ export default function SendForm() {
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [cid] = useState(clientId);
+  // From a Claire draft, the draft id is the client id: saving here and tapping Save on the card can't record twice.
+  const [cid] = useState(() => new URLSearchParams(window.location.search).get('draft') ?? clientId());
   const today = todayIST();
 
   useEffect(() => {
     void api.get<{ role: 'owner' | 'staff' }>('/api/sc/home').then((h) => setRole(h.role)).catch(() => undefined);
     void api.get<{ processes: Process[] }>('/api/sc/templates').then((r) => setProcs(r.processes.filter((p) => !p.in_house_only))).catch(() => undefined);
   }, []);
+
+  // Claire's draft → "Change" opens this form with what was said (party, work, lines).
+  const draftId = useSearchParams()[0].get('draft');
+  const [draftProc, setDraftProc] = useState<string | null>(null);
+  useEffect(() => {
+    if (!draftId) return;
+    void api.get<{ party: { k: 'b' | 'c'; id: string } | null; party_name: string | null; process_key: string | null; lines: { qty: number; unit: string; lot: string | null; spec: ResolvedSpec | null }[] }>(`/api/sc/drafts/${draftId}`).then((d) => {
+      if (d.party) setParty({ ref: d.party, name: d.party_name ?? '', kind: d.party.k === 'b' ? 'business' : 'contact', sub: null, onClaire: d.party.k === 'b' });
+      setDraftProc(d.process_key);
+      if (d.lines.length) setLines(d.lines.map((l) => ({ spec: l.spec, qty: String(l.qty), unit: l.unit, lot: l.lot ?? '', theyGot: '' })));
+    }).catch(() => undefined);
+  }, [draftId]);
+  useEffect(() => {
+    if (draftProc && !proc) setProc(procs.find((p) => p.key === draftProc) ?? null);
+  }, [draftProc, procs, proc]);
 
   useEffect(() => {
     if (proc && !expectedTouched) setExpected(addWorkingDays(today, proc.default_turnaround_days));

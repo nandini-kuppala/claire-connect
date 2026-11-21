@@ -3,7 +3,7 @@
 Governing brief: `docs/supply-chain/BRIEF.md` (re-read at the start of every phase and after any context compaction).
 
 ## Current phase
-**Phase 6 — slices 0, 0.5, 1, 2, 3, 4 and 4.5 done. DEMO STOP after slice 4.5 (B2): waiting for the user's go-ahead to continue with slice 5 (personal Claire).** Work stays on local branch `supply-chain`. Phase 0 done: `00-current-state.md`.
+**Phase 6 — slices 0 to 5 done. Next: slice 6 (off-platform reach and linking). The Haiku tier of personal Claire is built but off: it needs `ANTHROPIC_API_KEY` in `server/.env` and a verification run (see slice 5).** Work stays on local branch `supply-chain`. Phase 0 done: `00-current-state.md`.
 
 ## Phase status
 | Phase | Doc | Status |
@@ -14,7 +14,7 @@ Governing brief: `docs/supply-chain/BRIEF.md` (re-read at the start of every pha
 | 3 Product & UX | `03-product-ux.md`, `ui-principles.md`, `mockups/` (16 screens) | Done 2026-11-21, rendered at 375/1280 px en+ta, red-teamed, **approved** (U1–U9 defaults) |
 | 4 Technical design | `04-technical-design.md` | Done 2026-11-21, model check run, red-teamed, **approved** (T1–T9 defaults) |
 | 5 Build plan | `05-build-plan.md` (v2) | Done 2026-11-21, red-teamed, **approved** (B1–B3 defaults) |
-| 6 Implementation | slices on branch `supply-chain` | Slices 0–4.5 done 2026-11-21 — demo stop |
+| 6 Implementation | slices on branch `supply-chain` | Slices 0–5 done 2026-11-21 |
 | 7 Final verification | | Not started |
 
 ## Decisions made
@@ -342,8 +342,75 @@ Governing brief: `docs/supply-chain/BRIEF.md` (re-read at the start of every pha
   - Casualty doesn't flag a GST input-credit review.
   - Stopped jobs are not moved to `cancelled_awaiting_resolution`; the open difference blocks closing instead.
 
+### Slice 5 — Personal Claire (2026-11-21)
+- **Built** (`server/src/sc/claire/`):
+  - **Turn pipeline (04 §9.2)**: `scClaireTurn` runs first inside `claireTurn` when the flag is on, and returns null for anything that isn't about goods, so the marketplace flow still answers.
+  - **Tier 0, deterministic**: chips (`What's late`, `Out with others`, `Coming in` on Claire's home card) and plain phrases in en/ta/hi go straight to a tool with no model call.
+  - **Seven tools** (`tools.ts`): `query_holdings`, `query_jobs`, `query_movements`, `compute_analytics`, `explain_job`, `draft_record` with `mood` + `tense`, and `find_suppliers`. One JSON schema serves every tier (`additionalProperties:false`, no numeric constraints); zod validates every call.
+  - **Tier 1, free model**: `openrouter.ts` uses ERNIE, its own client, a 4 s budget, no 429 sleeps, and 400 of the app's 1,000 requests a day, counted per HTTP request.
+  - **Tier 2, Claude Haiku 5.5** (`haiku.ts`, official `@anthropic-ai/sdk` 1.12, the one new dependency):
+    - It is called only when tier 1 fails.
+    - Settings: `thinking:{type:"disabled"}`, `output_config.effort:"low"`, no temperature, `strict` tools, `tool_choice:auto` with no parallel calls, and a cached system prefix.
+    - A refusal (`stop_reason:"refusal"`) falls through to the rules.
+    - A $1/day cap (`CLAIRE_PAID_DAILY_USD`) is tracked from reported usage.
+    - **Off unless `ANTHROPIC_API_KEY` is set and `SC_CLAIRE_PAID=1`.**
+  - **Tier 3, rules** (`rules.ts`): record verbs, questions, plans, units, sizes, periods and analytics words in three languages, plus **spoken numbers** (ஐம்பது / ஐநூறு, पचास).
+  - **Resolution** (`resolve.ts`): the model never gives ids.
+    - A built-in Tamil/Devanagari romanizer and phonetic keys match party names across scripts and spellings ("லக்ஷ்மிக்கு", "நொய்யல்ல", "नोय्यल", "Nooyyal"), with case endings stripped and generic trade words ignored.
+    - Ties become a "Which one?" choice that routes back into the same question or draft.
+    - Materials, colours and sizes map to specs this business holds or has used.
+  - **Answers** (`answer.ts`, `strings.ts`) run through the same scoped reads as the Goods screens (`jobSummaries`, `positions`, `toConfirmFor`):
+    - template text in en/ta/hi, number + unit first, "about" on estimates;
+    - "about 89 kg finished navy … (about 95 kg grey being dyed)" from the P7 estimate;
+    - rows that open the job or movement, and a source line with the count and the time;
+    - analytics are owner-only, with "not enough history" under 3 jobs.
+  - **Questions never draft**: "அனுப்பியாச்சா?" is answered from the records, and plans get "Record it when you send it".
+  - **Drafts** (`drafts.ts`):
+    - A `record_draft` card shows a "verb · tense · date" header, the lines, notes and a read-back; Read out uses Sarvam TTS.
+    - Sizes said without quantities are split evenly, with a note.
+    - The process comes from the words, else the last work this party did that takes this material, else the usual work for it.
+    - Notes cover ×10 against the last send, the same record already today, and too little stock at my unit.
+    - Drafts expire softly after 24 h.
+    - **Save** runs the same write functions as the forms: Send for work, Got back and the trade handlers, lifted into `sendForWork` / `gotBack` / `recordTrade`. The draft id is the client id, so a double tap, a retry, or saving via **Change** (Send for work opens pre-filled from `?draft=`) never records twice.
+  - **Web**: `goods_answer` and `record_draft` cards; Save / Change / Cancel / Read out; the card refreshes its state from the server after a reload.
+  - Each turn logs its tier, model, outcome and time to `sc_claire_log`, never the user's text.
+- **Checks:**
+  - typecheck + lint green; **24/24** unit tests (3 new for cross-script matching).
+  - **Fixtures** (`npm run sc:claire-fixtures -w server`, 48 synthetic prompts: en 20, ta 14, hi 9, adversarial 5):
+    - **Rules alone: 48/48.** These are fixtures I wrote, so it is optimistic for free phrasing.
+    - **ERNIE on the exact 7-tool schema: every one of the 28 schema-valid calls was right**: 1 invalid call and 2 text replies, which fall to the rules. **But 17 of 47 requests failed upstream (429 / provider errors)**, so availability is again the risk (04 §9.1). Median 1.8 s.
+    - Model, then rules: 48/48.
+  - **Claire smoke** (`npm run sc:claire-smoke -w server`, rule tier, HTTP save): all pass. Covered:
+    - the Tamil demo sentence → a draft (S 200 + M 200 for stitching, nothing written) → Save → in Out with others; a second Save doesn't record twice;
+    - Change → saved from the form → the card shows saved;
+    - "அனுப்பியாச்சா?" → an answer; a plan isn't drafted; got back finds the open job;
+    - the answer about Lakshmi matches Out with others; "What's late" with no model; in my unit;
+    - staff: loss % → owner only, drafting allowed;
+    - two Lakshmis → a choice → the same draft finished;
+    - injection text → no draft and no prices; "Sree Textiles' fabric at Noyyal" → only my parties or my goods.
+  - s1–s4.5 still pass; `sc:verify` 0 problems.
+  - **Browser** (Ravi, Tamil, 375 px, through the real chat):
+    - typed the demo sentence → a draft card in Tamil, answered by **ERNIE in 2.5 s**, with the "same record today" note (correct, the smoke had saved it) → Save → Saved + Open;
+    - "லக்ஷ்மி கிட்ட இன்னும் எவ்வளவு கிட் இருக்கு?" → an answer card of the kit jobs at Lakshmi with "சுமார்" estimates and the source line.
+- **Fixed during checks:**
+  - The process was taken from the party's last job even when that work doesn't take the material (dyeing for kits).
+  - A Tamil name form "ஸ்ரீ" escaped the generic-word filter and matched "Sree".
+  - A plan with a present-tense "send" fell through to the marketplace flow.
+  - Short stock was only found at Save; the draft now warns and picks the lot with the most stock.
+  - The card kept saying "not saved yet" after Save.
+  - The source line counted the rows shown instead of all records.
+- **Decisions in implementation:**
+  - A non-goods message that reaches tier 1 costs one extra model call before the marketplace flow's own call. 04 §9.3 wanted one call per turn; folding `understand()` into the same call is left for later.
+  - Got back is drafted against one open job (matching the material); several outputs or grades go through Change.
+- **Known gaps:**
+  - **The Haiku tier is unverified and off.** `ANTHROPIC_API_KEY` in `server/.env` is empty, and it isn't in `render.yaml`. To enable it: add the key (and in the Render dashboard for deploys), run `SC_CLAIRE_PAID=1 SC_TIER=haiku MONGODB_DB=nexconn_sc_dev npm run sc:claire-fixtures -w server` (about $0.01), and set `SC_CLAIRE_PAID=1` if it passes.
+  - `explain_job` gives the open jobs at the party, not a narrative of one job's events.
+  - Drafts cover send for work, got back, buy and sell; Made here, returns and samples go through the forms.
+  - Voice uses the existing mic → Sarvam STT → text path; the transcript is the user's bubble.
+  - Tamil and Hindi templates are *to verify*, like the other strings.
+
 ## Open questions
 - T8: a separate free Atlas cluster for integration tests needs to be created by the user (not blocking slice 0's pure tests).
 
 ## Next
-**Demo stop.** Then slice 5 (personal Claire: one-call tool selection, templated answers in en/ta/hi, record drafts, voice).
+Slice 6 (off-platform reach and linking: statement links, WhatsApp share, contact linking). Optional before it: add the Anthropic key and verify the Haiku tier.

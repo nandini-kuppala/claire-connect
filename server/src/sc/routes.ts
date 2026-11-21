@@ -14,6 +14,7 @@ import work from './work.js';
 import jobs from './jobs.js';
 import trade from './trade.js';
 import adjust from './adjust.js';
+import drafts from './claire/drafts.js';
 
 const router = Router();
 router.use('/sc', requireAuth, requireSc);
@@ -25,6 +26,7 @@ router.use(work);
 router.use(jobs);
 router.use(trade);
 router.use(adjust);
+router.use(drafts);
 
 /** Action chips and the Goods badge (03 §4.2). Late/confirm/dispute counts arrive with slices 1–2. */
 router.get(

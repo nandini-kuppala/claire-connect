@@ -16,6 +16,7 @@ import { postOutput, postReceipt, postSend, real, reverse, pseudo, type Goods } 
 import { addWorkingDays, todayIST } from '../../../shared/sc/dates.js';
 import { winningAssertion } from '../../../shared/sc/evidence.js';
 import type { Dimension, PartyRef, Posting } from '../../../shared/sc/types.js';
+import { reply, type Reply } from './reply.js';
 
 export { UNDO_MS };
 const router = Router();
@@ -63,16 +64,13 @@ const sendBody = z.object({
   rework_of: z.string().max(40).optional(),
 });
 
-router.post(
-  '/sc/movements/send',
-  h(async (req: ScRequest, res) => {
-    const ctx = req.ctx;
-    const b = parse(sendBody, req.body);
+export async function sendForWork(ctx: Ctx, raw: unknown): Promise<Reply> {
+    const b = parse(sendBody, raw);
     const cp = await counterparty(ctx, b.to);
     const proc = await col('sc_process_types').findOne({ key: b.process_key, owner_business_id: { $in: [null, ctx.businessId] } } as any);
     if (!proc) throw new HttpError(400, 'Please pick the work.');
-    if (b.allow_untracked && ctx.role !== 'owner') return res.status(403).json({ error: 'Only the owner can record stock you never entered.', code: 'needs_owner' });
-    if (b.rate_paise !== undefined && ctx.role !== 'owner') return res.status(403).json({ error: 'Only the owner can set rates.', code: 'needs_owner' });
+    if (b.allow_untracked && ctx.role !== 'owner') return reply(403, { error: 'Only the owner can record stock you never entered.', code: 'needs_owner' });
+    if (b.rate_paise !== undefined && ctx.role !== 'owner') return reply(403, { error: 'Only the owner can set rates.', code: 'needs_owner' });
 
     const businessDate = b.business_date ?? todayIST();
     const owner = me(ctx);
@@ -96,7 +94,7 @@ router.post(
       if (available < q.base) short.push({ index: i, available, needed: q.base, dim: info.dim });
       lines.push({ l, info, q, goods, available, theyGot: l.they_got !== undefined ? qtyBase(l.they_got, l.unit, info, l.factor).base : null });
     }
-    if (short.length && !b.allow_untracked) return res.status(409).json({ error: 'You have less of this in stock than you are sending.', code: 'negative', lines: short });
+    if (short.length && !b.allow_untracked) return reply(409, { error: 'You have less of this in stock than you are sending.', code: 'negative', lines: short });
 
     const parties = bizIds(owner, performer);
     const postings: Posting[] = [];
@@ -159,9 +157,16 @@ router.post(
       // The DC photo is the shared document of the movement (model §7): both businesses may see it.
       if (b.photo_ids?.length) await col('sc_documents').updateMany({ _id: { $in: b.photo_ids }, business_id: ctx.businessId } as any, { $set: { record: { kind: 'movement', id: movementId }, shared_with: parties } }, { session });
     });
-    if (result.duplicate) return res.json({ movement: await col('sc_movements').findOne({ recorder_business_id: ctx.businessId, client_id: b.client_id } as any), duplicate: true });
+    if (result.duplicate) return reply(200, { movement: await col('sc_movements').findOne({ recorder_business_id: ctx.businessId, client_id: b.client_id } as any), duplicate: true });
     if (cp.onPlatform) await enqueueCard('movement', movementId, 'sent', visibleAt);
-    res.status(201).json({ movement, job, undo_until: visibleAt });
+    return reply(201, { movement, job, undo_until: visibleAt });
+}
+
+router.post(
+  '/sc/movements/send',
+  h(async (req: ScRequest, res) => {
+    const r = await sendForWork(req.ctx, req.body);
+    res.status(r.status).json(r.body);
   }),
 );
 
@@ -176,13 +181,10 @@ const returnBody = z.object({
   dc_no: z.string().trim().max(30).optional(),
 });
 
-router.post(
-  '/sc/jobs/:id/return',
-  h(async (req: ScRequest, res) => {
-    const ctx = req.ctx;
-    const b = parse(returnBody, req.body);
+export async function gotBack(ctx: Ctx, raw: unknown, jobId: string): Promise<Reply> {
+    const b = parse(returnBody, raw);
     // The job's client records what came back: the owner for a direct job, the intermediary for a sub-contract.
-    const job = await col('sc_jobs').findOne({ _id: req.params.id, 'client_party.k': 'b', 'client_party.id': ctx.businessId } as any);
+    const job = await col('sc_jobs').findOne({ _id: jobId, 'client_party.k': 'b', 'client_party.id': ctx.businessId } as any);
     if (!job) throw new HttpError(404, 'Not found');
     if (['closed', 'cancelled'].includes(job.status)) throw new HttpError(409, 'This job is already closed.');
     const businessDate = b.business_date ?? todayIST();
@@ -253,9 +255,16 @@ router.post(
       }
       if (discrepancies.length) await col('sc_discrepancies').insertMany(discrepancies, { session });
     });
-    if (result.duplicate) return res.json({ duplicate: true });
+    if (result.duplicate) return reply(200, { duplicate: true });
     if (onPlatform) await enqueueCard('movement', movementId, 'sent', movement.visible_at);
-    res.status(201).json({ movement, undo_until: movement.visible_at });
+    return reply(201, { movement, undo_until: movement.visible_at });
+}
+
+router.post(
+  '/sc/jobs/:id/return',
+  h(async (req: ScRequest, res) => {
+    const r = await gotBack(req.ctx, req.body, req.params.id);
+    res.status(r.status).json(r.body);
   }),
 );
 

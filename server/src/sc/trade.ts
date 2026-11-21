@@ -17,6 +17,7 @@ import { partyNames } from './views.js';
 import { postReceipt, postSend, pseudo, real, type Goods } from '../../../shared/sc/postings.js';
 import { todayIST } from '../../../shared/sc/dates.js';
 import type { Dimension, PartyRef, Posting, RealKey } from '../../../shared/sc/types.js';
+import { reply, type Reply } from './reply.js';
 
 const router = Router();
 const parse = <T>(schema: z.ZodType<T>, body: unknown): T => {
@@ -70,14 +71,11 @@ async function sourceKey(ctx: Ctx, goods: Goods, holder: PartyRef, place: string
   return { key, have: Math.max(0, h0?.qty_base ?? 0) };
 }
 
-router.post(
-  '/sc/movements/trade',
-  h(async (req: ScRequest, res) => {
-    const ctx = req.ctx;
-    const b = parse(tradeBody, req.body);
+export async function recordTrade(ctx: Ctx, raw: unknown): Promise<Reply> {
+    const b = parse(tradeBody, raw);
     const self = me(ctx);
     const kind = b.kind;
-    if (b.allow_untracked && ctx.role !== 'owner') return res.status(403).json({ error: 'Only the owner can record stock you never entered.', code: 'needs_owner' });
+    if (b.allow_untracked && ctx.role !== 'owner') return reply(403, { error: 'Only the owner can record stock you never entered.', code: 'needs_owner' });
     if (kind === 'move') {
       if (!b.to_place_id || b.to_place_id === (b.from_place_id ?? null)) throw new HttpError(400, 'Pick where the goods went.');
       if (!(await col('sc_places').findOne({ _id: b.to_place_id, business_id: ctx.businessId } as any))) throw new HttpError(404, 'Not found');
@@ -85,7 +83,7 @@ router.post(
     const cp = b.party ? await counterparty(ctx, b.party) : { party: self, onPlatform: false };
     const party = cp.party;
     // Incoming records are for parties not on CLAIRE: a business on CLAIRE records its own side (03 §6).
-    if ((kind === 'buy' || kind === 'buyer_returned' || kind === 'collect') && cp.onPlatform) return res.status(409).json({ error: 'They are on CLAIRE: they record it and you confirm it.', code: 'they_record' });
+    if ((kind === 'buy' || kind === 'buyer_returned' || kind === 'collect') && cp.onPlatform) return reply(409, { error: 'They are on CLAIRE: they record it and you confirm it.', code: 'they_record' });
     if (b.in_place && !['buy', 'sell'].includes(kind)) throw new HttpError(400, 'Please check the details and try again.');
     const holder: PartyRef = kind === 'collect' ? party : b.from_party ?? self;
     if (b.from_party && !sameParty(b.from_party, self)) await counterparty(ctx, b.from_party);
@@ -167,7 +165,7 @@ router.post(
       }
       lines.push(line);
     }
-    if (short.length && !b.allow_untracked) return res.status(409).json({ error: 'You have less of this than you are recording.', code: 'negative', lines: short });
+    if (short.length && !b.allow_untracked) return reply(409, { error: 'You have less of this than you are recording.', code: 'negative', lines: short });
 
     const movement: any = {
       _id: movementId, id: movementId, client_id: b.client_id, action: kind, purpose: b.in_place ? `${kind}_in_place` : kind,
@@ -193,9 +191,16 @@ router.post(
         await col('sc_prices').insertOne({ _id: newId('pr'), business_id: ctx.businessId, movement_id: movementId, kind, rate_paise: b.rate_paise, unit: b.lines[0].unit, created_at: now } as any, { session });
       }
     });
-    if (result.duplicate) return res.json({ duplicate: true });
+    if (result.duplicate) return reply(200, { duplicate: true });
     if (shared) await enqueueCard('movement', movementId, 'sent', movement.visible_at);
-    res.status(201).json({ movement: { id: movementId, lines: lines.map((l) => ({ line_id: l.line_id, settled: l.settled })) }, undo_until: shared ? movement.visible_at : null });
+    return reply(201, { movement: { id: movementId, lines: lines.map((l) => ({ line_id: l.line_id, settled: l.settled })) }, undo_until: shared ? movement.visible_at : null });
+}
+
+router.post(
+  '/sc/movements/trade',
+  h(async (req: ScRequest, res) => {
+    const r = await recordTrade(req.ctx, req.body);
+    res.status(r.status).json(r.body);
   }),
 );
 

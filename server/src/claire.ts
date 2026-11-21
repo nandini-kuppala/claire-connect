@@ -12,6 +12,7 @@ import { CATEGORIES, catById, categoryName } from '../../shared/taxonomy.js';
 import { serverLocale } from './locales/index.js';
 import { CC_CARD, type CardPayload, type Chip } from '../../shared/cards.js';
 import { createTicket } from './desk.js';
+import { scClaireTurn, goodsChips } from './sc/claire/turn.js';
 
 type Out = { kind: 'text'; text: string } | CardPayload;
 
@@ -74,7 +75,8 @@ export async function homeCard(user: UserRow): Promise<Out[]> {
     { id: 'home:human', label: t(lang, 'home_human') },
   ];
   const first = (user.name || biz?.owner_name || '').split(' ')[0];
-  return [{ kind: 'chips', text: t(lang, 'greet', { name: first }), hint: t(lang, 'greet_sub'), chips, layout: 'grid' }];
+  const goods = await goodsChips(user);
+  return [{ kind: 'chips', text: t(lang, 'greet', { name: first }), hint: t(lang, 'greet_sub'), chips: [...goods, ...chips], layout: 'grid' }];
 }
 
 export async function claireWelcome(user: UserRow) {
@@ -84,6 +86,9 @@ export async function claireWelcome(user: UserRow) {
 
 // ── Turn handling ─────────────────────────────────────────────────────────
 export async function claireTurn(user: UserRow, input: { text?: string; chipId?: string }) {
+  // Goods questions and records (supply-chain flag on): answered from the user's own records, else the flow below.
+  const goods = await scClaireTurn(user, input).catch((e) => { console.error('[claire] goods turn failed', e); return null; });
+  if (goods) return say(user, goods as Out[]);
   const s = await load(user.id);
   const lang = user.language;
   const biz = user.business_id ? await getBiz(user.business_id) : null;
