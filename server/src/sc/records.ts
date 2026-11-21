@@ -110,7 +110,7 @@ router.post(
       const received = x.theyGot ?? (cp.onPlatform ? null : x.q.base);
       if (received !== null) postings.push(...postReceipt({ goods: x.goods, owner, movementId, transitCustodian: owner, to: { party: performer, state: { s: 'allocated', ref: jobId } }, delta: Math.min(received, x.q.base) }));
       const line = {
-        line_id: lineId, spec_id: x.info.id, label_en: x.info.label_en, lot: x.goods.lot, grade: 'A', dim: x.info.dim, class: x.info.cls,
+        line_id: lineId, spec_id: x.info.id, label_en: x.info.label_en, role: x.info.role, lot: x.goods.lot, grade: 'A', dim: x.info.dim, class: x.info.cls,
         entered: { value: x.l.qty, unit: x.l.unit, factor: x.l.factor ?? null, approx: x.q.approx }, owner_before: owner, owner_after: owner, job_id: jobId, line_kind: 'goods',
         from_untracked: x.q.base - fromStock, viewer_business_ids: parties,
         sent: [assertion(ctx, x.q.base, 'self', businessDate, { final: true })],
@@ -140,7 +140,7 @@ router.post(
     const job = {
       _id: jobId, id: jobId, process_key: proc.key, process_type_id: proc._id, conservation_kind: proc.conservation_kind, loss_norm_pct: proc.loss_norm_pct, rate_basis: proc.rate_basis,
       owner_party: owner, client_party: owner, performer_party: performer, status: 'issued',
-      inputs: movLines.map((l) => ({ movement_id: movementId, line_id: l.line_id, spec_id: l.spec_id, dim: l.dim, lot: l.lot })),
+      inputs: movLines.map((l) => ({ movement_id: movementId, line_id: l.line_id, spec_id: l.spec_id, dim: l.dim, lot: l.lot, role: l.role ?? 'primary' })),
       outputs: [] as unknown[], returns: [] as string[], promised_at: null, expected_at: expected, business_date: businessDate, pauses: [],
       party_business_ids: parties, created_at: now, version: 1,
     };
@@ -178,18 +178,21 @@ router.post(
   h(async (req: ScRequest, res) => {
     const ctx = req.ctx;
     const b = parse(returnBody, req.body);
-    const job = await col('sc_jobs').findOne({ _id: req.params.id, 'owner_party.k': 'b', 'owner_party.id': ctx.businessId } as any);
+    // The job's client records what came back: the owner for a direct job, the intermediary for a sub-contract.
+    const job = await col('sc_jobs').findOne({ _id: req.params.id, 'client_party.k': 'b', 'client_party.id': ctx.businessId } as any);
     if (!job) throw new HttpError(404, 'Not found');
     if (['closed', 'cancelled'].includes(job.status)) throw new HttpError(409, 'This job is already closed.');
     const businessDate = b.business_date ?? todayIST();
-    const owner = me(ctx);
+    const client = me(ctx);
+    const owner = job.owner_party as PartyRef;
     const performer = job.performer_party as PartyRef;
+    const via = (job.via ?? null) as PartyRef | null;
     const onPlatform = performer.k === 'b';
     const terms = await termsFor(ctx, performer);
     const movementId = newId('mv');
     const place = b.to_place_id ?? null;
     const now = Date.now();
-    const parties = bizIds(owner, performer);
+    const parties = bizIds(client, performer);
     const postings: Posting[] = [];
     const movLines: any[] = [];
     const outputs: Record<string, unknown>[] = [];
@@ -201,11 +204,13 @@ router.post(
       const goods: Goods = { spec: info.id, lot: l.lot || null, grade: l.grade, dim: info.dim };
       const lineId = newId('ln');
       if (!l.unprocessed) {
-        postings.push(...postOutput({ goods, qty: declared, owner, performer, jobId: job._id }));
+        postings.push(...postOutput({ goods, qty: declared, owner, performer, via, jobId: job._id }));
         outputs.push({ movement_id: movementId, line_id: lineId, spec_id: info.id, grade: l.grade, lot: goods.lot, dim: info.dim, qty: declared, business_date: businessDate });
       }
-      postings.push(...postSend({ goods, qty: declared, owner, from: { party: performer, state: l.unprocessed ? { s: 'allocated', ref: job._id } : { s: 'available' } }, movementId, transitCustodian: performer }));
-      postings.push(...postReceipt({ goods, owner, movementId, transitCustodian: performer, to: { party: owner, place }, delta: Math.min(received, declared) }));
+      postings.push(...postSend({ goods, qty: declared, owner, from: { party: performer, via, state: l.unprocessed ? { s: 'allocated', ref: job._id } : { s: 'available' } }, movementId, transitCustodian: performer }));
+      // Unprocessed goods from a sub-contractor go back into the parent job's allocation (model §3.5 roll-up).
+      const back = l.unprocessed && job.parent_job_id ? { s: 'allocated' as const, ref: job.parent_job_id as string } : { s: 'available' as const };
+      postings.push(...postReceipt({ goods, owner, movementId, transitCustodian: performer, to: { party: client, place: back.s === 'available' ? place : null, state: back }, delta: Math.min(received, declared) }));
       movLines.push({
         line_id: lineId, spec_id: info.id, label_en: info.label_en, lot: goods.lot, grade: l.grade, dim: info.dim, class: info.cls, rolls: l.rolls ?? null,
         entered: { value: l.qty, unit: l.unit, factor: l.factor ?? null }, owner_before: owner, owner_after: owner, job_id: job._id,
@@ -216,8 +221,8 @@ router.post(
       });
     }
     const movement: any = {
-      _id: movementId, id: movementId, client_id: b.client_id, action: 'return_from_work', purpose: 'job_work_return', process_key: job.process_key,
-      from: { party: performer }, to: { party: owner, place_id: place }, transit_custodian: performer, lines: movLines, terms_snapshot: terms, dc_no: b.dc_no ?? null,
+      _id: movementId, id: movementId, client_id: b.client_id, action: 'return_from_work', purpose: job.parent_job_id ? 'subcontract_return' : 'job_work_return', process_key: job.process_key,
+      from: { party: performer }, to: { party: client, place_id: place }, transit_custodian: performer, via, lines: movLines, terms_snapshot: terms, dc_no: b.dc_no ?? null,
       business_date: businessDate, recorded_at: now, recorded_by_user_id: ctx.userId, recorder_business_id: ctx.businessId,
       visible_at: now + UNDO_MS, cancelled_at: null, party_business_ids: parties, version: 1,
     };
@@ -239,6 +244,10 @@ router.post(
         { $push: { outputs: { $each: outputs }, returns: movementId } as any, $set: { status: b.last ? 'completed' : 'in_progress', ...(b.last ? { completed_at: now } : {}) }, $inc: { version: 1 } },
         { session },
       );
+      // Roll-up: a sub-contractor's outputs count for the parent job the owner sees (with the intermediary).
+      if (job.parent_job_id && outputs.length) {
+        await col('sc_jobs').updateOne({ _id: job.parent_job_id } as any, { $push: { outputs: { $each: outputs.map((o) => ({ ...o, source: 'child', child_job_id: job._id })) } } as any, $set: { status: 'in_progress' } }, { session });
+      }
       if (discrepancies.length) await col('sc_discrepancies').insertMany(discrepancies, { session });
     });
     if (result.duplicate) return res.json({ duplicate: true });

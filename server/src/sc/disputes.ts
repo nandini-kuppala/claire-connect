@@ -28,7 +28,7 @@ export function resolutionPostings(d: any, outcome: Outcome): { postings: Postin
   const pc = d.posting;
   const g = pc.goods;
   const owner = pc.owner as PartyRef;
-  const dest = real(g, owner, pc.dest.party, pc.dest.state, { place: pc.dest.place });
+  const dest = real(g, owner, pc.dest.party, pc.dest.state, { place: pc.dest.place, via: pc.dest.via ?? null });
   const diff = d.difference as number; // sent − received
   const { sent, received } = d.figures;
   const toReceiver = outcome === 'sent' ? Math.abs(diff) : outcome === 'split' ? Math.floor(Math.abs(diff) / 2) : 0;

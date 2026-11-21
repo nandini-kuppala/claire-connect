@@ -9,7 +9,8 @@ def call(method, path, body=None, tok=None):
         with urllib.request.urlopen(req) as r: return r.status, json.loads(r.read() or b'{}')
     except urllib.error.HTTPError as e: return e.code, json.loads(e.read() or b'{}')
 _, v = call('POST','/api/auth/verify',{'phone':'9000000004','otp':'123456'}); T=v['token']
-_, cs = call('GET','/api/sc/contacts',tok=T); noy=[c for c in cs['contacts'] if c['name']=='Noyyal Dyeing'][0]['id']
+_, cs = call('GET','/api/sc/contacts',tok=T); found=[c for c in cs['contacts'] if c['name']=='Noyyal Dyeing']
+noy = found[0]['id'] if found else call('POST','/api/sc/contacts',{'name':'Noyyal Dyeing','phone':'9876500011','language':'ta','role_hint':'Dyeing unit'},T)[1]['contact']['id']
 _, g = call('POST','/api/sc/specs/resolve',{'material_type_id':'mt_knit_fabric','attrs':{'state':'grey','structure':'single jersey','gsm':180},'alias':'grey 180'},T); grey=g['spec']['id']
 _, n = call('POST','/api/sc/specs/resolve',{'material_type_id':'mt_knit_fabric','attrs':{'state':'finished','structure':'single jersey','gsm':180,'colour':'navy'}},T); navy=n['spec']['id']
 send={'to':{'k':'c','id':noy},'process_key':'dyeing','lines':[{'spec_id':grey,'qty':200,'unit':'kg','lot':'K-221','they_got':198.6}],'business_date':'2026-11-14','dc_no':'0412','rate_paise':7000,'client_id':str(uuid.uuid4())}

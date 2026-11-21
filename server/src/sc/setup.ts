@@ -178,6 +178,63 @@ router.get(
   }),
 );
 
+/** A size × colour grid → one content-addressed spec per cell (03 §6.2). Same attributes + colour + size. */
+router.post(
+  '/sc/specs/resolve-grid',
+  h(async (req: ScRequest, res) => {
+    const b = parse(z.object({ material_type_id: z.string(), base: z.record(z.string(), z.unknown()), colours: z.array(z.string().trim().min(1).max(30)).min(1).max(8), sizes: z.array(z.string().trim().min(1).max(10)).min(1).max(12) }), req.body);
+    const mt = await materialType(req.ctx, b.material_type_id);
+    const cells: Record<string, Record<string, unknown>> = {};
+    for (const colour of b.colours) {
+      cells[colour] = {};
+      for (const size of b.sizes) {
+        const n = normaliseSpec(mt, { ...b.base, colour, size });
+        if (!n.ok) return res.status(400).json({ error: 'Please fill the missing details.', code: 'spec_incomplete', missing: n.missing, invalid: n.invalid });
+        const id = specId(n.identity);
+        const family_key = `${mt.key}|${n.attrs.style ?? ''}`;
+        await col('sc_specs').updateOne({ _id: id } as any, { $set: { label_en: specLabel(mt, n.attrs) }, $setOnInsert: { id, material_type_id: mt.id, attrs: n.attrs, family_key, created_at: Date.now() } }, { upsert: true });
+        cells[colour][size] = { id, label_en: specLabel(mt, n.attrs), material_type_id: mt.id, attrs: n.attrs, family_key };
+      }
+    }
+    res.json({ cells, dimension: mt.base_dimension, units: mt.allowed_units, class: mt.material_class_key });
+  }),
+);
+
+// ── Styles: size set and trims per piece (model §3.2; snapshotted onto jobs) ─────────────────────
+
+router.get(
+  '/sc/styles',
+  h(async (req: ScRequest, res) => {
+    const styles = await col('sc_styles').find({ business_id: req.ctx.businessId } as any).sort({ code: 1 }).toArray();
+    // Trims come back resolved, so a send form can add them as lines without another lookup.
+    const ids = [...new Set(styles.flatMap((st: any) => (st.trims ?? []).map((t: any) => t.spec_id)))];
+    const specs = await col('sc_specs').find({ _id: { $in: ids } } as any).toArray();
+    const mts = await col('sc_material_types').find({ _id: { $in: [...new Set(specs.map((x: any) => x.material_type_id))] } } as any).toArray();
+    const mtBy = new Map(mts.map((m: any) => [m._id, m]));
+    const resolved = new Map(specs.map((x: any) => { const m: any = mtBy.get(x.material_type_id); return [x._id, { spec: x, dimension: m?.base_dimension, units: m?.allowed_units ?? [], class: m?.material_class_key }]; }));
+    res.json({ styles: styles.map((st: any) => ({ ...st, trims: (st.trims ?? []).map((t: any) => ({ ...t, resolved: resolved.get(t.spec_id) ?? null })) })) });
+  }),
+);
+
+router.post(
+  '/sc/styles',
+  requireOwner,
+  h(async (req: ScRequest, res) => {
+    const b = parse(
+      z.object({
+        code: z.string().trim().min(1).max(30), name: z.string().trim().max(60).optional(), size_set: z.array(z.string().trim().min(1).max(10)).min(1).max(12),
+        trims: z.array(z.object({ spec_id: z.string(), per_piece: z.number().positive().max(1000), unit: z.string().max(10), spare_pct: z.number().min(0).max(50).default(2) })).max(20),
+      }),
+      req.body,
+    );
+    for (const t of b.trims) if (!(await col('sc_specs').findOne({ _id: t.spec_id } as any, { projection: { _id: 1 } }))) throw new HttpError(400, 'Please pick the trims again.');
+    const code = b.code.toUpperCase();
+    const _id = `st_${req.ctx.businessId}_${code}`;
+    await col('sc_styles').updateOne({ _id } as any, { $set: { id: _id, business_id: req.ctx.businessId, code, name: b.name ?? null, size_set: b.size_set.map((x) => x.toUpperCase()), trims: b.trims, updated_at: Date.now() } }, { upsert: true });
+    res.status(201).json({ style: await col('sc_styles').findOne({ _id } as any) });
+  }),
+);
+
 // ── Terms per party (relationship, private; model §3.1, P8) ───────────────────────────────────────
 
 const relId = (bizId: string, p: PartyRef) => `rel_${bizId}_${p.k}_${p.id}`;

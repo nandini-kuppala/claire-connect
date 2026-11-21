@@ -1,17 +1,19 @@
-// Record → Send for work (03 S4, slice 1: off-platform counterparties, no size grid yet).
+// Record → Send for work (03 S4): counterparties on or off Claire; lines one by one or from a size × colour grid.
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import clsx from 'clsx';
 import { api, errorText, ApiError } from '../../lib/api';
 import { Button } from '../../components/Button';
 import { Sheet } from '../../components/Sheet';
-import { ArrowLeft, Camera, ChevronRight, Plus, Trash2 } from '../../icons';
+import { AlertTriangle, ArrowLeft, Camera, ChevronRight, LayoutGrid, Plus, Trash2 } from '../../icons';
 import { compressPhoto } from './photo';
 import { useSession } from '../../store/session';
 import { addWorkingDays, todayIST } from '@shared/sc/dates';
 import { RecS } from './Record.strings';
 import { PartyPicker } from './PartyPicker';
 import { SpecPicker } from './SpecPicker';
+import { GridSheet, lotMixSizes } from './GridSheet';
+import { WorkS } from './Work.strings';
 import { clientId, qty as fmtQty } from './format';
 import type { Party, ResolvedSpec } from './types';
 
@@ -31,6 +33,8 @@ function Label({ children, hint }: { children: React.ReactNode; hint?: string })
 
 export default function SendForm() {
   const s = RecS.use();
+  const w = WorkS.use();
+  const [gridOpen, setGridOpen] = useState(false);
   const nav = useNavigate();
   const lang = useSession((st) => st.user?.language || 'en');
   const [role, setRole] = useState<'owner' | 'staff'>('owner');
@@ -65,6 +69,7 @@ export default function SendForm() {
 
   const setLine = (i: number, patch: Partial<Line>) => setLines((ls) => ls.map((l, j) => (j === i ? { ...l, ...patch } : l)));
   const ready = !!party && !!proc && lines.every((l) => l.spec && Number(l.qty) > 0 && l.unit);
+  const mixed = useMemo(() => lotMixSizes(lines), [lines]);
   const rateUnit = useMemo(() => lines[0]?.spec?.units?.[0] ?? 'kg', [lines]);
 
   const submit = async (override?: { reason: string }) => {
@@ -165,9 +170,20 @@ export default function SendForm() {
                 )}
               </div>
             ))}
-            <Button variant="ghost" icon={Plus} onClick={() => setLines((ls) => [...ls, emptyLine()])}>
-              {s('material')}
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="ghost" icon={Plus} onClick={() => setLines((ls) => [...ls, emptyLine()])}>
+                {s('material')}
+              </Button>
+              <Button variant="ghost" icon={LayoutGrid} onClick={() => setGridOpen(true)}>
+                {w('grid')}
+              </Button>
+            </div>
+            {mixed.length > 0 && (
+              <p className="flex items-start gap-2 rounded-[14px] bg-accent-tint px-3 py-2 text-[14px] text-accent-ink">
+                <AlertTriangle size={18} className="mt-0.5 shrink-0" aria-hidden />
+                {w('lot_mix', { sizes: mixed.join(', ') })}
+              </p>
+            )}
           </div>
         </div>
 
@@ -229,6 +245,8 @@ export default function SendForm() {
         </Button>
       </div>
 
+      <GridSheet open={gridOpen} onClose={() => setGridOpen(false)}
+        onAdd={(add) => setLines((ls) => [...ls.filter((l) => l.spec), ...add.map((a) => ({ spec: a.spec, qty: String(a.qty), unit: a.unit, lot: a.lot, theyGot: '' }))])} />
       <PartyPicker open={partyOpen} onClose={() => setPartyOpen(false)} onPick={setParty} />
       <SpecPicker
         open={pickFor !== null}

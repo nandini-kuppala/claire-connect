@@ -9,6 +9,9 @@ import { ArrowLeft, Clock, Phone, Repeat } from '../../icons';
 import { useSession } from '../../store/session';
 import { RecS } from './Record.strings';
 import { TwoS } from './Two.strings';
+import { WorkS } from './Work.strings';
+import { PartyPicker } from './PartyPicker';
+import type { Party } from './types';
 import { SetupS } from './Setup.strings';
 import { Status, type Late } from './Status';
 import { qty as fmtQty, shortDate } from './format';
@@ -24,8 +27,8 @@ function Badge({ b, name }: { b?: { kind: string; why?: string }; name: string }
   const s = RecS.use();
   if (!b) return null;
   const text =
-    b.kind === 'confirmed_by' ? t2('badge_confirmed_by', { name }) : b.kind === 'confirmed_by_you' ? t2('badge_confirmed_by_you') : b.kind === 'check_and_confirm' ? t2('badge_check') : b.kind === 'not_confirmed' ? t2('badge_not_confirmed') : s('your_record');
-  const cls = b.kind === 'confirmed_by' || b.kind === 'confirmed_by_you' ? 'bg-success-tint text-success border-transparent' : b.kind === 'check_and_confirm' ? 'bg-accent-tint text-accent-ink border-transparent' : b.kind === 'not_confirmed' ? 'border-dashed text-meta' : 'text-ink-2';
+    b.kind === 'confirmed_by' ? t2('badge_confirmed_by', { name }) : b.kind === 'confirmed_by_you' ? t2('badge_confirmed_by_you') : b.kind === 'receipt_confirmed' ? t2('badge_receipt_confirmed') : b.kind === 'check_and_confirm' ? t2('badge_check') : b.kind === 'not_confirmed' ? t2('badge_not_confirmed') : s('your_record');
+  const cls = b.kind === 'confirmed_by' || b.kind === 'confirmed_by_you' || b.kind === 'receipt_confirmed' ? 'bg-success-tint text-success border-transparent' : b.kind === 'check_and_confirm' ? 'bg-accent-tint text-accent-ink border-transparent' : b.kind === 'not_confirmed' ? 'border-dashed text-meta' : 'text-ink-2';
   return (
     <span className="text-right">
       <span className={clsx('inline-block rounded-full border border-line-strong px-2 py-0.5 text-[12px] font-semibold', cls)}>{text}</span>
@@ -45,6 +48,12 @@ export default function PartyLedger() {
   const [terms, setTerms] = useState<Terms | null>(null);
   const [edit, setEdit] = useState<Terms | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const wk = WorkS.use();
+  const [tell, setTell] = useState<string | null>(null);
+  const [tellTo, setTellTo] = useState<Party | null>(null);
+  const [tellPick, setTellPick] = useState(false);
+  const [procs, setProcs] = useState<{ key: string; labels: Record<string, string> }[]>([]);
+  const [tellProc, setTellProc] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -100,6 +109,8 @@ export default function PartyLedger() {
 
       {d && (
         <>
+          <div className="lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:items-start">
+          <section className="lg:col-start-1">
           <h2 className="mx-4 mt-5 font-head text-[17px] font-semibold text-ink">{s('open')}</h2>
           {d.open.length === 0 ? (
             <p className="mx-4 mt-2 text-[14.5px] text-ink-2">{s('nothing_open')}</p>
@@ -134,7 +145,12 @@ export default function PartyLedger() {
                   {j.status !== 'completed' && (
                     <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
                       <span className="inline-flex items-center gap-1.5 text-[13px] text-meta"><Clock size={15} aria-hidden />{s('expected_on', { date: shortDate(j.expected_at, lang) })}</span>
-                      <Button size="sm" variant="tint" onClick={() => nav(`/goods/job/${j.id}/return`)}>{s('back_btn')}</Button>
+                      <span className="flex flex-wrap gap-1.5">
+                        {d.party.k === 'b' && owner && (
+                          <Button size="sm" variant="ghost" onClick={async () => { setTell(j.id); setTellTo(null); setTellProc(null); if (!procs.length) setProcs((await api.get<{ processes: { key: string; labels: Record<string, string> }[] }>('/api/sc/templates')).processes); }}>{wk('tell_send_on')}</Button>
+                        )}
+                        <Button size="sm" variant="tint" onClick={() => nav(`/goods/job/${j.id}/return`)}>{s('back_btn')}</Button>
+                      </span>
                     </div>
                   )}
                 </li>
@@ -142,7 +158,9 @@ export default function PartyLedger() {
             </ul>
           )}
 
-          <h2 className="mx-4 mt-6 font-head text-[17px] font-semibold text-ink">{s('history')}</h2>
+          </section>
+          <section className="lg:col-start-2 lg:row-span-2 lg:row-start-1">
+          <h2 className="mx-4 mt-6 lg:mt-5 font-head text-[17px] font-semibold text-ink">{s('history')}</h2>
           <ul className="mx-4 mt-2 divide-y divide-line overflow-hidden rounded-[18px] border border-line bg-surface">
             {d.history.map((h) => (
               <li key={h.id} className={clsx('px-4 py-3', h.cancelled && 'opacity-60')}>
@@ -166,6 +184,8 @@ export default function PartyLedger() {
             ))}
           </ul>
 
+          </section>
+          <section className="lg:col-start-1">
           {terms && (
             <>
               <div className="mx-4 mt-6 flex items-center justify-between gap-3">
@@ -181,8 +201,24 @@ export default function PartyLedger() {
               </dl>
             </>
           )}
+          </section>
+          </div>
         </>
       )}
+
+      <Sheet open={!!tell} onClose={() => setTell(null)} title={wk('tell_title')}
+        footer={<Button block size="lg" disabled={!tellTo || !tellProc} onClick={async () => { try { await api.post(`/api/sc/jobs/${tell}/instruct`, { to: tellTo!.ref, process_key: tellProc }); setTell(null); } catch (e) { setError(errorText(e)); } }}>{s('save')}</Button>}>
+        <div className="space-y-3 pb-2">
+          <p className="text-[14px] text-ink-2">{wk('tell_hint')}</p>
+          <button className="flex min-h-12 w-full items-center rounded-[16px] border border-line-strong bg-surface px-3.5 text-left text-[15px]" onClick={() => setTellPick(true)}>{tellTo?.name ?? <span className="text-meta">{wk('pick_unit')}</span>}</button>
+          <div className="flex flex-wrap gap-2">
+            {procs.map((p) => (
+              <button key={p.key} onClick={() => setTellProc(p.key)} className={clsx('min-h-11 rounded-full border px-3.5 text-[14px] font-semibold', tellProc === p.key ? 'border-primary bg-primary text-white' : 'border-line-strong bg-surface text-ink')}>{p.labels[lang] ?? p.labels.en}</button>
+            ))}
+          </div>
+        </div>
+      </Sheet>
+      <PartyPicker open={tellPick} onClose={() => setTellPick(false)} onPick={setTellTo} />
 
       <Sheet open={!!edit} onClose={() => setEdit(null)} title={s('terms')} footer={<Button block size="lg" onClick={() => void saveTerms()}>{s('save')}</Button>}>
         {edit && (

@@ -54,7 +54,7 @@ export async function movementCard(movementId: string): Promise<{ payload: CardP
   const lines = (m.lines as any[]).map((l) => {
     const recv = (l.received as any[]).filter((a) => a.evidence === 'account' || a.evidence === 'link');
     const sent = winningAssertion(l.sent);
-    return { lineId: l.line_id, label: l.label_en, dim: l.dim, sent: sent?.base_qty ?? 0, received: recv.length ? winningAssertion(recv)!.base_qty : null, final: recv.some((a) => a.final) };
+    return { lineId: l.line_id, label: l.label_generic ?? l.label_en, dim: l.dim, sent: sent?.base_qty ?? 0, received: recv.length ? winningAssertion(recv)!.base_qty : null, final: recv.some((a) => a.final) };
   });
   const allConfirmed = lines.every((l) => l.received !== null);
   const state = m.cancelled_at ? 'cancelled' : open ? 'disputed' : allConfirmed ? ((m.lines as any[]).some((l) => l.settled?.outcome === 'within') ? 'within_tolerance' : 'confirmed') : 'sent';

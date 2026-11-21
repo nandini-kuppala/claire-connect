@@ -10,6 +10,7 @@ import views from './views.js';
 import { todayIST } from '../../../shared/sc/dates.js';
 import { jobSummaries, toConfirmFor } from './views.js';
 import disputes from './disputes.js';
+import work from './work.js';
 
 const router = Router();
 router.use('/sc', requireAuth, requireSc);
@@ -17,6 +18,7 @@ router.use(setup);
 router.use(records);
 router.use(views);
 router.use(disputes);
+router.use(work);
 
 /** Action chips and the Goods badge (03 §4.2). Late/confirm/dispute counts arrive with slices 1–2. */
 router.get(

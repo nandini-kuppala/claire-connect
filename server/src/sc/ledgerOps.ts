@@ -16,14 +16,15 @@ export const UNDO_MS = 10 * 60_000; // D4
 export const me = (ctx: Ctx): PartyRef => ({ k: 'b', id: ctx.businessId });
 export const sameParty = (a: PartyRef | null | undefined, b: PartyRef | null | undefined) => !!a && !!b && a.k === b.k && a.id === b.id;
 
-export interface SpecInfo { id: string; label_en: string; dim: Dimension; cls: MaterialClass; units: string[]; mtKey: string }
+export interface SpecInfo { id: string; label_en: string; dim: Dimension; cls: MaterialClass; units: string[]; mtKey: string; role: 'primary' | 'secondary' }
 
 export async function specInfo(specId: string): Promise<SpecInfo> {
   const sp = await col('sc_specs').findOne({ _id: specId } as any);
   if (!sp) throw new HttpError(400, 'Please pick the material again.');
   const mt = await col('sc_material_types').findOne({ _id: sp.material_type_id } as any);
   if (!mt) throw new HttpError(400, 'Please pick the material again.');
-  return { id: specId, label_en: sp.label_en, dim: mt.base_dimension, cls: mt.material_class_key, units: mt.allowed_units, mtKey: mt.key };
+  // Trims (thread, buttons, labels, packing) are secondary inputs: they never add to the main goods count of a job.
+  return { id: specId, label_en: sp.label_en, dim: mt.base_dimension, cls: mt.material_class_key, units: mt.allowed_units, mtKey: mt.key, role: mt.form === 'trim' ? 'secondary' : 'primary' };
 }
 
 export type Terms = typeof DEFAULT_TERMS;
@@ -50,10 +51,11 @@ export const bearerOf = (t: Terms, roles: { owner: PartyRef; sender: PartyRef; r
   t.weighing_loss_bearer === 'performer' ? roles.performer : t.weighing_loss_bearer === 'sender' ? roles.sender : t.weighing_loss_bearer === 'receiver' ? roles.receiver : roles.owner;
 
 /** Where a movement line's receipt lands: allocated to the job at the performer, or available at the owner. */
-export function destOf(m: any, line: any): { party: PartyRef; state: HoldingState; place: string | null } {
-  return m.action === 'send_for_work'
-    ? { party: m.to.party, state: { s: 'allocated', ref: line.job_id }, place: null }
-    : { party: m.to.party, state: { s: 'available' }, place: m.to.place_id ?? null };
+export function destOf(m: any, line: any): { party: PartyRef; state: HoldingState; place: string | null; via: PartyRef | null } {
+  // Work-bound movements land allocated to the (child) job; a sub-contract forward keeps the intermediary as `via`.
+  return m.action === 'send_for_work' || m.action === 'forward'
+    ? { party: m.to.party, state: { s: 'allocated', ref: line.job_id }, place: null, via: m.via ?? null }
+    : { party: m.to.party, state: { s: 'available' }, place: m.to.place_id ?? null, via: null };
 }
 
 export interface SettleCtx {
@@ -80,7 +82,7 @@ export function settleCtxFor(m: any, line: any): SettleCtx {
   const owner = line.owner_before as PartyRef;
   const sender = m.from.party as PartyRef;
   const receiver = m.to.party as PartyRef;
-  const performer = m.action === 'send_for_work' ? receiver : sender;
+  const performer = m.action === 'send_for_work' || m.action === 'forward' ? receiver : sender;
   return {
     owner, movementId: m._id, transitCustodian: (m.transit_custodian ?? sender) as PartyRef, sender, receiver,
     bearer: bearerOf(terms, { owner, sender, receiver, performer }), tol: { weighedPct: terms.tolerance.weighed_pct, countedAbs: terms.tolerance.counted_abs },
@@ -129,7 +131,7 @@ export async function applyReceipt(ctx: Ctx, movementId: string, lineId: string,
   const postings: Posting[] = [];
   if (line.settled?.outcome === 'within') postings.push(...reverse(settleLine(goods, line.class, sent, oldRecv, c).postings));
   const delta = Math.min(newWinner.base_qty, sent) - Math.min(oldRecv, sent);
-  if (delta) postings.push(...postReceipt({ goods, owner: c.owner, movementId, transitCustodian: c.transitCustodian, to: { party: dest.party, state: dest.state, place: dest.place }, delta }));
+  if (delta) postings.push(...postReceipt({ goods, owner: c.owner, movementId, transitCustodian: c.transitCustodian, to: { party: dest.party, state: dest.state, place: dest.place, via: dest.via }, delta }));
   let settled: any = line.settled?.outcome === 'within' ? null : line.settled ?? null;
   let dq: any = null;
   if (newWinner.final) {

@@ -15,7 +15,7 @@ export const TwoS = defineStrings('goods_two', {
     accept: 'Accept', settled: 'Settled: {outcome}', concede_note: 'Using the other side’s figure settles it at once; anything else goes to them as a proposal.',
     trade_desk: 'Ask Trade Desk to help', with_desk: 'Trade Desk has this ({code}).', owner_only: 'Only the owner can settle differences.',
     o_sent: 'sender’s figure', o_received: 'receiver’s figure', o_split: 'split', o_credit: 'value credit',
-    badge_confirmed_by: 'Confirmed by {name}', badge_confirmed_by_you: 'Confirmed by you', badge_check: 'Check and confirm', badge_not_confirmed: 'Not confirmed',
+    badge_confirmed_by: 'Confirmed by {name}', badge_confirmed_by_you: 'Confirmed by you', badge_check: 'Check and confirm', badge_not_confirmed: 'Not confirmed', badge_receipt_confirmed: 'Receipt confirmed',
     why_no_answer: 'no answer yet', why_not_shared_yet: 'shares in a few minutes', why_you_typed: 'you typed their figure',
   },
   ta: {
@@ -31,7 +31,7 @@ export const TwoS = defineStrings('goods_two', {
     accept: 'ஏற்கிறேன்', settled: 'தீர்ந்தது: {outcome}', concede_note: 'மற்றவர் எண்ணை ஏற்றால் உடனே தீரும்; மற்றவை அவர்களுக்கு முன்மொழிவாகப் போகும்.',
     trade_desk: 'Trade Desk உதவி கேள்', with_desk: 'Trade Desk-இடம் உள்ளது ({code}).', owner_only: 'உரிமையாளர் மட்டுமே வித்தியாசத்தைத் தீர்க்க முடியும்.',
     o_sent: 'அனுப்பியவரின் எண்', o_received: 'பெற்றவரின் எண்', o_split: 'பாதி', o_credit: 'பண கிரெடிட்',
-    badge_confirmed_by: '{name} உறுதி செய்தார்', badge_confirmed_by_you: 'நீங்கள் உறுதி செய்தீர்கள்', badge_check: 'சரிபார்த்து உறுதி செய்', badge_not_confirmed: 'உறுதி செய்யவில்லை',
+    badge_confirmed_by: '{name} உறுதி செய்தார்', badge_confirmed_by_you: 'நீங்கள் உறுதி செய்தீர்கள்', badge_check: 'சரிபார்த்து உறுதி செய்', badge_not_confirmed: 'உறுதி செய்யவில்லை', badge_receipt_confirmed: 'பெற்றது உறுதி',
     why_no_answer: 'இன்னும் பதில் இல்லை', why_not_shared_yet: 'சில நிமிடங்களில் பகிரப்படும்', why_you_typed: 'அவர்கள் எண்ணை நீங்கள் பதிந்தீர்கள்',
   },
   hi: {
@@ -47,7 +47,7 @@ export const TwoS = defineStrings('goods_two', {
     accept: 'मंज़ूर', settled: 'निपटा: {outcome}', concede_note: 'दूसरी तरफ़ का आँकड़ा मानने पर तुरंत निपट जाता है; बाकी उन्हें प्रस्ताव के रूप में जाता है।',
     trade_desk: 'Trade Desk से मदद लें', with_desk: 'Trade Desk के पास है ({code})।', owner_only: 'केवल मालिक फ़र्क निपटा सकते हैं।',
     o_sent: 'भेजने वाले का आँकड़ा', o_received: 'पाने वाले का आँकड़ा', o_split: 'आधा-आधा', o_credit: 'पैसे का क्रेडिट',
-    badge_confirmed_by: '{name} ने पुष्टि की', badge_confirmed_by_you: 'आपने पुष्टि की', badge_check: 'जाँचें और पुष्टि करें', badge_not_confirmed: 'पुष्टि नहीं हुई',
+    badge_confirmed_by: '{name} ने पुष्टि की', badge_confirmed_by_you: 'आपने पुष्टि की', badge_check: 'जाँचें और पुष्टि करें', badge_not_confirmed: 'पुष्टि नहीं हुई', badge_receipt_confirmed: 'पहुँच की पुष्टि',
     why_no_answer: 'अभी जवाब नहीं', why_not_shared_yet: 'कुछ मिनट में साझा होगा', why_you_typed: 'उनका आँकड़ा आपने लिखा',
   },
 });

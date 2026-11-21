@@ -33,6 +33,33 @@ function Tab({ to, icon: Icon, label, end, badge }: { to: string; icon: LucideIc
   );
 }
 
+/** Desktop (≥ 1024 px, wide screens only): the same destinations as a labelled left rail. */
+export function RailNav({ unread = 0 }: { unread?: number }) {
+  const t = useT();
+  const sg = NavGoodsS.use();
+  const item = ({ isActive }: { isActive: boolean }) =>
+    clsx('flex min-h-11 items-center gap-3 rounded-[14px] px-3 text-[15px] font-semibold transition-colors', isActive ? 'bg-primary-tint text-primary' : 'text-ink-2 hover:bg-sunken');
+  const items: [string, LucideIcon, string, boolean?, number?][] = [
+    ['/', Home, t('nav_home'), true],
+    ['/chats', MessagesSquare, t('nav_chats'), false, unread],
+    ['/goods', Package, sg('goods')],
+    ['/orders', ClipboardList, t('nav_orders')],
+    ['/me', User, t('nav_me')],
+  ];
+  return (
+    <nav aria-label="Main" className="flex flex-col gap-1 p-3">
+      <p className="px-3 pb-3 pt-2 font-head text-[18px] font-bold text-ink">CLAIRE</p>
+      {items.map(([to, Icon, label, end, badge]) => (
+        <NavLink key={to} to={to} end={end} className={item}>
+          <Icon size={20} aria-hidden />
+          <span className="flex-1">{label}</span>
+          {!!badge && <span className="rounded-full bg-clay px-1.5 text-[11px] font-bold text-white">{badge > 99 ? '99+' : badge}</span>}
+        </NavLink>
+      ))}
+    </nav>
+  );
+}
+
 export function BottomNav({ unread = 0 }: { unread?: number }) {
   const t = useT();
   const business = useSession((s) => s.business);

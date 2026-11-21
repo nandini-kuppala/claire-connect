@@ -41,6 +41,8 @@ export interface JobSummary {
   since: string;
   expected_at: string;
   late: ReturnType<typeof lateness>;
+  ready: boolean;
+  held: string | null;
   dim: Dimension;
   sent: number; // Σ sent (input atoms)
   issued: number; // Σ received basis (P6)
@@ -59,7 +61,7 @@ export interface JobSummary {
 
 /** Summaries of my open jobs (owner = me), optionally for one performer. */
 export async function jobSummaries(ctx: Ctx, opts: { performer?: PartyRef; statuses?: string[] } = {}): Promise<JobSummary[]> {
-  const filter: any = { 'owner_party.k': 'b', 'owner_party.id': ctx.businessId, status: { $in: opts.statuses ?? ['issued', 'in_progress'] } };
+  const filter: any = { 'owner_party.k': 'b', 'owner_party.id': ctx.businessId, 'client_party.id': ctx.businessId, status: { $in: opts.statuses ?? ['issued', 'in_progress'] } };
   if (opts.performer) Object.assign(filter, { 'performer_party.k': opts.performer.k, 'performer_party.id': opts.performer.id });
   const jobs = await col('sc_jobs').find(filter).sort({ expected_at: 1 }).limit(200).toArray();
   if (!jobs.length) return [];
@@ -67,6 +69,10 @@ export async function jobSummaries(ctx: Ctx, opts: { performer?: PartyRef; statu
   const movs = new Map((await col('sc_movements').find({ _id: { $in: movIds } } as any).toArray()).map((m: any) => [m._id, m]));
   const specIds = [...new Set(jobs.flatMap((j: any) => [...j.inputs.map((i: any) => i.spec_id), ...j.outputs.map((o: any) => o.spec_id)]))];
   const labels = new Map((await col('sc_specs').find({ _id: { $in: specIds } } as any, { projection: { label_en: 1 } }).toArray()).map((s: any) => [s._id, s.label_en as string]));
+  // Goods the owner had sent on from a job (a hop) left that job: its unprocessed part no longer counts as there.
+  const hops = await col('sc_jobs').find({ hop_from_job_id: { $in: jobs.map((j: any) => j._id) }, status: { $ne: 'cancelled' } } as any, { projection: { hop_from_job_id: 1, sent_inputs: 1, issued_sent: 1 } }).toArray();
+  const hopped = new Map<string, number>();
+  for (const c of hops as any[]) hopped.set(c.hop_from_job_id, (hopped.get(c.hop_from_job_id) ?? 0) + (c.sent_inputs ?? c.issued_sent ?? 0));
   const today = todayIST();
   return jobs.map((j: any) => {
     let sent = 0;
@@ -74,7 +80,7 @@ export async function jobSummaries(ctx: Ctx, opts: { performer?: PartyRef; statu
     const bases = new Set<string>();
     const lots = new Set<string>();
     let dim: Dimension = 'mass';
-    for (const inp of j.inputs) {
+    for (const inp of j.inputs.filter((i: any) => i.role !== 'secondary')) {
       const line = movs.get(inp.movement_id)?.lines.find((l: any) => l.line_id === inp.line_id);
       if (!line) continue;
       dim = line.dim;
@@ -88,11 +94,12 @@ export async function jobSummaries(ctx: Ctx, opts: { performer?: PartyRef; statu
     const outputs = j.outputs.filter((o: any) => o.dim === dim).reduce((a: number, o: any) => a + o.qty, 0);
     const kind = j.conservation_kind as ConservationKind;
     const factor = kind === 'mass_losing' ? (j.loss_norm_pct ?? 0) / 100 : 1;
-    const p = approxPending({ kind, issued, outputs, factor });
+    const p = approxPending({ kind, issued: Math.max(0, issued - (hopped.get(j._id) ?? 0)), outputs, factor });
     const last = j.outputs.at(-1);
     return {
       id: j._id, process_key: j.process_key, performer: j.performer_party, status: j.status, since: j.business_date, expected_at: j.expected_at,
-      late: lateness(j.expected_at, today), dim, sent, issued, issuedBasis: bases.size > 1 ? 'mixed' : ((bases.values().next().value ?? 'sent') as 'sent' | 'their_figure'),
+      late: lateness(j.expected_at, today, { pausedDays: (j.pauses ?? []).reduce((n: number, p: any) => n + workingDaysBetween(p.from, p.to ?? today), 0), reason: (j.pauses ?? []).some((p: any) => !p.to) ? 'held_for_dues' : j.ready_at ? 'ready_not_collected' : 'processing' }),
+      ready: !!j.ready_at, held: (j.pauses ?? []).find((p: any) => !p.to)?.reason ?? null, dim, sent, issued, issuedBasis: bases.size > 1 ? 'mixed' : ((bases.values().next().value ?? 'sent') as 'sent' | 'their_figure'),
       outputs, pending: p.input, pendingAsOutput: kind === 'mass_losing' ? p.asOutput : null, overYield: p.overYield,
       // Loss is shown only once nothing is estimated to be left (or the owner said it was the last); before that the
       // remainder is still being processed, not lost.
@@ -109,8 +116,19 @@ const STATUS_RANK = { late: 0, due_today: 1, on_time: 2 } as const;
  * The v1 badge for a movement from this viewer's side (03 §7.1): my record → your_record / confirmed_by /
  * not_confirmed (+ why); their record I haven't checked → check_and_confirm; theirs I checked → confirmed_by_you.
  */
+/** A sub-contractor sees a plain name (no style code or brand); the owner and the forwarder see the real one. */
+export const lineLabel = (ctx: Ctx, l: any): string => (l.label_generic && l.generic_viewer === ctx.businessId ? l.label_generic : l.label_en);
+
+/** The other side has already confirmed or answered: undo is no longer offered (records.ts refuses it too). */
+const otherActed = (ctx: Ctx, m: any) => (m.lines as any[]).some((l) => [...(l.sent ?? []), ...(l.received ?? [])].some((a: any) => a.by?.business_id && a.by.business_id !== ctx.businessId));
+
 function badgeOf(ctx: Ctx, m: any): { kind: string; why?: string } {
   const lines = (m.lines as any[]).filter((l) => l.viewer_business_ids?.includes(ctx.businessId));
+  const party = (p: any) => p.party.k === 'b' && p.party.id === ctx.businessId;
+  // An onlooker (the owner of a disclosed sub-contract hop) is neither side: it can't confirm, only see whether the receiver did.
+  if (!party(m.from) && !party(m.to)) {
+    return lines.every((l) => (l.received as any[]).some((a) => a.evidence === 'account' || a.evidence === 'link')) ? { kind: 'receipt_confirmed' } : { kind: 'not_confirmed' };
+  }
   const otherSide = (l: any) => (m.from.party.k === 'b' && m.from.party.id === ctx.businessId ? l.received : m.to.party.k === 'b' && m.to.party.id === ctx.businessId ? l.sent : l.received) as any[];
   if (m.recorder_business_id !== ctx.businessId) {
     const mineChecked = lines.every((l) => [...l.sent, ...l.received].some((a: any) => a.by?.business_id === ctx.businessId));
@@ -204,7 +222,7 @@ export async function toConfirmFor(ctx: Ctx) {
     rows.push({
       movementId: m._id, action: m.action, role: iAmReceiver ? 'receiver' : 'sender', business_date: m.business_date, dc_no: m.dc_no ?? null,
       counterparty: iAmReceiver ? m.from.party : m.to.party,
-      lines: pending.map((l) => ({ line_id: l.line_id, label: l.label_en, lot: l.lot, dim: l.dim, sent: winningAssertion(l.sent)?.base_qty ?? 0, received: winningAssertion(l.received)?.base_qty ?? null, unit: l.entered?.unit ?? null })),
+      lines: pending.map((l) => ({ line_id: l.line_id, label: lineLabel(ctx, l), lot: l.lot, dim: l.dim, sent: winningAssertion(l.sent)?.base_qty ?? 0, received: winningAssertion(l.received)?.base_qty ?? null, unit: l.entered?.unit ?? null })),
     });
   }
   const names = await partyNames(ctx, rows.map((r) => r.counterparty));
@@ -220,7 +238,7 @@ router.get(
     const names = await partyNames(req.ctx, [m.from.party, m.to.party]);
     const docs = await col('sc_documents').find({ 'record.kind': 'movement', 'record.id': m._id, shared_with: req.ctx.businessId } as any, { projection: { _id: 1 } }).toArray();
     const lines = (m.lines as any[]).filter((l) => l.viewer_business_ids?.includes(req.ctx.businessId)).map((l) => ({
-      line_id: l.line_id, label: l.label_en, lot: l.lot, grade: l.grade, dim: l.dim, unit: l.entered?.unit ?? null, rolls: l.rolls ?? null, settled: l.settled ?? null,
+      line_id: l.line_id, label: lineLabel(req.ctx, l), lot: l.lot, grade: l.grade, dim: l.dim, unit: l.entered?.unit ?? null, rolls: l.rolls ?? null, settled: l.settled ?? null,
       sent: (l.sent as any[]).map((a) => ({ qty: a.base_qty, evidence: a.evidence, by: a.by?.business_id ?? null, at: a.recorded_at })),
       received: (l.received as any[]).map((a) => ({ qty: a.base_qty, evidence: a.evidence, by: a.by?.business_id ?? null, at: a.recorded_at, reason: a.reason ?? null })),
     }));
@@ -255,14 +273,14 @@ router.get(
     const history = visibleMovs.map((m: any) => ({
       id: m._id, action: m.action, business_date: m.business_date, dc_no: m.dc_no, cancelled: !!m.cancelled_at, mine: m.recorder_business_id === ctx.businessId,
       iAmSender: m.from.party.k === 'b' && m.from.party.id === ctx.businessId,
-      undoable_until: !m.cancelled_at && m.recorder_business_id === ctx.businessId && now < m.recorded_at + UNDO_MS ? m.recorded_at + UNDO_MS : null,
+      undoable_until: !m.cancelled_at && m.recorder_business_id === ctx.businessId && now < m.recorded_at + UNDO_MS && !otherActed(ctx, m) ? m.recorded_at + UNDO_MS : null,
       badge: badgeOf(ctx, m),
       lines: m.lines.filter((l: any) => l.viewer_business_ids?.includes(ctx.businessId)).map((l: any) => {
         const sent = winningAssertion(l.sent);
         const recv = winningAssertion(l.received);
         const theirs = m.action === 'send_for_work' ? recv : sent;
         return {
-          line_id: l.line_id, label: l.label_en, lot: l.lot, grade: l.grade, dim: l.dim, rolls: l.rolls ?? null, sent: sent?.base_qty ?? 0, received: recv?.base_qty ?? 0,
+          line_id: l.line_id, label: lineLabel(req.ctx, l), lot: l.lot, grade: l.grade, dim: l.dim, rolls: l.rolls ?? null, sent: sent?.base_qty ?? 0, received: recv?.base_qty ?? 0,
           their: theirs && theirs.evidence === 'on_behalf' ? theirs.base_qty : null, settled: l.settled ?? null, line_kind: l.line_kind,
         };
       }),

@@ -32,6 +32,7 @@ const PartyLedger = lazy(() => import('./screens/goods/PartyLedger'));
 const MovementScreen = lazy(() => import('./screens/goods/MovementScreen'));
 const DisputeScreen = lazy(() => import('./screens/goods/DisputeScreen'));
 const ReceiveFirstForm = lazy(() => import('./screens/goods/ReceiveFirstForm'));
+const WorkScreen = lazy(() => import('./screens/goods/WorkScreen'));
 
 /** The Goods routes exist only for businesses with the supply-chain flag; others go Home. */
 function RequireGoods({ children }: { children: ReactNode }) {
@@ -189,7 +190,7 @@ export default function App() {
           element={
             <RequireAuth agentOk={false}>
               <RequireGoods>
-                <AppShell>
+                <AppShell variant="wide">
                   <Suspense fallback={<Splash />}>
                     <Goods />
                   </Suspense>
@@ -245,7 +246,7 @@ export default function App() {
           element={
             <RequireAuth agentOk={false}>
               <RequireGoods>
-                <AppShell >
+                <AppShell variant="wide">
                   <Suspense fallback={<Splash />}>
                     <PartyLedger />
                   </Suspense>
@@ -290,6 +291,20 @@ export default function App() {
                 <AppShell nav={false}>
                   <Suspense fallback={<Splash />}>
                     <ReceiveFirstForm />
+                  </Suspense>
+                </AppShell>
+              </RequireGoods>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/goods/work/:id"
+          element={
+            <RequireAuth agentOk={false}>
+              <RequireGoods>
+                <AppShell variant="wide">
+                  <Suspense fallback={<Splash />}>
+                    <WorkScreen />
                   </Suspense>
                 </AppShell>
               </RequireGoods>

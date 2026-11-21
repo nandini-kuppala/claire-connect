@@ -77,7 +77,8 @@ export function postSend(i: SendInput): Posting[] {
   const out = i.from.external
     ? pseudo(g, 'EXTERNAL', `${i.from.party.k}:${i.from.party.id}`, owner)
     : real(g, owner, i.from.party, i.from.state ?? { s: 'available' }, { via: i.from.via, place: i.from.place });
-  const transit = real(g, owner, i.transitCustodian ?? i.from.party, { s: 'in_transit', ref: i.movementId }, { via: i.from.via });
+  // In transit, the goods sit with whoever carries them; `via` (the accountable intermediary) applies at a unit, not on the road.
+  const transit = real(g, owner, i.transitCustodian ?? i.from.party, { s: 'in_transit', ref: i.movementId });
   return [p(out, -s, g.dim), p(transit, s, g.dim)];
 }
 

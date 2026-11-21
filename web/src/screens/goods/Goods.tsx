@@ -13,10 +13,12 @@ import { SetupS } from './Setup.strings';
 import { RecS } from './Record.strings';
 import { Status, type Late } from './Status';
 import { TwoS } from './Two.strings';
+import { WorkS } from './Work.strings';
+import { Others } from './Others';
 import { qty as fmtQty, shortDate } from './format';
 
 type Tab = 'out' | 'in' | 'coming';
-interface Job { id: string; performer: { k: string; id: string }; status: string; since: string; expected_at: string; late: Late; dim: string; sent: number; issued: number; issuedBasis: string; outputs: number; pending: number; pendingAsOutput: number | null; lossNormPct: number; inputLabel: string; outputLabel: string | null; lots: string[]; name?: string }
+interface Job { id: string; performer: { k: string; id: string }; status: string; ready?: boolean; held?: string | null; since: string; expected_at: string; late: Late; dim: string; sent: number; issued: number; issuedBasis: string; outputs: number; pending: number; pendingAsOutput: number | null; lossNormPct: number; inputLabel: string; outputLabel: string | null; lots: string[]; name?: string }
 interface OutRow { party: { k: string; id: string }; name: string; kind: string; onClaire: boolean; since: string; status: Late; jobs: Job[] }
 interface InRow { id: string; label: string; lot: string | null; grade: string; place: string | null; qty: number; dim: string }
 interface Home { chips: { late: number; toConfirm: number; disputes: number }; role: 'owner' | 'staff' }
@@ -39,6 +41,15 @@ export default function Goods() {
   const ss = SetupS.use();
   const r = RecS.use();
   const t2 = TwoS.use();
+  const wk = WorkS.use();
+  const [sub, setSub] = useState<'mine' | 'others'>(() => {
+    try {
+      return localStorage.getItem('cc_goods_sub') === 'others' ? 'others' : 'mine';
+    } catch {
+      return 'mine';
+    }
+  });
+  const [othersCount, setOthersCount] = useState(0);
   const nav = useNavigate();
   const lang = useSession((st) => st.user?.language || 'en');
   const [params, setParams] = useSearchParams();
@@ -82,7 +93,29 @@ export default function Goods() {
     try {
       const h = await api.get<Home>('/api/sc/home');
       setHome(h);
-      if (tab === 'out') setOut((await api.get<{ rows: OutRow[] }>('/api/sc/goods/out')).rows);
+      if (tab === 'in' && sub === 'mine') {
+        const o = await api.get<{ groups: { jobs: unknown[] }[] }>('/api/sc/goods/others');
+        const n = o.groups.reduce((a, g) => a + g.jobs.length, 0);
+        setOthersCount(n);
+      }
+      if (tab === 'out') {
+        const rows = (await api.get<{ rows: OutRow[] }>('/api/sc/goods/out')).rows;
+        setOut(rows);
+        // A job worker (nothing of its own out, others' goods here) opens on Others' goods unless it chose a tab (03 §4.5).
+        let chosen = false;
+        try {
+          chosen = !!localStorage.getItem(TAB_KEY);
+        } catch {
+          /* no storage */
+        }
+        if (!rows.length && !chosen && !params.get('tab')) {
+          const o = await api.get<{ groups: { jobs: unknown[] }[] }>('/api/sc/goods/others');
+          if (o.groups.length) {
+            setSub('others');
+            setTabState('in');
+          }
+        }
+      }
       if (tab === 'coming') {
         const c = await api.get<{ rows: Job[]; toConfirm: ToConfirm[]; unmatched: Unmatched[] }>('/api/sc/goods/coming');
         setComing(c.rows);
@@ -93,7 +126,7 @@ export default function Goods() {
     } catch (e) {
       setError(errorText(e));
     }
-  }, [tab]);
+  }, [tab, sub]);
 
   useEffect(() => {
     void load();
@@ -123,14 +156,17 @@ export default function Goods() {
   const empty = { out: ['empty_out', 'empty_out_hint'], in: ['empty_in', 'empty_in_hint'], coming: ['empty_coming', 'empty_coming_hint'] } as const;
 
   return (
-    <div className="pb-28">
-      <header className="px-4 pb-1 pt-[max(18px,var(--safe-top))]">
+    <div className="pb-28 lg:pb-10">
+      <header className="px-4 pb-1 pt-[max(18px,var(--safe-top))] lg:pt-8">
         <div className="flex items-center justify-between gap-3">
           <h1 className="font-head text-[28px] font-bold leading-tight text-ink">{s('title')}</h1>
+          <span className="flex items-center gap-2">
           <button className="inline-flex min-h-11 items-center gap-1.5 rounded-full px-3 text-[14px] font-semibold text-ink-2 hover:bg-sunken" onClick={() => nav('/goods/setup')}>
             <Settings size={18} aria-hidden />
             {ss('open')}
           </button>
+            <span className="hidden lg:block"><Button icon={Plus} onClick={() => setSheet('record')}>{r('record')}</Button></span>
+          </span>
         </div>
 
         {chips && (chips.late > 0 || chips.toConfirm > 0 || chips.disputes > 0) && (
@@ -145,7 +181,7 @@ export default function Goods() {
           </div>
         )}
 
-        <div className="mt-4 grid grid-cols-3 gap-1 rounded-full bg-sunken p-1" role="tablist">
+        <div className="mt-4 grid grid-cols-3 gap-1 rounded-full bg-sunken p-1 lg:max-w-[560px]" role="tablist">
           {(['out', 'in', 'coming'] as Tab[]).map((k) => (
             <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)}
               className={clsx('flex min-h-11 items-center justify-center rounded-full px-2 py-1 text-center text-[14px] font-semibold leading-tight transition-colors', tab === k ? 'bg-surface text-primary shadow-[0_0_0_1px_var(--color-line)]' : 'text-ink-2')}>
@@ -154,6 +190,17 @@ export default function Goods() {
           ))}
         </div>
       </header>
+
+      {tab === 'in' && (othersCount > 0 || sub === 'others') && (
+        <div className="mx-4 mt-3 inline-flex gap-1 rounded-full bg-sunken p-1" role="tablist">
+          {(['mine', 'others'] as const).map((k) => (
+            <button key={k} role="tab" aria-selected={sub === k} onClick={() => { setSub(k); try { localStorage.setItem('cc_goods_sub', k); } catch { /* convenience */ } }}
+              className={clsx('min-h-10 rounded-full px-4 text-[14px] font-semibold', sub === k ? 'bg-surface text-primary shadow-[0_0_0_1px_var(--color-line)]' : 'text-ink-2')}>
+              {wk(k)}
+            </button>
+          ))}
+        </div>
+      )}
 
       {error && (
         <div className="mx-4 mt-4 rounded-[16px] bg-danger-tint px-4 py-3 text-[14px] text-danger">
@@ -166,7 +213,7 @@ export default function Goods() {
         <div className="mx-4 mt-4 space-y-3" aria-busy>
           {[0, 1, 2].map((i) => <div key={i} className="h-[84px] animate-pulse rounded-[18px] bg-sunken" />)}
         </div>
-      ) : list && list.length === 0 && !(tab === 'coming' && (toConfirm.length || unmatched.length)) ? (
+      ) : list && list.length === 0 && !(tab === 'coming' && (toConfirm.length || unmatched.length)) && !(tab === 'in' && sub === 'others') ? (
         <section className="mx-4 mt-5">
           <p className="font-head text-[18px] font-semibold text-ink">{s(empty[tab][0])}</p>
           <p className="mt-1 text-[15px] leading-relaxed text-ink-2">{s(empty[tab][1])}</p>
@@ -185,13 +232,41 @@ export default function Goods() {
       ) : tab === 'out' && out ? (
         <>
           <h2 className="mx-4 mt-5 font-head text-[17px] font-semibold text-ink">{out.length === 1 ? r('out_title_one') : r('out_title', { n: out.length })}</h2>
-          <ul className="mx-4 mt-2 divide-y divide-line overflow-hidden rounded-[18px] border border-line bg-surface">
+          <div className="mx-4 mt-2 hidden overflow-hidden rounded-[18px] border border-line bg-surface lg:block">
+            <table className="w-full text-left text-[14.5px]">
+              <thead className="bg-sunken text-[13px] text-ink-2">
+                <tr>
+                  <th className="px-4 py-2.5 font-semibold">{r('col_unit')}</th>
+                  <th className="px-4 py-2.5 text-right font-semibold">{r('col_with_them')}</th>
+                  <th className="px-4 py-2.5 font-semibold">{r('col_what')}</th>
+                  <th className="px-4 py-2.5 font-semibold">{r('col_since')}</th>
+                  <th className="px-4 py-2.5 font-semibold">{r('col_expected')}</th>
+                  <th className="px-4 py-2.5 font-semibold">{r('col_status')}</th>
+                </tr>
+              </thead>
+              {out.map((row) => (
+                <tbody key={`${row.party.k}:${row.party.id}`} className="cursor-pointer border-t border-line hover:bg-sunken" onClick={() => nav(`/goods/party/${row.party.k}/${row.party.id}`)}>
+                  {row.jobs.map((j, i) => (
+                    <tr key={j.id} className="align-top">
+                      {i === 0 && <td rowSpan={row.jobs.length} className="px-4 py-3 font-semibold text-ink"><button className="text-left hover:underline" onClick={(e) => { e.stopPropagation(); nav(`/goods/party/${row.party.k}/${row.party.id}`); }}>{row.name}</button></td>}
+                      <td className="whitespace-nowrap px-4 py-3 text-right font-head font-bold tabular-nums text-ink">{j.outputs > 0 ? `${r('approx')} ` : ''}{fmtQty(j.pending, j.dim)}</td>
+                      <td className="px-4 py-3 text-ink">{j.inputLabel}{j.pendingAsOutput !== null && j.outputLabel ? <span className="block text-[13px] text-meta">{r('to_come', { qty: `${r('approx')} ${fmtQty(j.pendingAsOutput, j.dim)}` })}</span> : null}</td>
+                      <td className="whitespace-nowrap px-4 py-3 text-ink-2">{shortDate(j.since, lang)}</td>
+                      <td className="whitespace-nowrap px-4 py-3 text-ink-2">{shortDate(j.expected_at, lang)}</td>
+                      <td className="px-4 py-3">{j.held ? <span className="inline-flex rounded-full bg-accent-tint px-2.5 py-1 text-[12.5px] font-semibold text-accent-ink">{wk('held')}</span> : j.ready && j.late?.status !== 'late' ? <span className="inline-flex rounded-full bg-primary-tint px-2.5 py-1 text-[12.5px] font-semibold text-primary">{wk('ready')}</span> : <Status late={j.late} />}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              ))}
+            </table>
+          </div>
+          <ul className="mx-4 mt-2 divide-y divide-line overflow-hidden rounded-[18px] border border-line bg-surface lg:hidden">
             {out.map((row) => (
               <li key={`${row.party.k}:${row.party.id}`}>
                 <button className="flex w-full items-start gap-3 px-4 py-3.5 text-left hover:bg-sunken" onClick={() => nav(`/goods/party/${row.party.k}/${row.party.id}`)}>
                   <span className="min-w-0 flex-1">
                     <span className="block text-[15.5px] font-semibold text-ink">{row.name}</span>
-                    <Status late={row.status} className="mt-1" />
+                    {row.jobs.some((j) => j.held) ? <span className="mt-1 inline-flex rounded-full bg-accent-tint px-2.5 py-1 text-[12.5px] font-semibold text-accent-ink">{wk('held')}</span> : row.jobs.some((j) => j.ready) && row.status.status !== 'late' ? <span className="mt-1 inline-flex rounded-full bg-primary-tint px-2.5 py-1 text-[12.5px] font-semibold text-primary">{wk('ready')}</span> : <Status late={row.status} className="mt-1" />}
                     {row.jobs.map((j) => (
                       <span key={j.id} className="mt-1.5 block text-[15px] text-ink">
                         <span className="font-head font-bold tabular-nums">{j.outputs > 0 ? `${r('approx')} ` : ''}{fmtQty(j.pending, j.dim)}</span> {j.inputLabel}
@@ -260,6 +335,8 @@ export default function Goods() {
           ))}
         </ul>}
         </>
+      ) : tab === 'in' && sub === 'others' ? (
+        <Others onCount={setOthersCount} />
       ) : tab === 'in' && mine ? (
         <>
           <h2 className="mx-4 mt-5 font-head text-[17px] font-semibold text-ink">{r('mine_title')}</h2>
@@ -275,12 +352,12 @@ export default function Goods() {
         </>
       ) : null}
 
-      <div className="fixed inset-x-0 bottom-[calc(61px+var(--safe-bottom))] z-20 mx-auto w-full max-w-[480px] border-t border-line bg-surface px-4 py-2.5">
+      <div className="fixed inset-x-0 bottom-[calc(61px+var(--safe-bottom))] z-20 mx-auto w-full max-w-[480px] border-t border-line bg-surface px-4 py-2.5 lg:hidden">
         <Button block size="lg" icon={Plus} onClick={() => setSheet('record')}>{r('record')}</Button>
       </div>
 
       {(toast || toastText) && (
-        <div role="status" className="fixed inset-x-0 bottom-[calc(140px+var(--safe-bottom))] z-40 mx-auto flex w-[calc(100%-32px)] max-w-[448px] items-center gap-3 rounded-[18px] bg-ink px-4 py-3 text-[14px] text-white shadow-[var(--shadow-float)]">
+        <div role="status" className="fixed inset-x-0 bottom-[calc(140px+var(--safe-bottom))] z-40 mx-auto flex w-[calc(100%-32px)] max-w-[448px] items-center lg:inset-x-auto lg:bottom-8 lg:right-8 lg:mx-0 lg:w-[420px] gap-3 rounded-[18px] bg-ink px-4 py-3 text-[14px] text-white shadow-[var(--shadow-float)]">
           <span className="min-w-0 flex-1">{toastText}</span>
           {toast && (
             <>

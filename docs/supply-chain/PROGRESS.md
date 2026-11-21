@@ -3,7 +3,7 @@
 Governing brief: `docs/supply-chain/BRIEF.md` (re-read at the start of every phase and after any context compaction).
 
 ## Current phase
-**Phase 6 — slices 0, 0.5, 1 and 2 done. DEMO STOP after slice 2 (B2): waiting for the user's go-ahead to continue with slice 3** (job workers, forwarding, size grid) on local branch `supply-chain`. Phase 0 done: `00-current-state.md`.
+**Phase 6 — slices 0, 0.5, 1, 2 and 3 done. Next: slice 4 (Made here, job detail, closing), then slice 4.5; the next DEMO STOP is after slice 4.5 (B2).** Work stays on local branch `supply-chain`. Phase 0 done: `00-current-state.md`.
 
 ## Phase status
 | Phase | Doc | Status |
@@ -14,7 +14,7 @@ Governing brief: `docs/supply-chain/BRIEF.md` (re-read at the start of every pha
 | 3 Product & UX | `03-product-ux.md`, `ui-principles.md`, `mockups/` (16 screens) | Done 2026-11-21, rendered at 375/1280 px en+ta, red-teamed, **approved** (U1–U9 defaults) |
 | 4 Technical design | `04-technical-design.md` | Done 2026-11-21, model check run, red-teamed, **approved** (T1–T9 defaults) |
 | 5 Build plan | `05-build-plan.md` (v2) | Done 2026-11-21, red-teamed, **approved** (B1–B3 defaults) |
-| 6 Implementation | slices on branch `supply-chain` | Slices 0, 0.5, 1, 2 done 2026-11-21 — demo stop |
+| 6 Implementation | slices on branch `supply-chain` | Slices 0, 0.5, 1, 2, 3 done 2026-11-21; next demo stop after 4.5 |
 | 7 Final verification | | Not started |
 
 ## Decisions made
@@ -152,8 +152,65 @@ Governing brief: `docs/supply-chain/BRIEF.md` (re-read at the start of every pha
   - transporter / LR and the transit-claim outcome come with the Sent-through field in slice 4.5;
   - integration tests still wait for T8.
 
+### Slice 3 — Job workers, forwarding and the size grid (2026-11-21)
+- **Built:**
+  - **Server (`work.ts`, plus `setup.ts` and `views.ts`):**
+    - **Others' goods**: the job worker's side, grouped by client; received, done here, sent back, sent on, still to work on, done but not sent back.
+    - **Work done**, **Mark ready** and **Hold for dues**. Holding pauses the lateness clock, and the owner sees Ready / Held on Out with others.
+    - **Send back to owner**: any shortfall becomes an implied output. Everything returned rolls up into the parent job.
+    - **Forward**, in two forms:
+      - **Sub-contract**: keeps `via`, so the owner still sees "with Lakshmi" and the sub-contractor sees "for Lakshmi". The owner is excluded from the record unless they are GST-registered (ITC-04 disclosure). The sub-contractor sees a plain name without style codes.
+      - **Hop**: the owner's "Tell them to send it on". It drops `via`; the new unit works for the owner directly and sees the real style.
+    - **Size × colour grid** (`POST /sc/specs/resolve-grid`) and **styles** with trims per piece (`GET/POST /sc/styles`; trims come back resolved).
+    - Trims are secondary input lines and are left out of job counts.
+  - **Web:**
+    - **In my unit** has a Mine / Others' goods switch. Job workers with nothing out open on Others' goods.
+    - **Work screen** with sheets for Work done, Send back and Forward. The forward sheet carries the disclosure and plain-name notes.
+    - Desktop return table with Save returns; **Tell them to send it on** on the party ledger.
+    - **Sizes and colours** sheet in Send for work, with trims added from the style (pieces × per piece × (1 + spare %), rounded up) and a **lot-mixing warning**.
+    - **Styles** and **Work you take** (process offerings) in Setup.
+    - **Desktop layout at ≥ 1024 px** (`AppShell variant="wide"`):
+      - a labelled left rail instead of the bottom nav;
+      - Record in the header and the toast in the corner;
+      - Out with others as a table;
+      - the party ledger in two panes (open + terms | history).
+- **Checks:**
+  - typecheck + lint green; 16/16 unit tests; web build OK (Goods chunk 7.6 KB gzipped).
+  - **`scripts/sc-smoke-s3.py`: 34/34**, covering:
+    - the grid and style trims (400 kits, not 1,624);
+    - Others' goods, ready, and held for dues;
+    - the disclosed forward: plain name for Sree, real style and "Receipt confirmed" for Ravi;
+    - no Undo after the other side confirmed;
+    - roll-up 220 → 120 → returned 280 with no double count;
+    - **hop**: 60 kits leave Lakshmi's job, 60 with Sree, and Sree works for Ravi directly;
+    - **undisclosed chain** Lakshmi → Sree → Ravi: Lakshmi gets 404, her history has no trace, she sees "with Sree", and Ravi sees "for Sree";
+    - **principal vs principal** at one job worker.
+  - s1 and s2 still pass; `sc:verify` 0 problems.
+  - **Browser**:
+    - Lakshmi in Tamil at 375 px: Others' goods, work screen, forward sheet with the disclosure note.
+    - Ravi at 1280 px: rail, Out table, two-pane ledger.
+    - Ravi at 375 px: the size grid in Tamil (S 100 + M 120 → 674 buttons).
+- **Fixed during checks:**
+  - The in-transit key carried `via`, so confirming a sub-contractor's return failed. Transit now sits with the carrier only.
+  - The `wide` shell had no bottom nav; the header Record button showed on phones.
+  - The owner of a disclosed hop was asked to "Check and confirm" a record they aren't party to. It now shows "Receipt confirmed" or "Not confirmed".
+  - Undo was offered on records the other side had already confirmed.
+  - The raw `a_forward` key showed in the ledger.
+  - The owner and the forwarder saw the plain name. Lines now keep the real label, and only the sub-contractor sees `label_generic`; goods-chat cards, shared by both sides, use the plain name.
+  - Hops weren't subtracted from the parent job. Forwarded jobs now record `sent_inputs` / `sent_outputs`.
+- **Decisions in implementation:**
+  - Disclosure to the owner = GST-registered owner or an owner-instructed hop.
+  - Forwarding again from a sub-contract is refused (`nested`) for now.
+  - Lot-mixing is a warning, never a block.
+- **Known gaps:**
+  - Sub-contracting work already done (e.g. outsourcing checking of stitched garments) isn't modelled; forwards are of kits/inputs. Slice 4, with Made here.
+  - Bulk "Mark all ready" across principals is per client group, not across groups (batch UI is v1.1 per the plan).
+  - Keyboard-first receive on desktop is only the return table.
+  - Tamil/Hindi strings for slice 3 are still marked *to verify* (glossary).
+  - Screenshots of open sheets in the in-app browser came back stale; sheets were verified through the DOM and zoomed captures instead.
+
 ## Open questions
 - T8: a separate free Atlas cluster for integration tests needs to be created by the user (not blocking slice 0's pure tests).
 
 ## Next
-Slice 0 (Foundations), then slice 0.5 (setup data), then slice 1 — demo stop after slice 1.
+Slice 4 (Made here: Cut · Pack · Check · Make sets; job detail; closing a job), then slice 4.5. Demo stop after slice 4.5.
