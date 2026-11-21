@@ -12,12 +12,12 @@ interface ProcessType { key: string; input_forms: string[]; output_forms: string
 const colour: Attr = { key: 'colour', role: 'spec', type: 'text' };
 
 export const MATERIAL_TYPES: MaterialType[] = [
-  { key: 'yarn', form: 'yarn', base_dimension: 'mass', allowed_units: ['kg', 'g', 'bags'], material_class_key: 'weighed',
-    attributes: [{ key: 'fibre', role: 'spec', type: 'text', required: true }, { key: 'count', role: 'spec', type: 'text', required: true }, { key: 'spinning', role: 'spec', type: 'enum', enum: ['carded', 'combed', 'compact', 'open-end', 'filament'] }, colour, { key: 'lot_no', role: 'lot', type: 'text' }],
-    labels: { en: 'Yarn', ta: 'நூல்', hi: 'धागा' } },
   { key: 'knit_fabric', form: 'fabric', base_dimension: 'mass', allowed_units: ['kg', 'g', 'rolls'], material_class_key: 'weighed',
     attributes: [{ key: 'state', role: 'spec', type: 'enum', enum: ['grey', 'rfd', 'dyed', 'finished', 'printed'], required: true }, { key: 'structure', role: 'spec', type: 'enum', enum: ['single jersey', 'lycra single jersey', 'interlock', 'rib 1x1', 'rib 2x2', 'pique', 'fleece', 'french terry', 'waffle'], required: true }, { key: 'fibre', role: 'spec', type: 'text' }, { key: 'gsm', role: 'spec', type: 'number' }, { key: 'dia', role: 'spec', type: 'number' }, { key: 'width_form', role: 'spec', type: 'enum', enum: ['tubular', 'open-width'] }, colour, { key: 'dye_lot', role: 'lot', type: 'text' }, { key: 'roll_no', role: 'info', type: 'text' }],
     labels: { en: 'Knitted fabric', ta: 'பனியன் துணி', hi: 'होज़री कपड़ा' } },
+  { key: 'yarn', form: 'yarn', base_dimension: 'mass', allowed_units: ['kg', 'g', 'bags'], material_class_key: 'weighed',
+    attributes: [{ key: 'fibre', role: 'spec', type: 'text', required: true }, { key: 'count', role: 'spec', type: 'text', required: true }, { key: 'spinning', role: 'spec', type: 'enum', enum: ['carded', 'combed', 'compact', 'open-end', 'filament'] }, colour, { key: 'lot_no', role: 'lot', type: 'text' }],
+    labels: { en: 'Yarn', ta: 'நூல்', hi: 'धागा' } },
   { key: 'collar_cuff', form: 'component', base_dimension: 'count', allowed_units: ['pcs', 'dozen', 'sets'], material_class_key: 'counted',
     attributes: [{ key: 'kind', role: 'spec', type: 'enum', enum: ['collar', 'cuff', 'collar+cuff set'] }, colour, { key: 'size', role: 'spec', type: 'text' }],
     labels: { en: 'Collar / cuff', ta: 'காலர் / கஃப்', hi: 'कॉलर / कफ़' } },
@@ -75,7 +75,7 @@ export const PROCESS_TYPES: ProcessType[] = [
 export async function ensureTemplates() {
   const now = Date.now();
   await Promise.all([
-    ...MATERIAL_TYPES.map((m) => col('sc_material_types').updateOne({ _id: `mt_${m.key}` } as any, { $set: { ...m, id: `mt_${m.key}`, owner_business_id: null, updated_at: now } }, { upsert: true })),
-    ...PROCESS_TYPES.map((p) => col('sc_process_types').updateOne({ _id: `pt_${p.key}` } as any, { $set: { ...p, id: `pt_${p.key}`, owner_business_id: null, calendar: 'default', updated_at: now } }, { upsert: true })),
+    ...MATERIAL_TYPES.map((m, order) => col('sc_material_types').updateOne({ _id: `mt_${m.key}` } as any, { $set: { ...m, order, id: `mt_${m.key}`, owner_business_id: null, updated_at: now } }, { upsert: true })),
+    ...PROCESS_TYPES.map((p, order) => col('sc_process_types').updateOne({ _id: `pt_${p.key}` } as any, { $set: { ...p, order, id: `pt_${p.key}`, owner_business_id: null, calendar: 'default', updated_at: now } }, { upsert: true })),
   ]);
 }

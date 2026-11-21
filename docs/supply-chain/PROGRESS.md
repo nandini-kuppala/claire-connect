@@ -3,7 +3,7 @@
 Governing brief: `docs/supply-chain/BRIEF.md` (re-read at the start of every phase and after any context compaction).
 
 ## Current phase
-**Phase 6 — slice 0 done; next slice 0.5 (setup data)** on local branch `supply-chain`. Phase 0 done: `00-current-state.md`.
+**Phase 6 — slices 0 and 0.5 done; next slice 1 (Out with others, single-player), then a demo stop** on local branch `supply-chain`. Phase 0 done: `00-current-state.md`.
 
 ## Phase status
 | Phase | Doc | Status |
@@ -14,7 +14,7 @@ Governing brief: `docs/supply-chain/BRIEF.md` (re-read at the start of every pha
 | 3 Product & UX | `03-product-ux.md`, `ui-principles.md`, `mockups/` (16 screens) | Done 2026-11-21, rendered at 375/1280 px en+ta, red-teamed, **approved** (U1–U9 defaults) |
 | 4 Technical design | `04-technical-design.md` | Done 2026-11-21, model check run, red-teamed, **approved** (T1–T9 defaults) |
 | 5 Build plan | `05-build-plan.md` (v2) | Done 2026-11-21, red-teamed, **approved** (B1–B3 defaults) |
-| 6 Implementation | slices on branch `supply-chain` | Slice 0 done 2026-11-21 |
+| 6 Implementation | slices on branch `supply-chain` | Slices 0, 0.5 done 2026-11-21 |
 | 7 Final verification | | Not started |
 
 ## Decisions made
@@ -60,6 +60,30 @@ Governing brief: `docs/supply-chain/BRIEF.md` (re-read at the start of every pha
   - Browser at 375 px in ta and en.
 - **Not done here (by plan):** integration tests on a separate cluster (T8, waiting); the desktop wide layout (slice 3).
 - **Local dev now runs with** `SC_ENABLED=1 MONGODB_DB=nexconn_sc_dev npm run dev`, with Ravi (`b_ravi`) flagged in the dev database only.
+
+### Slice 0.5 — Setup data (2026-11-21)
+- **Built:**
+  - Server (`server/src/sc/setup.ts`, mounted behind the same auth + flag check):
+    - contacts, with name forms in en/ta/hi via Sarvam transliteration (best-effort, 3 s timeout) and duplicate-phone refusal;
+    - the party picker (my contacts + businesses I trade with + name search; never another business's contacts);
+    - places (owner);
+    - content-addressed specs (`shared/sc/specs.ts` normalisation; same fabric typed two ways = one spec), aliases and recent specs;
+    - terms per party (defaults: weighing loss borne by the owner, bill on received, ±1.5 % / 0);
+    - effective-dated rate cards (owner; a newer card closes the previous one);
+    - process offerings; capabilities derived from sells/buys + role label, confirmed once.
+  - Web: **Goods → Setup** with people you work with (add contact), your places, what your unit does (capability chips, owner confirms), your materials (aliases); the **material picker sheet** (your names, recent, new material → kind → details, required first) for slice 1.
+  - Material templates now ordered (fabric, yarn, components, garments, trims, other).
+- **Checks:**
+  - typecheck + lint green; 15/15 tests (spec identity and validation, capability derivation added).
+  - API exercised against the dev database (contact create + duplicate refused, picker search, spec resolve twice = same id, incomplete spec names its missing fields, alias search).
+  - Browser at 375 px in Tamil (setup screen, picker kinds list, fabric details form).
+- **Findings:**
+  - Sarvam transliteration is lossy ("நொய்யல்" → "Neel"), so Claire's party matching must be fuzzy across scripts (already in 04 §9.2). Stored name forms are search aids only.
+  - "Noyyal Dyeing" now exists both as Ravi's contact and as a platform business in the dev database. That is the case contact linking (slice 6) handles; the demo seed (Phase 7) will decide which one Ravi uses.
+- **Deferred by plan:**
+  - the terms and rate editors' UI → the party ledger in slice 1;
+  - the process-offerings editor → slice 3 (job workers);
+  - Tamil/Hindi labels for material choice values (grey, rfd, single jersey…) → slice 1, with the glossary.
 
 ## Open questions
 - T8: a separate free Atlas cluster for integration tests needs to be created by the user (not blocking slice 0's pure tests).

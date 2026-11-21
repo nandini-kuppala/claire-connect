@@ -4,6 +4,9 @@ import { useCallback, useEffect, useState } from 'react';
 import clsx from 'clsx';
 import { api, errorText } from '../../lib/api';
 import { Button } from '../../components/Button';
+import { useNavigate } from 'react-router-dom';
+import { Settings } from '../../icons';
+import { SetupS } from './Setup.strings';
 import { GoodsS } from './Goods.strings';
 
 type Tab = 'out' | 'in' | 'coming';
@@ -23,6 +26,8 @@ const readTab = (): Tab => {
 
 export default function Goods() {
   const s = GoodsS.use();
+  const ss = SetupS.use();
+  const nav = useNavigate();
   const [tab, setTabState] = useState<Tab>(readTab);
   const [home, setHome] = useState<Home | null>(null);
   const [rows, setRows] = useState<unknown[] | null>(null);
@@ -60,7 +65,13 @@ export default function Goods() {
   return (
     <div className="pb-6">
       <header className="px-4 pb-1 pt-[max(18px,var(--safe-top))]">
-        <h1 className="font-head text-[28px] font-bold leading-tight text-ink">{s('title')}</h1>
+        <div className="flex items-center justify-between gap-3">
+          <h1 className="font-head text-[28px] font-bold leading-tight text-ink">{s('title')}</h1>
+          <button className="inline-flex min-h-11 items-center gap-1.5 rounded-full px-3 text-[14px] font-semibold text-ink-2 hover:bg-sunken" onClick={() => nav('/goods/setup')}>
+            <Settings size={18} aria-hidden />
+            {ss('open')}
+          </button>
+        </div>
 
         {chips && (chips.late > 0 || chips.toConfirm > 0 || chips.disputes > 0) && (
           <div className="mt-3 flex flex-wrap gap-2">

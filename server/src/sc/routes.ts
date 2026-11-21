@@ -4,10 +4,12 @@ import { col } from '../db/index.js';
 import { h, requireAuth } from '../util.js';
 import { requireSc, type ScRequest } from './flag.js';
 import { positions } from './repo.js';
+import setup from './setup.js';
 import { todayIST } from '../../../shared/sc/dates.js';
 
 const router = Router();
 router.use('/sc', requireAuth, requireSc);
+router.use(setup);
 
 /** Action chips and the Goods badge (03 §4.2). Late/confirm/dispute counts arrive with slices 1–2. */
 router.get(
@@ -33,7 +35,7 @@ router.get(
   '/sc/templates',
   h(async (req: ScRequest, res) => {
     const scope = { owner_business_id: { $in: [null, req.ctx.businessId] } } as any;
-    const [materials, processes] = await Promise.all([col('sc_material_types').find(scope).toArray(), col('sc_process_types').find(scope).toArray()]);
+    const [materials, processes] = await Promise.all([col('sc_material_types').find(scope).sort({ owner_business_id: 1, order: 1 }).toArray(), col('sc_process_types').find(scope).sort({ owner_business_id: 1, order: 1 }).toArray()]);
     res.json({ materials, processes });
   }),
 );
