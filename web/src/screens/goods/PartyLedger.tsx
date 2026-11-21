@@ -10,6 +10,7 @@ import { useSession } from '../../store/session';
 import { RecS } from './Record.strings';
 import { TwoS } from './Two.strings';
 import { WorkS } from './Work.strings';
+import { LinkS } from './Link.strings';
 import { PartyPicker } from './PartyPicker';
 import type { Party } from './types';
 import { SetupS } from './Setup.strings';
@@ -49,6 +50,8 @@ export default function PartyLedger() {
   const [edit, setEdit] = useState<Terms | null>(null);
   const [error, setError] = useState<string | null>(null);
   const wk = WorkS.use();
+  const ls = LinkS.use();
+  const [shared, setShared] = useState<{ url: string; copied: boolean } | null>(null);
   const [tell, setTell] = useState<string | null>(null);
   const [tellTo, setTellTo] = useState<Party | null>(null);
   const [tellPick, setTellPick] = useState(false);
@@ -105,6 +108,18 @@ export default function PartyLedger() {
         )}
       </header>
 
+      {d && owner && d.name.kind === 'contact' && !d.name.onClaire && (
+        <div className="mx-4 mt-4 flex flex-wrap items-center gap-2">
+          <Button size="sm" variant="tint" onClick={async () => {
+            try {
+              const r = await api.post<{ link: { url: string }; whatsapp: string }>('/api/sc/links', { party: d.party });
+              setShared({ url: r.link.url, copied: false });
+              window.open(r.whatsapp, '_blank', 'noopener');
+            } catch (e) { setError(errorText(e)); }
+          }}>{ls('send_statement')}</Button>
+          {shared && <button className="min-h-10 rounded-full px-3 text-[13.5px] font-semibold text-primary" onClick={async () => { try { await navigator.clipboard.writeText(shared.url); setShared({ ...shared, copied: true }); } catch { /* clipboard blocked */ } }}>{shared.copied ? ls('copied') : ls('copy')}</button>}
+        </div>
+      )}
       {error && <p className="mx-4 mt-4 rounded-[14px] bg-danger-tint px-3 py-2 text-[14px] text-danger">{error}</p>}
 
       {d && (

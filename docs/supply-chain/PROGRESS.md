@@ -3,7 +3,7 @@
 Governing brief: `docs/supply-chain/BRIEF.md` (re-read at the start of every phase and after any context compaction).
 
 ## Current phase
-**Phase 6 — slices 0 to 5 done. Next: slice 6 (off-platform reach and linking). The Haiku tier of personal Claire is built but off: it needs `ANTHROPIC_API_KEY` in `server/.env` and a verification run (see slice 5).** Work stays on local branch `supply-chain`. Phase 0 done: `00-current-state.md`.
+**Phase 6 — slices 0 to 6 done. Next: slice 7 (staff). The Haiku tier of personal Claire is still off until `ANTHROPIC_API_KEY` is set and verified (slice 5).** Work stays on local branch `supply-chain`. Phase 0 done: `00-current-state.md`.
 
 ## Phase status
 | Phase | Doc | Status |
@@ -14,7 +14,7 @@ Governing brief: `docs/supply-chain/BRIEF.md` (re-read at the start of every pha
 | 3 Product & UX | `03-product-ux.md`, `ui-principles.md`, `mockups/` (16 screens) | Done 2026-11-21, rendered at 375/1280 px en+ta, red-teamed, **approved** (U1–U9 defaults) |
 | 4 Technical design | `04-technical-design.md` | Done 2026-11-21, model check run, red-teamed, **approved** (T1–T9 defaults) |
 | 5 Build plan | `05-build-plan.md` (v2) | Done 2026-11-21, red-teamed, **approved** (B1–B3 defaults) |
-| 6 Implementation | slices on branch `supply-chain` | Slices 0–5 done 2026-11-21 |
+| 6 Implementation | slices on branch `supply-chain` | Slices 0–6 done 2026-11-21 |
 | 7 Final verification | | Not started |
 
 ## Decisions made
@@ -409,8 +409,77 @@ Governing brief: `docs/supply-chain/BRIEF.md` (re-read at the start of every pha
   - Voice uses the existing mic → Sarvam STT → text path; the transcript is the user's bubble.
   - Tamil and Hindi templates are *to verify*, like the other strings.
 
+### Slice 6 — Off-platform reach and linking (2026-11-21)
+- **Built:**
+  - **Statement links** (`statement.ts`, 04 §10.4) for a contact or a business that doesn't use Goods:
+    - The token is 128-bit and only its SHA-256 is stored. There is one link per (recorder, party); creating it again rotates the token.
+    - **The page at `/l/:token`**:
+      - server-rendered HTML mounted before the API and the SPA fallback (the dev proxy forwards `/l/`), so no app bundle; about 5–21 KB in the dev data;
+      - in the contact's language with a ta / hi / en switch, light and dark;
+      - only the lines between the recorder and that party, plain names (no style codes), no prices, no other parties;
+      - the 20 newest open items, with a note for older ones;
+      - footer: what this is, no prices, the DPDP notice, **Stop these updates**.
+    - **Actions** (plain HTML form posts, 303 back with a thank-you):
+      - **Correct** / **Different number**: a receipt or the sender's figure with **`link` evidence**, so the recorder sees "Confirmed by Selvi" ranked below an account;
+      - **I returned some**: a proposal the recorder accepts (records Got back on their word) or declines; a job with no output yet sends the recorder to the Got back form;
+      - **Ready for pickup**;
+      - **Stop**.
+    - "Seen" is set only by a beacon after load or by an action, never by a bare GET, so link previews don't count.
+    - **30 requests a minute** per token and IP.
+    - **Best-effort recorder guard**: authenticated Goods requests remember the device (IP + UA hash). From such a device the page is view-only and refuses answers.
+    - A link stopped by the recorder, rotated away, or retired by linking says it no longer works (404).
+    - Owner routes: create / rotate (returns the `wa.me` URL with a pre-filled message in the contact's language to their number; **the app never messages anyone**), list (seen, stopped by whom), stop, and proposals with accept / decline.
+  - **Contact linking** (`link.ts`, model §6.4, 04 §5.6.1):
+    - A business that joins with a phone others saved as a contact sees only **"N businesses have records with your number"**: no names, no data.
+    - **Ask to link** → each recorder sees "{business} says they are your contact {name}" → **Approve** or **Decline**; silence never approves.
+    - **Approve = one `link_rekey` event**:
+      - every holding keyed on the contact (owner / custodian / via / attributedTo) moves to the business, −q/+q with history intact;
+      - the recorder's movements and jobs are re-pointed (the original is kept in `linked_from`), and the business is added to viewers and parties, including open disputes;
+      - duplicate contacts with the same phone are merged (`merged_into`, `archived_at`);
+      - the statement link retires.
+    - The party list and Claire's name matching then use the business, not the contact.
+  - **Web**:
+    - "Send statement on WhatsApp" + Copy link on a contact's ledger.
+    - Statement links in Setup (opened / not yet / stopped by them, with Stop).
+    - On the Goods home: link requests to approve, the "records with your number" invitation, and "they say they returned …" proposals to accept.
+- **Checks:**
+  - typecheck + lint green; 24/24 unit tests.
+  - **`scripts/sc-smoke-s6.py`: all pass**:
+    - **Statement flow (Lakshmi → Selvi)**:
+      - WhatsApp message in Tamil to her number; page < 50 KB, server-side;
+      - no ₹, no other parties, no style codes; a WhatsApp preview GET is not "seen", the beacon is;
+      - the recorder's device can't answer (403); Selvi confirms 200 → "confirmed by" with `link` evidence;
+      - "returned 150" → proposal → accept asks what came back → accepted → 50 still with Selvi;
+      - ready → Lakshmi sees ready; Hindi switch; Stop → "stopped by them";
+      - unknown token → 404 page; the rate limit returns 429.
+    - **Scenario L**: Ravi's contact Kaveri Dyeing joins with that phone:
+      - she sees a count only and nothing before approval;
+      - Ravi sees the request and approves → holdings re-keyed → **one row under the business** in Out with others;
+      - Kaveri sees Ravi's 120 kg as others' goods and confirms the old record (119.2 kg) from her account;
+      - the old link 404s, the party list shows the business, and there are no more suggestions.
+  - s1–s5 smokes and the Claire smoke still pass; `sc:verify` 0 problems after the rekeys.
+  - **Browser** (Ravi's device, Tamil, 375 px, dark):
+    - the statement page shows the view-only note on the recorder's own phone, with buttons disabled;
+    - the footer and DPDP notice read well;
+    - "WhatsApp-ல் கணக்கு அனுப்பு" on a contact's ledger.
+- **Fixed during checks:**
+  - Dark-mode buttons had white text on light green.
+  - A page with 50 open items reached 40 KB; it's now capped at 20 items (21 KB).
+  - A link retired by linking still showed "stopped" instead of no longer working.
+  - The smoke's flag step ran on the shell's default Node 18; it now loads Node 24 through nvm.
+- **Decisions in implementation:**
+  - The contacts API already refuses a second contact with the same phone, so merging duplicates covers entries that predate that check.
+  - Re-pointing movements and jobs rewrites their party fields (keeping `linked_from`). Events (`sc_events`) are never rewritten.
+  - A statement-link proposal is accepted against the job's last output, or what the recorder picks.
+- **Known gaps:**
+  - The recorder guard is device-based and best-effort (04 §10.4): a second phone still works, and its answers are labelled "via link".
+  - Statement pages for businesses without Goods work through the API, but the party ledger only offers "Send statement" on contacts.
+  - Silent accounts (a business on CLAIRE that never opens the app) aren't suggested automatically.
+  - The contact's side can't propose dispute outcomes from the page yet; the recorder settles one-sided differences.
+  - The "seen" beacon needs JavaScript; without it, seen is set on the first answer.
+
 ## Open questions
 - T8: a separate free Atlas cluster for integration tests needs to be created by the user (not blocking slice 0's pure tests).
 
 ## Next
-Slice 6 (off-platform reach and linking: statement links, WhatsApp share, contact linking). Optional before it: add the Anthropic key and verify the Haiku tier.
+Slice 7 (staff: phone logins added by the owner, optional PIN, role-limited Record, counts above the threshold pending approval). Optional: add the Anthropic key and verify the Haiku tier.

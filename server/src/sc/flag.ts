@@ -24,6 +24,8 @@ export async function requireSc(req: Request, res: Response, next: NextFunction)
     const business = user?.business_id ? await byId<any>('businesses', user.business_id) : null;
     if (!user || !business || !scOn(business)) return res.status(404).json({ error: 'Not found' });
     (req as ScRequest).ctx = { businessId: business.id, userId: user.id, role: user.role === 'staff' ? 'staff' : 'owner', language: user.language || business.language || 'en' };
+    // Remember this device for the business, so its own statement links open view-only here (04 §10.4).
+    void import('./statement.js').then((m) => m.noteDevice(req, business.id)).catch(() => undefined);
     next();
   } catch (err) {
     next(err);

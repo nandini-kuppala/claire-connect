@@ -16,6 +16,7 @@ import { TwoS } from './Two.strings';
 import { WorkS } from './Work.strings';
 import { JobS } from './Job.strings';
 import { TradeS } from './Trade.strings';
+import { LinkBanners } from './LinkBanners';
 import { Others } from './Others';
 import { qty as fmtQty, shortDate } from './format';
 
@@ -194,6 +195,8 @@ export default function Goods() {
           ))}
         </div>
       </header>
+
+      <LinkBanners owner={home?.role === 'owner'} onChange={() => void load()} />
 
       {tab === 'in' && (othersCount > 0 || sub === 'others') && (
         <div className="mx-4 mt-3 inline-flex gap-1 rounded-full bg-sunken p-1" role="tablist">

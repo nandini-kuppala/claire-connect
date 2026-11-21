@@ -39,7 +39,7 @@ export function pausedDays(j: any, today: string) {
 }
 
 /** A sub-contractor must not learn whose goods these are: style codes and brands are dropped from forwarded lines. */
-async function genericLabel(specId: string) {
+export async function genericLabel(specId: string) {
   const sp = await col('sc_specs').findOne({ _id: specId } as any);
   const mt = sp ? await col('sc_material_types').findOne({ _id: sp.material_type_id } as any) : null;
   if (!sp || !mt) return 'Goods';

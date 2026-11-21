@@ -95,11 +95,12 @@ router.get(
     const q = String(req.query.q ?? '').trim().slice(0, 40);
     const rx = q ? new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') : null;
     const contacts = await col('sc_contacts')
-      .find({ owner_business_id: req.ctx.businessId, ...(rx ? { $or: [{ name: rx }, { 'name_forms.ta': rx }, { 'name_forms.hi': rx }, { 'name_forms.en': rx }, { phones: rx }] } : {}) } as any)
+      .find({ owner_business_id: req.ctx.businessId, link_state: { $ne: 'linked' }, archived_at: { $exists: false }, ...(rx ? { $or: [{ name: rx }, { 'name_forms.ta': rx }, { 'name_forms.hi': rx }, { 'name_forms.en': rx }, { phones: rx }] } : {}) } as any)
       .limit(30)
       .toArray();
     const convs = await col('conversations').find({ business_ids: req.ctx.businessId, kind: { $in: ['deal', 'goods'] } } as any, { projection: { business_ids: 1 } }).limit(100).toArray();
-    const tradeIds = [...new Set(convs.flatMap((c: any) => c.business_ids as string[]).filter((x) => x !== req.ctx.businessId))];
+    const linked = await col('sc_contacts').find({ owner_business_id: req.ctx.businessId, link_state: 'linked' } as any, { projection: { linked_business_id: 1 } }).toArray();
+    const tradeIds = [...new Set([...convs.flatMap((c: any) => c.business_ids as string[]), ...linked.map((c: any) => c.linked_business_id as string)].filter((x) => x && x !== req.ctx.businessId))];
     const bizFilter: any = rx ? { $or: [{ name: rx }, { owner_name: rx }] } : { _id: { $in: tradeIds } };
     const businesses = await col('businesses').find({ ...bizFilter, _id: { ...(bizFilter._id ?? {}), $ne: req.ctx.businessId } } as any, { projection: { name: 1, role_label: 1, city: 1, area: 1, language: 1 } }).limit(20).toArray();
     res.json({

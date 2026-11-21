@@ -75,6 +75,8 @@ async function main() {
     const [{ ensureScIndexes }, { ensureTemplates }] = await Promise.all([import('./sc/indexes.js'), import('./sc/templates.js')]);
     await ensureScIndexes();
     await ensureTemplates();
+    // Public statement pages (/l/:token) and their form posts: no login, before the API and the SPA fallback.
+    app.use((await import('./sc/statement.js')).publicRouter);
     app.use('/api', (await import('./sc/files.js')).default);
     app.use('/api', (await import('./sc/routes.js')).default);
     (await import('./sc/goodsChat.js')).startCardTicker();

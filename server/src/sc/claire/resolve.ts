@@ -72,7 +72,7 @@ export const __keysForTest = keysOf;
 
 /** This business's parties: its contacts and every business it has traded goods with. */
 export async function candidates(ctx: Ctx): Promise<Cand[]> {
-  const contacts = await col('sc_contacts').find({ owner_business_id: ctx.businessId, archived_at: { $exists: false } } as any).limit(300).toArray();
+  const contacts = await col('sc_contacts').find({ owner_business_id: ctx.businessId, archived_at: { $exists: false }, link_state: { $ne: 'linked' } } as any).limit(300).toArray();
   const movs = await col('sc_movements').find({ party_business_ids: ctx.businessId } as any, { projection: { party_business_ids: 1 } }).sort({ recorded_at: -1 }).limit(400).toArray();
   const bizIds = [...new Set(movs.flatMap((m: any) => m.party_business_ids as string[]).filter((b) => b !== ctx.businessId))];
   const bizs = await col('businesses').find({ _id: { $in: bizIds } } as any, { projection: { name: 1 } }).toArray();

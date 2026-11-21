@@ -161,11 +161,11 @@ async function applyReceiptNow(ctx: Ctx, movementId: string, lineId: string, bas
  * The sender's own figure on a return they did not record (P6: the performer's declared output). Posts the change in
  * output and dispatch, and re-settles the line against what the owner received.
  */
-export async function applySenderFigure(ctx: Ctx, movementId: string, lineId: string, base: number, businessDate: string) {
-  return onClosedJob(ctx, movementId, lineId, 'late_sender_figure', () => applySenderFigureNow(ctx, movementId, lineId, base, businessDate));
+export async function applySenderFigure(ctx: Ctx, movementId: string, lineId: string, base: number, businessDate: string, evidence: 'account' | 'link' = 'account') {
+  return onClosedJob(ctx, movementId, lineId, 'late_sender_figure', () => applySenderFigureNow(ctx, movementId, lineId, base, businessDate, evidence));
 }
 
-async function applySenderFigureNow(ctx: Ctx, movementId: string, lineId: string, base: number, businessDate: string) {
+async function applySenderFigureNow(ctx: Ctx, movementId: string, lineId: string, base: number, businessDate: string, evidence: 'account' | 'link') {
   const m = await col('sc_movements').findOne({ _id: movementId, cancelled_at: null } as any);
   if (!m) throw new HttpError(404, 'Not found');
   const line = (m.lines as any[]).find((l) => l.line_id === lineId);
@@ -176,7 +176,7 @@ async function applySenderFigureNow(ctx: Ctx, movementId: string, lineId: string
   const goods = goodsOf(line);
   const oldDeclared = winningAssertion(line.sent)!.base_qty;
   const received = winningAssertion(line.received)?.base_qty ?? 0;
-  const a = assertion(ctx, base, 'account', businessDate, { final: true });
+  const a = assertion(ctx, base, evidence, businessDate, { final: true });
   const declared = winningAssertion([...(line.sent as Assertion[]), a])!.base_qty;
   const postings: Posting[] = [];
   if (line.settled?.outcome === 'within') postings.push(...reverse(settleLine(goods, line.class, oldDeclared, received, c).postings));

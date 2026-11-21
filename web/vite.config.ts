@@ -18,6 +18,7 @@ export default defineConfig({
     proxy: {
       '/api': { target: backend, changeOrigin: true },
       '/uploads': { target: backend, changeOrigin: true },
+      '/l/': { target: backend, changeOrigin: true },
     },
   },
   preview: {
@@ -25,6 +26,7 @@ export default defineConfig({
     proxy: {
       '/api': { target: backend, changeOrigin: true },
       '/uploads': { target: backend, changeOrigin: true },
+      '/l/': { target: backend, changeOrigin: true },
     },
   },
   build: { target: 'es2022', chunkSizeWarningLimit: 1600 },

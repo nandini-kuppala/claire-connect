@@ -10,6 +10,7 @@ import { SetupS } from './Setup.strings';
 import { SpecPicker } from './SpecPicker';
 import { WorkS } from './Work.strings';
 import { JobS } from './Job.strings';
+import { LinkS } from './Link.strings';
 import { useSession } from '../../store/session';
 import type { Contact, Place, ResolvedSpec, Spec } from './types';
 import type { Style } from './GridSheet';
@@ -48,6 +49,8 @@ export default function GoodsSetup() {
   const s = SetupS.use();
   const wk = WorkS.use();
   const jb = JobS.use();
+  const lk = LinkS.use();
+  const [links, setLinks] = useState<{ id: string; name: string; seen_at: number | null; stopped_at: number | null; stopped_by: string | null }[]>([]);
   const lang = useSession((st) => st.user?.language || 'en');
   const [procs, setProcs] = useState<{ key: string; labels: Record<string, string>; default_turnaround_days: number }[]>([]);
   const [offers, setOffers] = useState<Record<string, { on: boolean; capacity_per_day?: string; turnaround_days?: string }>>({});
@@ -85,6 +88,7 @@ export default function GoodsSetup() {
     const [t, o] = await Promise.all([api.get<{ processes: { key: string; labels: Record<string, string>; default_turnaround_days: number }[] }>('/api/sc/templates'), api.get<{ offerings: { process_key: string; capacity_per_day?: number; turnaround_days?: number }[] }>('/api/sc/offerings')]);
     setProcs(t.processes);
     setStyles((await api.get<{ styles: Style[] }>('/api/sc/styles')).styles);
+    setLinks((await api.get<{ links: typeof links }>('/api/sc/links')).links);
     setOffers(Object.fromEntries(o.offerings.map((x) => [x.process_key, { on: true, capacity_per_day: x.capacity_per_day ? String(x.capacity_per_day) : '', turnaround_days: x.turnaround_days ? String(x.turnaround_days) : '' }])));
   }, []);
 
@@ -252,6 +256,22 @@ export default function GoodsSetup() {
           </ul>
         )}
       </Section>
+
+      {links.length > 0 && (
+        <Section title={lk('links')} hint={lk('links_hint')}>
+          <ul className="divide-y divide-line overflow-hidden rounded-[18px] border border-line bg-surface">
+            {links.map((x) => (
+              <li key={x.id} className="flex items-center gap-3 px-4 py-3">
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[15px] font-semibold text-ink">{x.name}</span>
+                  <span className="block text-[13px] text-meta">{x.stopped_at ? (x.stopped_by === 'party' ? lk('stopped_party') : lk('stopped_me')) : x.seen_at ? lk('seen', { date: new Date(x.seen_at).toLocaleDateString(lang === 'en' ? 'en-IN' : `${lang}-IN`, { day: 'numeric', month: 'short' }) }) : lk('not_seen')}</span>
+                </span>
+                {owner && !x.stopped_at && <Button size="sm" variant="ghost" onClick={async () => { await api.del(`/api/sc/links/${x.id}`); void load(); }}>{lk('stop')}</Button>}
+              </li>
+            ))}
+          </ul>
+        </Section>
+      )}
 
       <Sheet open={!!styleForm} onClose={() => setStyleForm(null)} title={wk('style')}
         footer={<Button block size="lg" loading={busy} disabled={!styleForm?.code.trim() || !styleForm?.sizes.trim() || styleForm.trims.some((t) => !(Number(t.per_piece) > 0))}
