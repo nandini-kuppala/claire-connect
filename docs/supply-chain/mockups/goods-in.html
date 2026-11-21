@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Goods · In my unit</title>
+<link rel="stylesheet" href="mockup.css">
+<style>
+/* A tapped row opens its actions underneath; only one row is open at a time. */
+.lrow .tog{flex:none;color:var(--meta);margin-top:2px}
+.lrow.open{background:#fafbfb}
+.rowacts{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.rowacts .btn{flex:1 1 auto}
+@media (min-width:1024px){.frame.wide .list{margin-left:0;margin-right:0;max-width:560px}}
+table.t tr.grp td{background:#fafbfb;font-size:12px;font-weight:700;color:var(--meta);padding:8px 12px}
+</style>
+</head>
+<body>
+<!-- S10 · Goods → In my unit → Mine. Viewer: Ravi (owner). He holds no one else's goods, so there is no Mine | Others' goods switch. -->
+<div class="frame wide">
+  <aside class="rail" data-active="goods"></aside>
+  <div class="app">
+    <header class="hdr">
+      <h1 data-ta="சரக்கு" data-hi="माल">Goods</h1>
+      <button class="iconbtn lbl"><svg class="i"><use href="icons.svg#search"/></svg><span data-ta="தேடு" data-hi="खोजें">Find</span></button>
+      <button class="iconbtn lbl"><svg class="i"><use href="icons.svg#chart"/></svg><span data-ta="அறிக்கைகள்" data-hi="रिपोर्ट">Reports</span></button>
+      <button class="btn primary only-desk"><svg class="i"><use href="icons.svg#plus"/></svg><span data-ta="பதிவு செய்" data-hi="दर्ज करें">Record</span></button>
+      <button class="btn tint only-desk"><svg class="i"><use href="icons.svg#mic"/></svg><span data-ta="சொல்லுங்கள்" data-hi="बोलकर बताएँ">Say it</span></button>
+    </header>
+    <div class="wrap">
+      <div class="chips">
+        <button class="chip danger"><svg class="i sm"><use href="icons.svg#clock"/></svg><span class="n">2</span> <span data-ta="தாமதம்" data-hi="देर">late</span></button>
+        <button class="chip danger"><svg class="i sm"><use href="icons.svg#scale"/></svg><span class="n">1</span> <span data-ta="வித்தியாசம்" data-hi="फ़र्क">dispute</span></button>
+      </div>
+      <div class="seg" role="tablist">
+        <button role="tab" data-ta="வெளியே உள்ளது" data-hi="दूसरों के पास">Out with others</button>
+        <button class="on" role="tab" data-ta="என் யூனிட்டில்" data-hi="मेरी यूनिट में">In my unit</button>
+        <button role="tab" data-ta="வர வேண்டியது" data-hi="आने वाला">Coming in</button>
+      </div>
+
+      <div class="sec-h">
+        <h2 data-ta="உங்கள் சரக்கு · கோடவுன், கட்டிங்" data-hi="आपका माल · गोदाम, कटिंग">Yours · Godown and Cutting floor</h2>
+        <button class="hint"><span data-ta="பொருள் வாரியாக" data-hi="सामान के हिसाब से">By material</span> <svg class="i sm" style="vertical-align:-3px"><use href="icons.svg#chev-d"/></svg></button>
+      </div>
+
+      <!-- Mobile: grouped by material; tap a row for its actions (first row shown open) -->
+      <div class="list only-mob">
+        <div class="groupl" data-ta="துணி" data-hi="कपड़ा">Fabric</div>
+        <div class="lrow open">
+          <div class="main">
+            <div class="t" data-ta="நேவி SJ 180 GSM · சாயம் முடிந்தது" data-hi="नेवी SJ 180 GSM · रंगाई हो चुकी">Navy SJ 180 GSM · dyed</div>
+            <div class="q"><span class="num">96</span> kg <span class="muted">· <span data-ta="கோடவுன்" data-hi="गोदाम">Godown</span></span></div>
+            <div class="m" data-ta="லாட் N-0412/1 · Noyyal Dyeing-இலிருந்து 19 நவ. வந்தது" data-hi="लॉट N-0412/1 · Noyyal Dyeing से 19 नव॰ आया">Lot N-0412/1 · back from Noyyal Dyeing 19 Nov</div>
+            <div class="rowacts">
+              <button class="btn secondary sm"><svg class="i sm"><use href="icons.svg#count"/></svg><span data-ta="எண்ணு" data-hi="गिनें">Count</span></button>
+              <button class="btn secondary sm"><svg class="i sm"><use href="icons.svg#move"/></svg><span data-ta="இடம் மாற்று" data-hi="जगह बदलें">Move</span></button>
+              <button class="btn secondary sm"><svg class="i sm"><use href="icons.svg#send"/></svg><span data-ta="வேலைக்கு அனுப்பு" data-hi="काम के लिए भेजें">Send for work</span></button>
+              <button class="btn secondary sm"><svg class="i sm"><use href="icons.svg#tag"/></svg><span data-ta="விற்பனை" data-hi="बेचें">Sell</span></button>
+            </div>
+          </div>
+          <svg class="i tog" style="transform:rotate(180deg)"><use href="icons.svg#chev-d"/></svg>
+        </div>
+
+        <div class="groupl" data-ta="கட்டிங் கிட் மற்றும் பேனல்" data-hi="कटिंग किट और पैनल">Cut kits and panels</div>
+        <div class="lrow">
+          <div class="main">
+            <div class="t" data-ta="நேவி போலோ கிட் RKF-P22 · R-13" data-hi="नेवी पोलो किट RKF-P22 · R-13">Navy polo kits RKF-P22 · R-13</div>
+            <div class="q"><span class="num">400</span> <span data-ta="செட் · S 200 · M 200" data-hi="सेट · S 200 · M 200">sets · S 200 · M 200</span> <span class="muted">· <span data-ta="கட்டிங் ஃப்ளோர்" data-hi="कटिंग फ़्लोर">Cutting floor</span></span></div>
+            <div class="m" data-ta="லாட் N-0398 · 20 நவ. கட் செய்தது" data-hi="लॉट N-0398 · 20 नव॰ को कटे">Lot N-0398 · cut 20 Nov</div>
+          </div>
+          <svg class="i tog"><use href="icons.svg#chev-d"/></svg>
+        </div>
+        <div class="lrow">
+          <div class="main">
+            <div class="t" data-ta="வெள்ளை டீ கிட் (பின் + கை) · R-12" data-hi="सफ़ेद टी किट (पीछे + बाँह) · R-12">White tee kits (backs + sleeves) · R-12</div>
+            <div class="stl"><span class="st neutral"><svg class="i"><use href="icons.svg#clock"/></svg><span data-ta="முன் பேனலுக்கு காத்திருக்கிறது" data-hi="फ्रंट पैनल का इंतज़ार">Waiting for fronts</span></span></div>
+            <div class="q"><span class="num">2,000</span> <span data-ta="செட்" data-hi="सेट">sets</span> <span class="muted">· <span data-ta="கட்டிங் ஃப்ளோர்" data-hi="कटिंग फ़्लोर">Cutting floor</span></span></div>
+            <div class="m" data-ta="1,962 நல்ல முன் பேனல் + 30 மிஸ்பிரிண்ட் இங்கே · 8 Colour Craft-உடன் வித்தியாசம் (கணக்கில் இல்லை)" data-hi="1,962 अच्छे फ्रंट + 30 मिसप्रिंट यहाँ · 8 पर Colour Craft से फ़र्क (गिनती में नहीं)">1,962 good fronts + 30 misprints here · 8 disputed with Colour Craft (not counted)</div>
+          </div>
+          <svg class="i tog"><use href="icons.svg#chev-d"/></svg>
+        </div>
+        <div class="lrow">
+          <div class="main">
+            <div class="t" data-ta="பிரிண்ட் முன் பேனல் · R-12" data-hi="प्रिंटेड फ्रंट पैनल · R-12">Printed fronts · R-12</div>
+            <div class="stl"><span class="st ok"><svg class="i"><use href="icons.svg#check"/></svg><span data-ta="நல்லது" data-hi="अच्छा">Good</span></span></div>
+            <div class="q"><span class="num">1,962</span> <span data-ta="பீஸ்" data-hi="पीस">pcs</span> <span class="muted">· <span data-ta="கட்டிங் ஃப்ளோர்" data-hi="कटिंग फ़्लोर">Cutting floor</span></span></div>
+            <div class="m" data-ta="Colour Craft Prints-இலிருந்து · J-0409" data-hi="Colour Craft Prints से · J-0409">From Colour Craft Prints · J-0409</div>
+          </div>
+          <svg class="i tog"><use href="icons.svg#chev-d"/></svg>
+        </div>
+        <div class="lrow">
+          <div class="main">
+            <div class="t" data-ta="பிரிண்ட் முன் பேனல் · R-12" data-hi="प्रिंटेड फ्रंट पैनल · R-12">Printed fronts · R-12</div>
+            <div class="stl"><span class="st late"><svg class="i"><use href="icons.svg#x"/></svg><span data-ta="ரிஜெக்ட் · மிஸ்பிரிண்ட்" data-hi="रिजेक्ट · मिसप्रिंट">Reject · misprint</span></span></div>
+            <div class="q"><span class="num">30</span> <span data-ta="பீஸ்" data-hi="पीस">pcs</span> <span class="muted">· <span data-ta="கட்டிங் ஃப்ளோர்" data-hi="कटिंग फ़्लोर">Cutting floor</span></span></div>
+            <div class="m" data-ta="Colour Craft Prints-இலிருந்து · J-0409" data-hi="Colour Craft Prints से · J-0409">From Colour Craft Prints · J-0409</div>
+          </div>
+          <svg class="i tog"><use href="icons.svg#chev-d"/></svg>
+        </div>
+
+        <div class="groupl" data-ta="தயார் சரக்கு" data-hi="तैयार माल">Ready goods</div>
+        <div class="lrow">
+          <div class="main">
+            <div class="t" data-ta="நேவி போலோ · பேக் செய்தது · R-11" data-hi="नेवी पोलो · पैक किए · R-11">Navy polo · packed · R-11</div>
+            <div class="q"><span class="num">20</span> <span data-ta="பீஸ் · S" data-hi="पीस · S">pcs · S</span> <span class="muted">· <span data-ta="கோடவுன்" data-hi="गोदाम">Godown</span></span></div>
+            <div class="m" data-ta="420 பேக் செய்தது − 400 Amit Hosiery-க்கு 20 நவ. அனுப்பியது (S 200 · M 200)" data-hi="420 पैक − 400 Amit Hosiery को 20 नव॰ भेजे (S 200 · M 200)">420 packed − 400 sent to Amit Hosiery 20 Nov (S 200 · M 200)</div>
+          </div>
+          <svg class="i tog"><use href="icons.svg#chev-d"/></svg>
+        </div>
+
+        <div class="groupl" data-ta="டிரிம்ஸ்" data-hi="ट्रिम्स">Trims</div>
+        <div class="lrow">
+          <div class="main">
+            <div class="t" data-ta="பட்டன்" data-hi="बटन">Buttons</div>
+            <div class="q"><span class="num">1,254</span> <span data-ta="பீஸ் (≈ 8.7 கிராஸ்)" data-hi="पीस (≈ 8.7 ग्रोस)">pcs (≈ 8.7 gross)</span> <span class="muted">· <span data-ta="கோடவுன்" data-hi="गोदाम">Godown</span></span></div>
+          </div>
+          <svg class="i tog"><use href="icons.svg#chev-d"/></svg>
+        </div>
+        <div class="lrow">
+          <div class="main">
+            <div class="t" data-ta="நூல்" data-hi="धागा">Thread</div>
+            <div class="q"><span class="num">22</span> <span data-ta="கோன்" data-hi="कोन">cones</span> <span class="muted">· <span data-ta="கோடவுன்" data-hi="गोदाम">Godown</span></span></div>
+          </div>
+          <svg class="i tog"><use href="icons.svg#chev-d"/></svg>
+        </div>
+        <div class="lrow">
+          <div class="main">
+            <div class="t" data-ta="மெயின் லேபிள்" data-hi="मेन लेबल">Main labels</div>
+            <div class="q"><span class="num">1,200</span> <span data-ta="பீஸ்" data-hi="पीस">pcs</span> <span class="muted">· <span data-ta="கோடவுன்" data-hi="गोदाम">Godown</span></span></div>
+          </div>
+          <svg class="i tog"><use href="icons.svg#chev-d"/></svg>
+        </div>
+      </div>
+
+      <!-- Desktop: the same as a table -->
+      <div class="only-desk card" style="margin:8px 0 0;padding:4px 8px">
+        <table class="t">
+          <thead><tr><th data-ta="பொருள்" data-hi="सामान">Material</th><th data-ta="லாட் / ரன்" data-hi="लॉट / रन">Lot / run</th><th data-ta="தரம்" data-hi="ग्रेड">Grade</th><th data-ta="இடம்" data-hi="जगह">Place</th><th class="r" data-ta="அளவு" data-hi="मात्रा">Qty</th><th data-ta="குறிப்பு" data-hi="नोट">Note</th><th></th></tr></thead>
+          <tbody>
+            <tr class="grp"><td colspan="7" data-ta="துணி" data-hi="कपड़ा">Fabric</td></tr>
+            <tr><td><b data-ta="நேவி SJ 180 GSM · சாயம் முடிந்தது" data-hi="नेवी SJ 180 GSM · रंगाई हो चुकी">Navy SJ 180 GSM · dyed</b></td><td>N-0412/1</td><td data-ta="நல்லது" data-hi="अच्छा">Good</td><td data-ta="கோடவுன்" data-hi="गोदाम">Godown</td><td class="r num">96 kg</td><td class="meta" data-ta="Noyyal-இலிருந்து 19 நவ." data-hi="Noyyal से 19 नव॰">From Noyyal 19 Nov</td><td><button class="btn ghost sm" data-ta="செயல்கள்" data-hi="काम">Actions</button></td></tr>
+            <tr class="grp"><td colspan="7" data-ta="கட்டிங் கிட் மற்றும் பேனல்" data-hi="कटिंग किट और पैनल">Cut kits and panels</td></tr>
+            <tr><td><b data-ta="நேவி போலோ கிட் RKF-P22" data-hi="नेवी पोलो किट RKF-P22">Navy polo kits RKF-P22</b></td><td>R-13 · N-0398</td><td data-ta="நல்லது" data-hi="अच्छा">Good</td><td data-ta="கட்டிங் ஃப்ளோர்" data-hi="कटिंग फ़्लोर">Cutting floor</td><td class="r num" data-ta="400 செட்" data-hi="400 सेट">400 sets</td><td class="meta" data-ta="S 200 · M 200 · 20 நவ. கட் செய்தது" data-hi="S 200 · M 200 · 20 नव॰ को कटे">S 200 · M 200 · cut 20 Nov</td><td><button class="btn ghost sm" data-ta="செயல்கள்" data-hi="काम">Actions</button></td></tr>
+            <tr><td><b data-ta="வெள்ளை டீ கிட் (பின் + கை)" data-hi="सफ़ेद टी किट (पीछे + बाँह)">White tee kits (backs + sleeves)</b></td><td>R-12</td><td data-ta="நல்லது" data-hi="अच्छा">Good</td><td data-ta="கட்டிங் ஃப்ளோர்" data-hi="कटिंग फ़्लोर">Cutting floor</td><td class="r num" data-ta="2,000 செட்" data-hi="2,000 सेट">2,000 sets</td><td><span class="st neutral"><svg class="i"><use href="icons.svg#clock"/></svg><span data-ta="முன் பேனலுக்கு காத்திருக்கிறது" data-hi="फ्रंट पैनल का इंतज़ार">Waiting for fronts</span></span></td><td><button class="btn ghost sm" data-ta="செயல்கள்" data-hi="काम">Actions</button></td></tr>
+            <tr><td><b data-ta="பிரிண்ட் முன் பேனல்" data-hi="प्रिंटेड फ्रंट पैनल">Printed fronts</b></td><td>R-12 · J-0409</td><td><span class="st ok"><svg class="i"><use href="icons.svg#check"/></svg><span data-ta="நல்லது" data-hi="अच्छा">Good</span></span></td><td data-ta="கட்டிங் ஃப்ளோர்" data-hi="कटिंग फ़्लोर">Cutting floor</td><td class="r num" data-ta="1,962 பீஸ்" data-hi="1,962 पीस">1,962 pcs</td><td class="meta" data-ta="Colour Craft Prints-இலிருந்து" data-hi="Colour Craft Prints से">From Colour Craft Prints</td><td><button class="btn ghost sm" data-ta="செயல்கள்" data-hi="काम">Actions</button></td></tr>
+            <tr><td><b data-ta="பிரிண்ட் முன் பேனல்" data-hi="प्रिंटेड फ्रंट पैनल">Printed fronts</b></td><td>R-12 · J-0409</td><td><span class="st late"><svg class="i"><use href="icons.svg#x"/></svg><span data-ta="ரிஜெக்ட்" data-hi="रिजेक्ट">Reject</span></span></td><td data-ta="கட்டிங் ஃப்ளோர்" data-hi="कटिंग फ़्लोर">Cutting floor</td><td class="r num" data-ta="30 பீஸ்" data-hi="30 पीस">30 pcs</td><td class="meta" data-ta="மிஸ்பிரிண்ட்" data-hi="मिसप्रिंट">Misprint</td><td><button class="btn ghost sm" data-ta="செயல்கள்" data-hi="काम">Actions</button></td></tr>
+            <tr class="grp"><td colspan="7" data-ta="தயார் சரக்கு" data-hi="तैयार माल">Ready goods</td></tr>
+            <tr><td><b data-ta="நேவி போலோ · பேக் செய்தது" data-hi="नेवी पोलो · पैक किए">Navy polo · packed</b></td><td>R-11</td><td data-ta="நல்லது" data-hi="अच्छा">Good</td><td data-ta="கோடவுன்" data-hi="गोदाम">Godown</td><td class="r num" data-ta="20 பீஸ் · S" data-hi="20 पीस · S">20 pcs · S</td><td class="meta" data-ta="420 பேக் − 400 Amit Hosiery-க்கு" data-hi="420 पैक − 400 Amit Hosiery को">420 packed − 400 to Amit Hosiery</td><td><button class="btn ghost sm" data-ta="செயல்கள்" data-hi="काम">Actions</button></td></tr>
+            <tr class="grp"><td colspan="7" data-ta="டிரிம்ஸ்" data-hi="ट्रिम्स">Trims</td></tr>
+            <tr><td><b data-ta="பட்டன்" data-hi="बटन">Buttons</b></td><td>—</td><td data-ta="நல்லது" data-hi="अच्छा">Good</td><td data-ta="கோடவுன்" data-hi="गोदाम">Godown</td><td class="r num" data-ta="1,254 பீஸ்" data-hi="1,254 पीस">1,254 pcs</td><td class="meta" data-ta="≈ 8.7 கிராஸ்" data-hi="≈ 8.7 ग्रोस">≈ 8.7 gross</td><td><button class="btn ghost sm" data-ta="செயல்கள்" data-hi="काम">Actions</button></td></tr>
+            <tr><td><b data-ta="நூல்" data-hi="धागा">Thread</b></td><td>—</td><td data-ta="நல்லது" data-hi="अच्छा">Good</td><td data-ta="கோடவுன்" data-hi="गोदाम">Godown</td><td class="r num" data-ta="22 கோன்" data-hi="22 कोन">22 cones</td><td></td><td><button class="btn ghost sm" data-ta="செயல்கள்" data-hi="काम">Actions</button></td></tr>
+            <tr><td><b data-ta="மெயின் லேபிள்" data-hi="मेन लेबल">Main labels</b></td><td>—</td><td data-ta="நல்லது" data-hi="अच्छा">Good</td><td data-ta="கோடவுன்" data-hi="गोदाम">Godown</td><td class="r num" data-ta="1,200 பீஸ்" data-hi="1,200 पीस">1,200 pcs</td><td></td><td><button class="btn ghost sm" data-ta="செயல்கள்" data-hi="काम">Actions</button></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Owned but elsewhere: a link, never double-listed -->
+      <div class="list" style="margin-top:12px">
+        <a class="lrow" href="goods-out.html">
+          <svg class="i" style="color:var(--primary);margin-top:2px"><use href="icons.svg#out"/></svg>
+          <div class="main">
+            <div class="t" data-ta="+ உங்கள் சரக்கு 6 வேறு இடங்களில்" data-hi="+ आपका माल 6 और जगह">+ Yours at 6 other places</div>
+            <div class="m" data-ta="வெளியே உள்ளது பகுதியில் பாருங்கள்" data-hi="दूसरों के पास वाले हिस्से में देखें">See Out with others</div>
+          </div>
+          <svg class="i tog"><use href="icons.svg#chev-r"/></svg>
+        </a>
+        <a class="lrow" href="party.html">
+          <svg class="i" style="color:var(--primary);margin-top:2px"><use href="icons.svg#store"/></svg>
+          <div class="main">
+            <div class="t"><span data-ta="+ 140 kg கருப்பு SJ, Sri Amman Fabrics-இல்" data-hi="+ 140 kg काला SJ, Sri Amman Fabrics पर">+ 140 kg black SJ at Sri Amman Fabrics</span></div>
+            <div class="m" data-ta="வாங்கியது, உங்களுக்காக அவர்கள் கடையில் வைத்துள்ளனர்" data-hi="खरीदा हुआ, आपके लिए उनकी दुकान पर रखा">Bought, kept for you at their shop</div>
+          </div>
+          <svg class="i tog"><use href="icons.svg#chev-r"/></svg>
+        </a>
+      </div>
+
+      <p class="anno"><b>Question:</b> what do I own here, and where is it physically? <b>Decision:</b> what to cut next; what to buy; what to return. Grouped by material, place on every line. Tap a row for Count · Move · Send for work · Sell (first row shown open). Reject is a grade on its own line, never mixed into Good. Shown at 10:30, before today's send to Lakshmi (DC 0419: the 400 R-13 kits, 12 cones, 1,224 buttons, 400 labels). No "Others' goods" switch: Ravi holds nobody else's goods; it appears only for businesses that do. No "low" flag without a planned run's trims list (v1.1).</p>
+    </div>
+    <div class="bottombar">
+      <button class="btn primary lg"><svg class="i"><use href="icons.svg#plus"/></svg><span data-ta="பதிவு செய்" data-hi="दर्ज करें">Record</span></button>
+      <button class="btn tint lg"><svg class="i"><use href="icons.svg#mic"/></svg><span data-ta="சொல்லுங்கள்" data-hi="बोलें">Say it</span></button>
+    </div>
+    <nav class="nav" data-active="goods" data-badgegoods="1"></nav>
+  </div>
+</div>
+<script src="mockup.js"></script>
+</body>
+</html>

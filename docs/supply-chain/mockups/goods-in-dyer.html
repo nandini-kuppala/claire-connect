@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Goods · Others' goods (dyer)</title>
+<link rel="stylesheet" href="mockup.css">
+<style>
+/* Second-level switch under "In my unit": smaller than the main segment. */
+.seg.sub{margin-top:10px;max-width:360px}
+.seg.sub button{min-height:36px;font-size:13.5px}
+.lrow .t a{color:inherit;text-decoration:none}
+.lrow .act{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap}
+.lead{margin:10px 16px 0;font-size:13px;color:var(--meta);display:flex;gap:6px;align-items:flex-start}
+@media (min-width:1024px){.frame.wide .seg.sub{margin-left:0}.frame.wide .lead{margin-left:0}}
+</style>
+</head>
+<body>
+<!-- S10/S11 · Goods → In my unit → Others' goods. Viewer: Noyyal Dyeing's office clerk (staff: no rates, values or bills). -->
+<div class="frame wide">
+  <aside class="rail" data-active="goods"></aside>
+  <div class="app">
+    <header class="hdr">
+      <h1><span data-ta="சரக்கு" data-hi="माल">Goods</span><span class="sub">Noyyal Dyeing</span></h1>
+      <button class="iconbtn lbl"><svg class="i"><use href="icons.svg#search"/></svg><span data-ta="தேடு" data-hi="खोजें">Find</span></button>
+      <button class="btn primary only-desk"><svg class="i"><use href="icons.svg#plus"/></svg><span data-ta="பதிவு செய்" data-hi="दर्ज करें">Record</span></button>
+      <button class="btn tint only-desk"><svg class="i"><use href="icons.svg#mic"/></svg><span data-ta="சொல்லுங்கள்" data-hi="बोलकर बताएँ">Say it</span></button>
+    </header>
+    <div class="wrap">
+      <div class="seg" role="tablist">
+        <button role="tab" data-ta="வெளியே உள்ளது" data-hi="दूसरों के पास">Out with others</button>
+        <button class="on" role="tab" data-ta="என் யூனிட்டில்" data-hi="मेरी यूनिट में">In my unit</button>
+        <button role="tab" data-ta="வர வேண்டியது" data-hi="आने वाला">Coming in</button>
+      </div>
+      <div class="seg sub" role="tablist">
+        <button role="tab" data-ta="என்னுடையது" data-hi="मेरा">Mine</button>
+        <button class="on" role="tab" data-ta="மற்றவர்களின் சரக்கு" data-hi="दूसरों का माल">Others' goods</button>
+      </div>
+      <p class="lead"><svg class="i sm" style="margin-top:1px"><use href="icons.svg#info"/></svg><span data-ta="சாயம், கெமிக்கல் இங்கே கணக்கில் இல்லை. வாடிக்கையாளர்களின் துணி மட்டும்." data-hi="रंग और केमिकल का हिसाब यहाँ नहीं रखा जाता। सिर्फ़ ग्राहकों का कपड़ा।">Dyes and chemicals are not tracked here. Only your customers' fabric.</span></p>
+
+      <div class="chips">
+        <button class="chip"><svg class="i sm"><use href="icons.svg#check"/></svg><span class="n">1</span> <span data-ta="எடுக்க தயார்" data-hi="लेने को तैयार">Ready to collect</span></button>
+        <button class="chip"><svg class="i sm"><use href="icons.svg#wallet"/></svg><span class="n">1</span> <span data-ta="பாக்கிக்காக நிறுத்தியது" data-hi="बकाया के लिए रोका">Held for dues</span></button>
+        <button class="chip"><svg class="i sm"><use href="icons.svg#clock"/></svg><span class="n">3</span> <span data-ta="10 நாளுக்கு மேல்" data-hi="10 दिन से ज़्यादा">Over 10 days</span></button>
+      </div>
+
+      <div class="sec-h">
+        <h2 data-ta="5 பேரின் சரக்கு · ≈ 1,454 kg" data-hi="5 लोगों का माल · ≈ 1,454 kg">Goods of 5 businesses · ≈ 1,454 kg</h2>
+        <button class="hint"><span data-ta="வரிசை: தாமதம் முதலில்" data-hi="क्रम: देर वाले पहले">Sorted: late first</span> <svg class="i sm" style="vertical-align:-3px"><use href="icons.svg#chev-d"/></svg></button>
+      </div>
+
+      <!-- Mobile: one row per principal -->
+      <div class="list only-mob">
+        <div class="lrow">
+          <span class="av" style="background:#4B5563">DE</span>
+          <div class="main">
+            <div class="t"><a href="party.html">Devi Exports</a></div>
+            <div class="stl"><span class="st late"><svg class="i"><use href="icons.svg#clock"/></svg><span data-ta="3 நாள் தாமதம்" data-hi="3 दिन देर">Late 3 days</span></span></div>
+            <div class="q"><span class="num">410</span> kg <span data-ta="கிரே இன்டர்லாக் இங்கே" data-hi="ग्रे इंटरलॉक यहाँ">grey interlock here</span></div>
+            <div class="m" data-ta="6 நவ. பெற்றது · இன்னும் எதுவும் திருப்பவில்லை · 15 நாள்" data-hi="6 नव॰ मिला · अभी कुछ वापस नहीं · 15 दिन">Received 6 Nov · nothing returned yet · 15 days</div>
+          </div>
+        </div>
+        <div class="lrow">
+          <span class="av" style="background:#B4552F">KK</span>
+          <div class="main">
+            <div class="t"><a href="party.html">Kavin Knits</a></div>
+            <div class="stl"><span class="st held"><svg class="i"><use href="icons.svg#wallet"/></svg><span data-ta="பாக்கிக்காக நிறுத்தியது" data-hi="बकाया के लिए रोका">Held for dues</span></span></div>
+            <div class="q"><span class="num">520</span> kg <span data-ta="கிரே SJ · கருப்பு சாயத்துக்கு" data-hi="ग्रे SJ · काली रंगाई के लिए">grey SJ · for black</span></div>
+            <div class="m" data-ta="9 நவ. பெற்றது · 18 நவ. முதல் நிறுத்தியது · 12 நாள்" data-hi="9 नव॰ मिला · 18 नव॰ से रोका · 12 दिन">Received 9 Nov · held since 18 Nov · 12 days</div>
+          </div>
+        </div>
+        <div class="lrow">
+          <span class="av" style="background:#0D9488">ST</span>
+          <div class="main">
+            <div class="t"><a href="party.html">Sree Textiles</a></div>
+            <div class="stl"><span class="st ready"><svg class="i"><use href="icons.svg#check"/></svg><span data-ta="எடுக்க தயார்" data-hi="लेने को तैयार">Ready to collect</span></span></div>
+            <div class="q"><span class="num">279</span> kg <span data-ta="லூப்நிட் · சாயம் முடிந்து தயார்" data-hi="लूपनिट · रंगाई होकर तैयार">loopknit · dyed and ready</span></div>
+            <div class="m" data-ta="10 நவ. 300 kg கிரே பெற்றது · 17 நவ. முதல் தயார் · 4 நாளாக எடுக்கவில்லை · 11 நாள்" data-hi="10 नव॰ 300 kg ग्रे मिला · 17 नव॰ से तैयार · 4 दिन से नहीं उठाया · 11 दिन">Received 300 kg grey 10 Nov · ready since 17 Nov · not collected for 4 days · 11 days</div>
+            <div class="act"><button class="btn tint sm"><svg class="i sm"><use href="icons.svg#whatsapp"/></svg><span data-ta="நினைவூட்டு" data-hi="याद दिलाएँ">Remind</span></button></div>
+          </div>
+        </div>
+        <div class="lrow">
+          <span class="av" style="background:#1f8c73">RK</span>
+          <div class="main">
+            <div class="t"><a href="party.html">Ravi Knit Fashions</a></div>
+            <div class="stl"><span class="st due"><svg class="i"><use href="icons.svg#clock"/></svg><span data-ta="இன்று கொடுக்க வேண்டும்" data-hi="आज देना है">Due today</span></span></div>
+            <div class="q"><span class="num">≈ 95</span> kg <span data-ta="கிரே SJ 180 GSM இன்னும் இங்கே · நேவி சாயத்துக்கு" data-hi="ग्रे SJ 180 GSM अभी यहाँ · नेवी रंगाई के लिए">grey SJ 180 GSM still here · for navy</span></div>
+            <div class="m" data-ta="J-0412 · லாட் K-221 · 14 நவ. 198.6 kg பெற்றது · 96 kg திருப்பியது" data-hi="J-0412 · लॉट K-221 · 14 नव॰ 198.6 kg मिला · 96 kg वापस">J-0412 · lot K-221 · received 198.6 kg 14 Nov · 96 kg returned</div>
+            <div class="m"><svg class="i sm" style="vertical-align:-3px"><use href="icons.svg#truck"/></svg> <span data-ta="+ 300 kg கிரே SJ, Arul Knitting Mills-இலிருந்து 24 நவ. வரும்" data-hi="+ 300 kg ग्रे SJ, Arul Knitting Mills से 24 नव॰ आएगा">+ 300 kg grey SJ coming from Arul Knitting Mills, 24 Nov</span></div>
+          </div>
+        </div>
+        <div class="lrow">
+          <span class="av" style="background:#6d4466">AK</span>
+          <div class="main">
+            <div class="t"><a href="party.html">Anand Knitwear</a></div>
+            <div class="stl"><span class="st neutral"><svg class="i"><use href="icons.svg#play"/></svg><span data-ta="வேலையில் உள்ளது" data-hi="काम चल रहा है">In process</span></span></div>
+            <div class="q"><span class="num">150</span> kg <span data-ta="ரிப் · நேவி சாயத்துக்கு" data-hi="रिब · नेवी रंगाई के लिए">rib · for navy</span></div>
+            <div class="m" data-ta="20 நவ. பெற்றது · கொடுக்க வேண்டியது 27 நவ." data-hi="20 नव॰ मिला · देना है 27 नव॰">Received 20 Nov · due 27 Nov</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Desktop: principals as a table the clerk reconciles at the PC -->
+      <div class="only-desk card" style="margin:8px 0 0;padding:4px 8px">
+        <table class="t">
+          <thead><tr><th data-ta="யாருடையது" data-hi="किसका">Principal</th><th data-ta="லாட் / என்ன" data-hi="लॉट / क्या">Lot / what</th><th class="r" data-ta="பெற்றது" data-hi="मिला">Received</th><th class="r" data-ta="திருப்பியது" data-hi="वापस किया">Returned</th><th class="r" data-ta="≈ இன்னும் இங்கே" data-hi="≈ अभी यहाँ">≈ Still here</th><th data-ta="முதல்" data-hi="कब से">Since</th><th data-ta="நிலை" data-hi="स्थिति">Status</th></tr></thead>
+          <tbody>
+            <tr><td><b>Devi Exports</b></td><td data-ta="கிரே இன்டர்லாக்" data-hi="ग्रे इंटरलॉक">Grey interlock</td><td class="r tnum">410 kg</td><td class="r tnum">0 kg</td><td class="r num">410 kg</td><td data-ta="6 நவ. · 15 நாள்" data-hi="6 नव॰ · 15 दिन">6 Nov · 15 days</td><td><span class="st late"><svg class="i"><use href="icons.svg#clock"/></svg><span data-ta="3 நாள் தாமதம்" data-hi="3 दिन देर">Late 3 days</span></span></td></tr>
+            <tr><td><b>Kavin Knits</b></td><td data-ta="கிரே SJ · கருப்புக்கு" data-hi="ग्रे SJ · काले के लिए">Grey SJ · for black</td><td class="r tnum">520 kg</td><td class="r tnum">0 kg</td><td class="r num">520 kg</td><td data-ta="9 நவ. · 12 நாள்" data-hi="9 नव॰ · 12 दिन">9 Nov · 12 days</td><td><span class="st held"><svg class="i"><use href="icons.svg#wallet"/></svg><span data-ta="பாக்கிக்காக நிறுத்தியது" data-hi="बकाया के लिए रोका">Held for dues</span></span><div class="meta" data-ta="18 நவ. முதல்" data-hi="18 नव॰ से">since 18 Nov</div></td></tr>
+            <tr><td><b>Sree Textiles</b></td><td data-ta="லூப்நிட் · சாயம் முடிந்தது" data-hi="लूपनिट · रंगाई हो चुकी">Loopknit · dyed</td><td class="r tnum">300 kg</td><td class="r tnum">0 kg</td><td class="r num">279 kg</td><td data-ta="10 நவ. · 11 நாள்" data-hi="10 नव॰ · 11 दिन">10 Nov · 11 days</td><td><span class="st ready"><svg class="i"><use href="icons.svg#check"/></svg><span data-ta="எடுக்க தயார்" data-hi="लेने को तैयार">Ready to collect</span></span><div class="meta" data-ta="17 நவ. முதல் தயார் · 4 நாளாக எடுக்கவில்லை" data-hi="17 नव॰ से तैयार · 4 दिन से नहीं उठाया">ready since 17 Nov · not collected 4 days</div></td></tr>
+            <tr><td><b>Ravi Knit Fashions</b><div class="meta" data-ta="+ 300 kg Arul-இலிருந்து 24 நவ." data-hi="+ 300 kg Arul से 24 नव॰">+ 300 kg from Arul, 24 Nov</div></td><td data-ta="J-0412 · லாட் K-221 · கிரே SJ 180 GSM → நேவி" data-hi="J-0412 · लॉट K-221 · ग्रे SJ 180 GSM → नेवी">J-0412 · lot K-221 · grey SJ 180 GSM → navy</td><td class="r tnum">198.6 kg</td><td class="r tnum">96 kg</td><td class="r num">≈ 95 kg grey</td><td data-ta="14 நவ. · 7 நாள்" data-hi="14 नव॰ · 7 दिन">14 Nov · 7 days</td><td><span class="st due"><svg class="i"><use href="icons.svg#clock"/></svg><span data-ta="இன்று கொடுக்க வேண்டும்" data-hi="आज देना है">Due today</span></span></td></tr>
+            <tr><td><b>Anand Knitwear</b></td><td data-ta="ரிப் · நேவிக்கு" data-hi="रिब · नेवी के लिए">Rib · for navy</td><td class="r tnum">150 kg</td><td class="r tnum">0 kg</td><td class="r num">150 kg</td><td data-ta="20 நவ. · 1 நாள்" data-hi="20 नव॰ · 1 दिन">20 Nov · 1 day</td><td><span class="st neutral"><svg class="i"><use href="icons.svg#play"/></svg><span data-ta="வேலையில் உள்ளது" data-hi="काम चल रहा है">In process</span></span><div class="meta" data-ta="27 நவ. கொடுக்க வேண்டும்" data-hi="27 नव॰ देना है">due 27 Nov</div></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p class="anno"><b>Question:</b> whose goods am I holding, how long, and what's ready? <b>Decision:</b> which lots to push today; whom to ask to collect. Never mixed with Mine. The dyer sees all its own principals; each principal sees only its own lots. The clerk is staff, so "Held for dues" shows without the amount (owner only). ≈ still here = received − returned ÷ (1 − usual loss), in the input's unit (grey kg); a ready lot shows its finished kg (Sree 279 kg). Over 10 days counts from received: Sree 11, Kavin 12, Devi 15 = 3. Totals add kg only: 410 + 520 + 279 + ≈ 95 + 150 = ≈ 1,454 kg.</p>
+    </div>
+    <div class="bottombar">
+      <button class="btn primary lg"><svg class="i"><use href="icons.svg#plus"/></svg><span data-ta="பதிவு செய்" data-hi="दर्ज करें">Record</span></button>
+      <button class="btn tint lg"><svg class="i"><use href="icons.svg#mic"/></svg><span data-ta="சொல்லுங்கள்" data-hi="बोलें">Say it</span></button>
+    </div>
+    <nav class="nav" data-active="goods"></nav>
+  </div>
+</div>
+<script src="mockup.js"></script>
+</body>
+</html>

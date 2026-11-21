@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Party · Noyyal Dyeing</title>
+<link rel="stylesheet" href="mockup.css">
+<style>
+/* Desktop: Open + History left, Bills + Terms right. Mobile: one column, tabs on top. */
+@media (min-width:1024px){
+  .frame.wide .cols{display:grid;grid-template-columns:3fr 2fr;gap:28px;align-items:start}
+  .frame.wide .cols .card,.frame.wide .cols .list,.frame.wide .who{margin-left:0;margin-right:0}
+}
+.who{margin:12px 16px 0}
+.card .hd{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center}
+.lrow .ev{margin-top:6px}
+.bottombar .btn{flex:1 1 0}
+.big{font:700 22px/1.2 var(--head)}
+</style>
+</head>
+<body>
+<!-- S2 · Party ledger: Noyyal Dyeing, seen by Ravi (owner). Tab "Open" selected; History, Bills and Terms are rendered below it so one screen shows the whole anatomy. -->
+<div class="frame wide">
+  <aside class="rail" data-active="goods"></aside>
+  <div class="app">
+    <header class="hdr">
+      <button class="iconbtn" aria-label="Back"><svg class="i"><use href="icons.svg#chev-l"/></svg></button>
+      <span class="av" style="background:#15803D">ND</span>
+      <h1>Noyyal Dyeing<span class="sub" data-ta="சாயப்பட்டறை · Senthil Nathan" data-hi="डाइंग · Senthil Nathan">Dyer · Senthil Nathan</span></h1>
+      <button class="btn primary only-desk"><svg class="i"><use href="icons.svg#plus"/></svg><span data-ta="Noyyal உடன் பதிவு" data-hi="Noyyal के साथ दर्ज करें">Record with Noyyal</span></button>
+      <button class="btn secondary only-desk"><svg class="i"><use href="icons.svg#whatsapp"/></svg><span data-ta="ஸ்டேட்மென்ட் அனுப்பு" data-hi="स्टेटमेंट भेजें">Share statement</span></button>
+    </header>
+    <div class="wrap">
+      <div class="who">
+        <div class="row-gap"><span class="tagp on"><svg class="i sm"><use href="icons.svg#check"/></svg><span data-ta="CLAIRE-ல் உள்ளனர்" data-hi="CLAIRE पर हैं">On CLAIRE</span></span></div>
+        <div class="btns" style="margin-top:10px;max-width:520px">
+          <button class="btn secondary sm"><svg class="i sm"><use href="icons.svg#phone"/></svg><span data-ta="அழை" data-hi="कॉल">Call</span></button>
+          <button class="btn secondary sm"><svg class="i sm"><use href="icons.svg#whatsapp"/></svg>WhatsApp</button>
+          <button class="btn secondary sm"><svg class="i sm"><use href="icons.svg#chats"/></svg><span data-ta="சாட்" data-hi="चैट">Chat</span></button>
+        </div>
+      </div>
+      <div class="seg only-mob" role="tablist">
+        <button class="on" role="tab" data-ta="நடப்பில்" data-hi="चालू">Open</button>
+        <button role="tab" data-ta="வரலாறு" data-hi="इतिहास">History</button>
+        <button role="tab" data-ta="பில்கள்" data-hi="बिल">Bills</button>
+        <button role="tab" data-ta="நிபந்தனைகள்" data-hi="शर्तें">Terms</button>
+      </div>
+
+      <div class="cols">
+        <div>
+          <!-- OPEN -->
+          <div class="sec-h"><h2 data-ta="நடப்பில்" data-hi="चालू">Open</h2><span class="hint" data-ta="1 வேலை · 1 வரவு" data-hi="1 काम · 1 आवक">1 job · 1 delivery</span></div>
+          <div class="card">
+            <div class="hd"><h3 data-ta="J-0412 · நேவி சாயம்" data-hi="J-0412 · नेवी रंगाई">J-0412 · dyeing navy</h3><span class="st due"><svg class="i"><use href="icons.svg#clock"/></svg><span data-ta="இன்று வர வேண்டும்" data-hi="आज आना है">Due today</span></span></div>
+            <div class="meta" style="margin-top:2px" data-ta="DC 0412 · 14 நவ. அனுப்பியது · வர வேண்டியது 21 நவ." data-hi="DC 0412 · 14 नव॰ भेजा · आना है 21 नव॰">DC 0412 · sent 14 Nov · expected 21 Nov</div>
+            <dl class="kv" style="margin-top:12px">
+              <dt data-ta="அனுப்பியது" data-hi="भेजा">Sent</dt><dd><span class="num">200</span> kg <span data-ta="கிரே SJ 180 GSM, லாட் K-221" data-hi="ग्रे SJ 180 GSM, लॉट K-221">grey SJ 180 GSM, lot K-221</span></dd>
+              <dt data-ta="அவர்கள் பெற்றது" data-hi="उन्हें मिला">They received</dt><dd><span class="num">198.6</span> kg</dd>
+              <dt data-ta="திரும்ப வந்தது" data-hi="वापस आया">Back</dt><dd><span class="num">96</span> kg <span data-ta="நேவி · 19 நவ." data-hi="नेवी · 19 नव॰">navy · 19 Nov</span></dd>
+              <dt data-ta="இன்னும் அங்கே" data-hi="अभी वहाँ">Still there</dt><dd><span class="num">≈ 95</span> kg <span data-ta="கிரே (≈ 89 kg நேவி வர வேண்டும்)" data-hi="ग्रे (≈ 89 kg नेवी आना है)">grey (≈ 89 kg navy to come)</span></dd>
+            </dl>
+            <p class="meta" style="margin-top:8px" data-ta="எடை வித்தியாசம் 1.4 kg (0.7 %), 1.5 % வரம்புக்குள் · நிபந்தனைப்படி உரிமையாளர் (நீங்கள்) ஏற்கிறீர்கள்" data-hi="तौल में फ़र्क 1.4 kg (0.7 %), 1.5 % की सीमा में · शर्त के अनुसार मालिक (आप) के खाते">Weighing difference 1.4 kg (0.7 %), within 1.5 % · borne by the owner (you), as agreed</p>
+            <div class="sbar" style="margin-top:12px" aria-hidden="true"><span class="a" style="width:52%"></span><span class="d" style="width:48%"></span></div>
+            <div class="legend">
+              <span><i style="background:var(--primary)"></i><span data-ta="வந்தது 96 kg (சேதாரத்துக்கு முன் ≈ 103 kg)" data-hi="वापस 96 kg (घटत से पहले ≈ 103 kg)">Back 96 kg (≈ 103 kg before loss)</span></span>
+              <span><i style="background:var(--line-strong)"></i><span data-ta="இன்னும் அங்கே ≈ 95 kg கிரே" data-hi="अभी वहाँ ≈ 95 kg ग्रे">Still there ≈ 95 kg grey</span></span>
+            </div>
+          </div>
+          <div class="list" style="margin-top:12px">
+            <a class="lrow" href="goods-coming.html">
+              <svg class="i" style="color:var(--ink-2);margin-top:2px"><use href="icons.svg#truck"/></svg>
+              <div class="main">
+                <div class="t" data-ta="Noyyal-க்கு வருகிறது" data-hi="Noyyal के पास आ रहा है">Arriving at Noyyal</div>
+                <div class="q"><span class="num">300</span> kg <span data-ta="கிரே SJ 180 GSM · Arul Knitting Mills-இலிருந்து" data-hi="ग्रे SJ 180 GSM · Arul Knitting Mills से">grey SJ 180 GSM · from Arul Knitting Mills</span></div>
+                <div class="m" data-ta="நீங்கள் வாங்கியது · வர வேண்டியது 24 நவ. · Noyyal உறுதி செய்வார்" data-hi="आपका खरीदा · आना है 24 नव॰ · Noyyal पुष्टि करेंगे">You bought it · expected 24 Nov · Noyyal confirms</div>
+              </div>
+            </a>
+          </div>
+
+          <!-- HISTORY -->
+          <div class="sec-h"><h2 data-ta="வரலாறு" data-hi="इतिहास">History</h2><span class="hint" data-ta="புதியது முதலில்" data-hi="नया पहले">Newest first</span></div>
+          <div class="list">
+            <div class="lrow"><div class="main">
+              <div class="t" data-ta="19 நவ. · Noyyal 96 kg நேவி திருப்பி அனுப்பியது" data-hi="19 नव॰ · Noyyal ने 96 kg नेवी वापस भेजा">19 Nov · Noyyal sent back 96 kg navy</div>
+              <div class="m" data-ta="J-0412 · நீங்கள் எடை போட்டது 96 kg · லாட் N-0412/1 · கோடவுன்" data-hi="J-0412 · आपने तौला 96 kg · लॉट N-0412/1 · गोदाम">J-0412 · you weighed 96 kg · lot N-0412/1 · Godown</div>
+              <span class="ev conf"><svg class="i"><use href="icons.svg#check"/></svg><span data-ta="நீங்கள் உறுதி செய்தீர்கள்" data-hi="आपने पुष्टि की">Confirmed by you</span></span>
+            </div></div>
+            <div class="lrow"><div class="main">
+              <div class="t" data-ta="14 நவ. · 200 kg கிரே SJ அனுப்பியது · அவர்கள் பெற்றது 198.6 kg" data-hi="14 नव॰ · 200 kg ग्रे SJ भेजा · उन्हें मिला 198.6 kg">14 Nov · Sent 200 kg grey SJ · they received 198.6 kg</div>
+              <div class="m" data-ta="DC 0412 · லாட் K-221 · எடை வித்தியாசம் 1.4 kg பதிவு" data-hi="DC 0412 · लॉट K-221 · तौल में फ़र्क 1.4 kg दर्ज">DC 0412 · lot K-221 · weighing difference 1.4 kg recorded</div>
+              <span class="ev conf"><svg class="i"><use href="icons.svg#check"/></svg><span data-ta="அவர்கள் உறுதி செய்தனர்" data-hi="उन्होंने पुष्टि की">Confirmed by them</span></span>
+            </div></div>
+            <div class="lrow"><div class="main">
+              <div class="t" data-ta="2 நவ. · ₹22,400 UPI-ல் செலுத்தியது" data-hi="2 नव॰ · ₹22,400 UPI से चुकाया">2 Nov · Paid ₹22,400 by UPI</div>
+              <div class="m" data-ta="J-0388 பில்" data-hi="J-0388 का बिल">For J-0388</div>
+              <span class="ev"><svg class="i"><use href="icons.svg#user"/></svg><span data-ta="உங்கள் பதிவு" data-hi="आपका रिकॉर्ड">Your record</span></span> <span class="tagp" style="margin-top:6px" data-ta="உரிமையாளர் மட்டும்" data-hi="सिर्फ़ मालिक">Owner only</span>
+            </div></div>
+            <div class="lrow"><div class="main">
+              <div class="t" data-ta="அக். · J-0388 முடிந்தது: 320 kg → 297 kg கருப்பு" data-hi="अक्टू॰ · J-0388 पूरा: 320 kg → 297 kg काला">Oct · J-0388 closed: 320 kg → 297 kg black</div>
+              <div class="m" data-ta="சேதாரம் 7.2 %" data-hi="घटत 7.2 %">Loss 7.2 %</div>
+              <span class="ev conf"><svg class="i"><use href="icons.svg#check"/></svg><span data-ta="அவர்கள் உறுதி செய்தனர்" data-hi="उन्होंने पुष्टि की">Confirmed by them</span></span>
+            </div></div>
+            <div class="lrow"><div class="main">
+              <div class="t" data-ta="5 அக். · ₹17,500 NEFT-ல் செலுத்தியது" data-hi="5 अक्टू॰ · ₹17,500 NEFT से चुकाया">5 Oct · Paid ₹17,500 by NEFT</div>
+              <div class="m" data-ta="J-0371 பில்" data-hi="J-0371 का बिल">For J-0371</div>
+              <span class="ev"><svg class="i"><use href="icons.svg#user"/></svg><span data-ta="உங்கள் பதிவு" data-hi="आपका रिकॉर्ड">Your record</span></span> <span class="tagp" style="margin-top:6px" data-ta="உரிமையாளர் மட்டும்" data-hi="सिर्फ़ मालिक">Owner only</span>
+            </div></div>
+            <div class="lrow"><div class="main">
+              <div class="t" data-ta="செப். · J-0371 முடிந்தது: 250 kg → 233 kg நேவி" data-hi="सित॰ · J-0371 पूरा: 250 kg → 233 kg नेवी">Sep · J-0371 closed: 250 kg → 233 kg navy</div>
+              <div class="m" data-ta="சேதாரம் 6.8 %" data-hi="घटत 6.8 %">Loss 6.8 %</div>
+              <span class="ev conf"><svg class="i"><use href="icons.svg#check"/></svg><span data-ta="அவர்கள் உறுதி செய்தனர்" data-hi="उन्होंने पुष्टि की">Confirmed by them</span></span>
+            </div></div>
+          </div>
+        </div>
+
+        <div>
+          <!-- BILLS (owner only) -->
+          <div class="sec-h"><h2 data-ta="பில்கள்" data-hi="बिल">Bills</h2><span class="hint" data-ta="உரிமையாளருக்கு மட்டும்" data-hi="सिर्फ़ मालिक को">Owner only</span></div>
+          <div class="card">
+            <div class="big" data-ta="இப்போது பாக்கி இல்லை" data-hi="अभी कुछ बकाया नहीं">Nothing due now</div>
+            <div class="meta" style="margin-top:2px" data-ta="J-0412 முடிந்ததும் ≈ ₹13,902" data-hi="J-0412 पूरा होने पर ≈ ₹13,902">≈ ₹13,902 when J-0412 closes</div>
+            <table class="mini" style="margin-top:12px">
+              <thead><tr><th data-ta="வேலை" data-hi="काम">Job</th><th class="r" data-ta="பில்" data-hi="बिल">Bill</th><th data-ta="நிலை" data-hi="स्थिति">State</th></tr></thead>
+              <tbody>
+                <tr><td>J-0412</td><td class="r tnum">≈ ₹13,902</td><td><span data-ta="முடிந்ததும் (198.6 kg × ₹70)" data-hi="पूरा होने पर (198.6 kg × ₹70)">when closed (198.6 kg × ₹70)</span></td></tr>
+                <tr><td>J-0388</td><td class="r tnum">₹22,400</td><td><span class="st ok"><svg class="i"><use href="icons.svg#check"/></svg><span data-ta="செலுத்தியது 2 நவ." data-hi="चुकाया 2 नव॰">Paid 2 Nov</span></span></td></tr>
+                <tr><td>J-0371</td><td class="r tnum">₹17,500</td><td><span class="st ok"><svg class="i"><use href="icons.svg#check"/></svg><span data-ta="செலுத்தியது 5 அக்." data-hi="चुकाया 5 अक्टू॰">Paid 5 Oct</span></span></td></tr>
+              </tbody>
+            </table>
+            <div class="btns" style="margin-top:12px"><button class="btn secondary sm"><svg class="i sm"><use href="icons.svg#wallet"/></svg><span data-ta="பணம் கொடுத்ததை பதிவு செய்" data-hi="भुगतान दर्ज करें">Record payment</span></button></div>
+          </div>
+
+          <!-- TERMS (owner only) -->
+          <div class="sec-h"><h2 data-ta="நிபந்தனைகள்" data-hi="शर्तें">Terms</h2><button class="hint" data-ta="மாற்று" data-hi="बदलें">Edit</button></div>
+          <div class="card">
+            <dl class="kv">
+              <dt data-ta="கூலி" data-hi="रेट">Rate</dt><dd data-ta="₹70/kg, அவர்கள் பெற்ற எடைக்கு" data-hi="₹70/kg, उन्हें मिले वज़न पर">₹70/kg on kg they received</dd>
+              <dt data-ta="அனுமதித்த எடை வித்தியாசம்" data-hi="तौल में छूट">Weighing difference allowed</dt><dd data-ta="1.5 % வரை" data-hi="1.5 % तक">up to 1.5 %</dd>
+              <dt data-ta="எடை வித்தியாசம் யாருக்கு" data-hi="तौल का फ़र्क किसके खाते">Weighing difference borne by</dt><dd data-ta="உரிமையாளர் (நீங்கள்) · போகும்போதும் வரும்போதும்" data-hi="मालिक (आप) · जाते और लौटते दोनों समय">the owner (you) · out and back</dd>
+              <dt data-ta="வழக்கமான சேதாரம்" data-hi="आम घटत">Usual loss</dt><dd>7 %</dd>
+              <dt data-ta="வழக்கமான நாட்கள்" data-hi="आम समय">Usual turnaround</dt><dd data-ta="6 நாள்" data-hi="6 दिन">6 days</dd>
+            </dl>
+            <p class="meta" style="margin-top:10px" data-ta="7 % என்பது 3 வேலை முடியும் வரை பொதுவான அளவு. இதுவரை 2 வேலை (7.2 %, 6.8 %)." data-hi="3 काम पूरे होने तक 7 % आम आँकड़ा है। अब तक 2 काम (7.2 %, 6.8 %)।">7 % is the standard figure until 3 jobs. So far 2 jobs (7.2 %, 6.8 %).</p>
+          </div>
+        </div>
+      </div>
+
+      <p class="anno"><b>Question:</b> what is open with Noyyal, what happened, and what do we owe each other? <b>Decision:</b> call about lot K-221; settle the bill; send the statement link. On mobile only the selected tab shows; here all four are drawn so the anatomy is visible. Bills and Terms are owner-only. Badges: your own records carry Your record · Confirmed by them · Not confirmed; a record Noyyal made that you checked shows Confirmed by you. The bill is computed from kg they received × rate; payments are record-only. Payment lines in History carry an "Owner only" tag: staff see the goods lines but not the payments.</p>
+    </div>
+    <div class="bottombar">
+      <button class="btn primary lg"><svg class="i"><use href="icons.svg#plus"/></svg><span data-ta="Noyyal உடன் பதிவு" data-hi="Noyyal के साथ दर्ज करें">Record with Noyyal</span></button>
+      <button class="btn secondary lg"><svg class="i"><use href="icons.svg#whatsapp"/></svg><span data-ta="ஸ்டேட்மென்ட் அனுப்பு" data-hi="स्टेटमेंट भेजें">Share statement</span></button>
+    </div>
+    <nav class="nav" data-active="goods" data-badgegoods="1"></nav>
+  </div>
+</div>
+<script src="mockup.js"></script>
+</body>
+</html>

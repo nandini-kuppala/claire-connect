@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Claire · personal</title>
+<link rel="stylesheet" href="mockup.css">
+<style>
+/* Claire chat only: answer footer (source + listen), voice note, draft card in the log, wrapping suggestion chips */
+.bubble.other b{font-weight:700}
+.foot{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:0 8px;margin-top:4px}
+.src a{color:var(--primary);font-weight:600;text-decoration:none}
+.listen{display:inline-flex;align-items:center;gap:4px;min-height:44px;padding:0 6px;font-size:12.5px;font-weight:600;color:var(--ink-2)}
+.listen .i{width:16px;height:16px}
+.voice{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--meta);margin-bottom:4px}
+.day{align-self:center;font-size:12px;color:var(--meta);padding:2px 10px;border-radius:999px;background:var(--sunken)}
+.draft{margin:0;max-width:94%;border-color:var(--primary-soft)}
+.draft .kv{margin-top:12px}
+.draft .kv dd{text-align:left}
+.draft .btns{margin-top:14px}
+.suggest{flex-wrap:wrap;padding:8px 12px;border-top:1px solid var(--line);background:var(--surface)}
+.suggest .chip{white-space:normal;text-align:left}
+.ph{color:var(--faint);font-size:15px;flex:1;min-width:0}
+</style>
+</head>
+<body>
+<!-- S12 · Claire, personal. Same thread as today's pinned Claire in Chats, with Goods tools. Viewer: Ravi (owner). Sat 21 Nov, 10:30. -->
+<div class="frame">
+  <div class="app chat">
+    <header class="hdr">
+      <button class="iconbtn" aria-label="Back"><svg class="i"><use href="icons.svg#chev-l"/></svg></button>
+      <span class="cmark">C</span>
+      <h1>Claire <span class="sub" data-ta="Chats-ல் பின் செய்தது · உங்கள் பதிவுகளிலிருந்து மட்டும்" data-hi="Chats में पिन · सिर्फ़ आपके रिकॉर्ड से">Pinned in Chats · from your own records only</span></h1>
+    </header>
+
+    <div class="log">
+      <span class="day" data-ta="இன்று" data-hi="आज">Today</span>
+
+      <div class="bubble own" data-ta="Noyyal-ல இன்னும் எவ்வளவு நேவி துணி இருக்கு?" data-hi="Noyyal के पास अभी कितना नेवी कपड़ा है?">How much navy fabric is still at Noyyal?</div>
+      <div class="bubble other">
+        <p data-ta="Noyyal Dyeing-ல் <b>சுமார் 95 kg</b> கிரே துணி இன்னும் நேவி சாயத்தில் இருக்கு — வழக்கமான 7 % சேதாரத்துக்குப் பின் சுமார் 89 kg நேவி." data-hi="Noyyal Dyeing के पास <b>लगभग 95 kg</b> ग्रे कपड़ा अभी नेवी रंगाई में है — आम 7 % घटत के बाद लगभग 89 kg नेवी।"><b>About 95 kg</b> of grey fabric is still at Noyyal Dyeing being dyed navy — about 89 kg of navy after the usual 7 % loss.</p>
+        <table class="mini">
+          <thead><tr><th data-ta="லாட்" data-hi="लॉट">Lot</th><th class="r" data-ta="அவர்கள் பெற்றது" data-hi="उन्हें मिला">Received</th><th class="r" data-ta="திரும்பியது" data-hi="वापस">Back</th><th data-ta="வர வேண்டியது" data-hi="आना है">Due</th></tr></thead>
+          <tbody><tr><td>K-221</td><td class="r tnum">198.6 kg</td><td class="r tnum">96 kg</td><td><span class="st due"><svg class="i"><use href="icons.svg#clock"/></svg><span data-ta="இன்று" data-hi="आज">Today</span></span></td></tr></tbody>
+        </table>
+        <div class="foot">
+          <span class="src"><svg class="i sm"><use href="icons.svg#doc"/></svg><span data-ta="2 பதிவுகளிலிருந்து · 21 நவ., 10:30 வரை ·" data-hi="2 रिकॉर्ड से · 21 नव॰, 10:30 तक ·">From 2 records · up to 21 Nov, 10:30 ·</span><a href="goods-out.html" data-ta="எல்லாம் பார்" data-hi="सब देखें">See all</a></span>
+          <button class="listen"><svg class="i"><use href="icons.svg#play"/></svg><span data-ta="கேள்" data-hi="सुनें">Listen</span></button>
+        </div>
+      </div>
+
+      <div class="bubble own" data-ta="இந்த வாரம் எந்த தையல் வேலை தாமதம்?" data-hi="इस हफ़्ते कौन-से सिलाई के काम देर से हैं?">Which stitching jobs are late this week?</div>
+      <div class="bubble other">
+        <p data-ta="<b>1 தையல் வேலை</b> தாமதம்." data-hi="<b>1 सिलाई का काम</b> देर से है।"><b>1 stitching job</b> is late.</p>
+        <table class="mini">
+          <thead><tr><th data-ta="யூனிட்" data-hi="यूनिट">Unit</th><th class="r" data-ta="மீதம்" data-hi="बाकी">Pending</th><th data-ta="தாமதம்" data-hi="देर">Late</th></tr></thead>
+          <tbody><tr><td>Raju Stitching Works<div class="meta" data-ta="போலோ கிட் L, XL, XXL" data-hi="पोलो किट L, XL, XXL">Polo kits L, XL, XXL</div></td><td class="r tnum" data-ta="402 பீஸ்" data-hi="402 पीस">402 pcs</td><td><span class="st late"><svg class="i"><use href="icons.svg#clock"/></svg><span data-ta="2 நாள்" data-hi="2 दिन">2 days</span></span></td></tr></tbody>
+        </table>
+        <p style="margin-top:8px" data-ta="Lakshmi-யின் 180 எடுக்க தயார் (தாமதம் இல்லை)." data-hi="Lakshmi के 180 लेने को तैयार हैं (देर नहीं)।">Lakshmi's 180 are ready to collect (not late).</p>
+        <div class="foot">
+          <span class="src"><svg class="i sm"><use href="icons.svg#doc"/></svg><span data-ta="2 வேலைகளிலிருந்து · 21 நவ., 10:30 வரை ·" data-hi="2 जॉब से · 21 नव॰, 10:30 तक ·">From 2 jobs · up to 21 Nov, 10:30 ·</span><a href="goods-out.html" data-ta="எல்லாம் பார்" data-hi="सब देखें">See all</a></span>
+          <button class="listen"><svg class="i"><use href="icons.svg#play"/></svg><span data-ta="கேள்" data-hi="सुनें">Listen</span></button>
+        </div>
+      </div>
+
+      <div class="bubble own">
+        <div class="voice"><svg class="i sm"><use href="icons.svg#mic"/></svg><span data-ta="குரல் · 0:06" data-hi="आवाज़ · 0:06">Voice · 0:06</span></div>
+        <p lang="ta" data-ta="லக்ஷ்மிக்கு 400 போலோ கிட் அனுப்பினேன், S M மட்டும்" data-hi="லக்ஷ்மிக்கு 400 போலோ கிட் அனுப்பினேன், S M மட்டும்">லக்ஷ்மிக்கு 400 போலோ கிட் அனுப்பினேன், S M மட்டும்</p>
+      </div>
+      <div class="card draft">
+        <h3 class="row-gap"><svg class="i"><use href="icons.svg#out"/></svg><span data-ta="வேலைக்கு அனுப்பு — சரிபார்த்து சேமி" data-hi="काम के लिए भेजें — जाँचें और सेव करें">Send for work — check and save</span></h3>
+        <dl class="kv">
+          <dt data-ta="யாருக்கு" data-hi="किसको">To</dt><dd>Lakshmi Garments</dd>
+          <dt data-ta="வேலை" data-hi="काम">Work</dt><dd data-ta="தையல்" data-hi="सिलाई">Stitching</dd>
+          <dt data-ta="சரக்கு" data-hi="माल">Goods</dt><dd><span data-ta="நேவி போலோ கிட் RKF-P22 · லாட் N-0398" data-hi="नेवी पोलो किट RKF-P22 · लॉट N-0398">Navy polo kits RKF-P22 · lot N-0398</span>
+            <div class="meta" style="margin-top:2px;font-weight:500" data-ta="ஸ்டாக்கில்: 400 செட், 20 நவ. கட் செய்தது" data-hi="स्टॉक में: 400 सेट, 20 नव॰ को कटे">in stock: 400 sets, cut 20 Nov</div></dd>
+          <dt data-ta="சைஸ்" data-hi="साइज़">Sizes</dt><dd data-ta="S 200 · M 200 (400 பீஸ்)" data-hi="S 200 · M 200 (400 पीस)">S 200 · M 200 (400 pcs)</dd>
+          <dt data-ta="வர வேண்டியது" data-hi="आना है">Expected</dt><dd data-ta="சனி 28 நவ. (வழக்கம் 6 நாள்)" data-hi="शनि 28 नव॰ (आमतौर पर 6 दिन)">Sat 28 Nov (usual 6 days)</dd>
+          <dt data-ta="ரேட்" data-hi="रेट">Rate</dt><dd data-ta="₹14/பீஸ் (வழக்கம்)" data-hi="₹14/पीस (आम)">₹14/pc (usual)</dd>
+          <dt data-ta="டிரிம்ஸ்" data-hi="ट्रिम्स">Trims</dt>
+          <dd><button class="chip on"><svg class="i sm"><use href="icons.svg#plus"/></svg><span data-ta="ஸ்டைலிலிருந்து சேர்க்கவா?" data-hi="स्टाइल से जोड़ें?">Add from style?</span></button>
+            <div class="meta" style="margin-top:4px;font-weight:500" data-ta="நூல் 12 கோன் · பட்டன் 1,224 · லேபிள் 400" data-hi="धागा 12 कोन · बटन 1,224 · लेबल 400">thread 12 cones · buttons 1,224 · labels 400</div></dd>
+        </dl>
+        <p class="meta" style="margin-top:10px" data-ta="சேமி தட்டும் வரை எதுவும் பதிவாகாது." data-hi="सेव दबाने तक कुछ दर्ज नहीं होगा।">Nothing is saved until you tap Save.</p>
+        <div class="btns">
+          <button class="btn primary"><svg class="i"><use href="icons.svg#check"/></svg><span data-ta="சேமி" data-hi="सेव करें">Save</span></button>
+          <button class="btn secondary" data-ta="மாற்று" data-hi="बदलें">Change</button>
+          <button class="btn ghost" data-ta="வேண்டாம்" data-hi="रद्द करें">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="chips suggest">
+      <button class="chip"><svg class="i sm"><use href="icons.svg#clock"/></svg><span data-ta="எது தாமதம்" data-hi="क्या देर से है">What's late</span></button>
+      <button class="chip"><svg class="i sm"><use href="icons.svg#out"/></svg><span data-ta="வெளியே உள்ளது" data-hi="दूसरों के पास">Out with others</span></button>
+      <button class="chip"><svg class="i sm"><use href="icons.svg#in"/></svg><span data-ta="வர வேண்டியது" data-hi="आने वाला">Coming in</span></button>
+    </div>
+    <div class="composer">
+      <label class="input"><span class="ph" data-ta="கேளுங்கள், அல்லது என்ன அனுப்பினீர்கள் என்று சொல்லுங்கள்" data-hi="पूछें, या बताएँ क्या भेजा">Ask, or say what you sent</span></label>
+      <button class="micbtn" style="width:48px;height:48px" aria-label="Say it"><svg class="i"><use href="icons.svg#mic"/></svg></button>
+    </div>
+  </div>
+</div>
+<p class="anno" style="max-width:448px;margin:16px auto"><b>Question:</b> anything about my goods, in my words. <b>Decision:</b> whatever the answer prompts; writes go through the draft card and nothing saves without Save. Answers lead with the number and unit, show a small table and the records behind them, and say "about" for estimates. The voice transcript stays in the user's script (Tamil here) in every UI language, so a mis-hearing shows before the draft. Listen reads the answer aloud on tap; nothing auto-plays. No emoji, sparkles or filler.</p>
+<script src="mockup.js"></script>
+</body>
+</html>

@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Flow · Run R-11</title>
+<link rel="stylesheet" href="mockup.css">
+<style>
+/* Flow view only: a stepped list on mobile, stage columns with CSS connector lines on desktop. No chart library. */
+.flow{list-style:none;margin:8px 16px 0}
+.stage{position:relative;display:grid;grid-template-columns:28px minmax(0,1fr);gap:0 12px;padding-bottom:20px}
+.stage::before{content:"";position:absolute;left:13px;top:32px;bottom:4px;width:2px;background:var(--line-strong)}
+.stage:last-child::before{display:none}
+.dot{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+.dot .i{width:16px;height:16px}
+.dot.ok{background:var(--success-tint);color:var(--success)}
+.dot.late{background:var(--danger-tint);color:var(--danger)}
+.dot.go{background:var(--warning-tint);color:var(--warning)}
+.sh{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;min-height:28px}
+.sh h3{font:650 16.5px/1.3 var(--head)}
+.stage .q{margin-top:4px;font-size:14.5px}
+.stage .m{margin-top:2px;font-size:13px;color:var(--meta)}
+.br{display:block;margin-top:8px;padding:10px 12px;border-left:3px solid var(--line-strong);border-radius:0 12px 12px 0;background:#fafbfb;color:inherit;text-decoration:none;font-size:14px}
+.br .t{font-weight:650;display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center}
+.br.late{border-left-color:var(--danger)}.br.ready{border-left-color:var(--primary)}
+.stage .st,.stage .ev{white-space:normal}
+.buyers{list-style:none;margin-top:12px;font-size:14.5px}
+.buyers li{padding:8px 0;border-top:1px solid var(--line)}
+@media (min-width:1024px){
+  .frame.wide .flow{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:16px;margin:8px 0 0}
+  .frame.wide .stage{display:block;padding-bottom:0}
+  .frame.wide .stage::before{left:36px;right:-12px;top:13px;bottom:auto;width:auto;height:2px}
+  .frame.wide .stage .body{margin-top:10px}
+  .frame.wide .card{margin:16px 0 0}
+}
+</style>
+</head>
+<body>
+<!-- S9 · Flow view for Run R-11. Viewer: Ravi (owner), Ravi Knit Fashions. As of Sat 21 Nov. -->
+<div class="frame wide">
+  <aside class="rail" data-active="goods"></aside>
+  <div class="app">
+    <header class="hdr">
+      <button class="iconbtn" aria-label="Back"><svg class="i"><use href="icons.svg#chev-l"/></svg></button>
+      <h1><span data-ta="R-11 · RKF போலோ நேவி · நவ." data-hi="R-11 · RKF पोलो नेवी · नव॰">R-11 · RKF polo navy · Nov</span>
+        <span class="sub" data-ta="1,002 நேவி போலோ · 3 வாங்குபவர்கள் · இன்று 21 நவ." data-hi="1,002 नेवी पोलो · 3 खरीदार · आज 21 नव॰">1,002 navy polos · 3 buyers · today 21 Nov</span></h1>
+    </header>
+    <div class="wrap">
+      <div class="card">
+        <h3 data-ta="ஒவ்வொரு வாங்குபவருக்கும் எப்போது சொல்லலாம்?" data-hi="हर खरीदार को कब बता सकते हैं?">When can I tell each buyer?</h3>
+        <div class="sbar" style="margin-top:12px" role="img" aria-label="1,002 pcs: 400 with Amit Hosiery, 20 packed at Godown, 180 ready at Lakshmi, 402 late at Raju"><span class="a" style="width:39.9%"></span><span class="d" style="width:2%"></span><span class="b" style="width:18%"></span><span style="width:40.1%;background:var(--danger)"></span></div>
+        <div class="legend">
+          <span class="num" data-ta="1,002 பீஸ்:" data-hi="1,002 पीस:">1,002 pcs:</span>
+          <span><i style="background:var(--primary)"></i><b>400</b> <span data-ta="Amit Hosiery-க்கு போனது" data-hi="Amit Hosiery को गए">with Amit Hosiery</span></span>
+          <span><i style="background:var(--line-strong)"></i><b>20</b> <span data-ta="பேக் ஆகி Godown-ல்" data-hi="पैक होकर Godown में">packed at Godown</span></span>
+          <span><i style="background:var(--accent)"></i><b>180</b> <span data-ta="Lakshmi-யிடம் தயார்" data-hi="Lakshmi के पास तैयार">ready at Lakshmi</span></span>
+          <span><i style="background:var(--danger)"></i><b>402</b> <span data-ta="Raju-விடம், தாமதம்" data-hi="Raju के पास, देर">at Raju, late</span></span>
+        </div>
+        <ul class="buyers">
+          <li><b>Amit Hosiery</b>: <span data-ta="600-ல் 400 அனுப்பியது 20 நவ. (S 200 · M 200), வழியில், 25 நவ. சேரும். மீதி L 80 · XL 80 · XXL 40 — Raju-வுக்காக காத்திருக்கு (தாமதம், தேதி இல்லை)." data-hi="600 में से 400 भेजे 20 नव॰ (S 200 · M 200), रास्ते में, 25 नव॰ पहुँचेंगे। बाकी L 80 · XL 80 · XXL 40 — Raju का इंतज़ार (देर, तारीख नहीं)।">400 of 600 sent 20 Nov (S 200 · M 200), in transit, arriving 25 Nov. Still needs L 80 · XL 80 · XXL 40 — waits on Raju (late, no date yet).</span></li>
+          <li><b>Murugan Fashions</b>: <span data-ta="300-ல் 0. S 100 · M 100 எடுத்து வந்ததும் போகலாம்: Godown-ல் பேக் ஆன 20 S + Lakshmi-யின் 180 (S 80 · M 100, தயார்; சொன்னது திங்கள் 23 நவ.). L 50 · XL 30 · XXL 20 — Raju-வுக்காக காத்திருக்கு." data-hi="300 में से 0। S 100 · M 100 लाते ही जा सकते हैं: Godown में पैक 20 S + Lakshmi के 180 (S 80 · M 100, तैयार; वादा सोम 23 नव॰)। L 50 · XL 30 · XXL 20 — Raju का इंतज़ार।">0 of 300. S 100 · M 100 can go as soon as you collect: the 20 packed S + Lakshmi's 180 (S 80 · M 100, ready; promised Mon 23 Nov). L 50 · XL 30 · XXL 20 wait on Raju.</span></li>
+          <li><b>Rahul Traders</b>: <span data-ta="102-ல் 0. எல்லாம் Raju-விடமிருந்து (L 30 · XL 50 · XXL 22) — Raju தேதி சொல்லும் வரை சொல்ல முடியாது." data-hi="102 में से 0। सब Raju से (L 30 · XL 50 · XXL 22) — Raju तारीख बताए तब तक नहीं बता सकते।">0 of 102. All from Raju (L 30 · XL 50 · XXL 22) — no date until Raju gives one.</span></li>
+        </ul>
+      </div>
+
+      <div class="sec-h"><h2 data-ta="கட்டம் கட்டமாக" data-hi="हर चरण">Stage by stage</h2><span class="hint" data-ta="தட்டினால் வேலை திறக்கும்" data-hi="टैप करें, जॉब खुलेगा">Tap a row to open the job</span></div>
+      <ol class="flow">
+        <li class="stage">
+          <span class="dot ok"><svg class="i"><use href="icons.svg#check"/></svg></span>
+          <div class="body">
+            <div class="sh"><h3 data-ta="துணி" data-hi="कपड़ा">Fabric</h3><span class="st ok"><svg class="i"><use href="icons.svg#check"/></svg><span data-ta="எல்லாம் வெட்டியாச்சு" data-hi="सब कट गया">All cut</span></span></div>
+            <div class="q"><span data-ta="நேவி SJ" data-hi="नेवी SJ">Navy SJ</span> <span class="num">240</span> kg <span data-ta="· 2 லாட்" data-hi="· 2 लॉट">· 2 lots</span></div>
+            <div class="br"><div class="t">D-4471 · 150 kg</div><span data-ta="→ S, M · Lakshmi-க்கு" data-hi="→ S, M · Lakshmi को">→ S, M · for Lakshmi</span></div>
+            <div class="br"><div class="t">D-4502 · 90 kg</div><span data-ta="→ L, XL, XXL · Raju-க்கு" data-hi="→ L, XL, XXL · Raju को">→ L, XL, XXL · for Raju</span></div>
+          </div>
+        </li>
+        <li class="stage">
+          <span class="dot ok"><svg class="i"><use href="icons.svg#check"/></svg></span>
+          <div class="body">
+            <div class="sh"><h3 data-ta="கட்டிங்" data-hi="कटिंग">Cutting</h3><span class="st ok"><svg class="i"><use href="icons.svg#check"/></svg><span data-ta="முடிந்தது" data-hi="हो गया">Done</span></span></div>
+            <div class="m" data-ta="நம்ம யூனிட் · Cutting floor" data-hi="अपनी यूनिट · Cutting floor">In-house · Cutting floor</div>
+            <div class="q"><span class="num">1,002</span> <span data-ta="செட் வெட்டியது" data-hi="सेट कटे">sets cut</span></div>
+            <div class="m">S 300 · M 300 · L 160 · XL 160 · XXL 82</div>
+            <div class="m" data-ta="240 kg-லிருந்து · 18 kg கட்டிங் வேஸ்ட்" data-hi="240 kg से · 18 kg कटिंग वेस्ट">From 240 kg · 18 kg cut waste</div>
+          </div>
+        </li>
+        <li class="stage">
+          <span class="dot late"><svg class="i"><use href="icons.svg#clock"/></svg></span>
+          <div class="body">
+            <div class="sh"><h3 data-ta="தையல்" data-hi="सिलाई">Stitching</h3><span class="st late"><svg class="i"><use href="icons.svg#clock"/></svg><span data-ta="1 தாமதம்" data-hi="1 देर">1 late</span></span></div>
+            <a class="br ready" href="job.html">
+              <div class="t">Lakshmi Garments <span class="meta">S, M · D-4471</span></div>
+              <div data-ta="600 அனுப்பியது 13 நவ. · 420 திரும்பியது · 180 Lakshmi-யிடம்" data-hi="600 भेजे 13 नव॰ · 420 वापस · 180 Lakshmi के पास">600 sent 13 Nov · 420 back · 180 at Lakshmi</div>
+              <div class="row-gap" style="margin-top:4px"><span class="st ready"><svg class="i"><use href="icons.svg#check"/></svg><span data-ta="எடுக்க தயார்" data-hi="लेने को तैयार">Ready to collect</span></span><span class="meta" data-ta="சொன்னது திங்கள் 23 நவ." data-hi="वादा सोम 23 नव॰">promised Mon 23 Nov</span></div>
+            </a>
+            <a class="br late" href="job.html">
+              <div class="t">Raju Stitching Works <span class="meta">L, XL, XXL · D-4502</span></div>
+              <div data-ta="402 அனுப்பியது 12 நவ. · 0 திரும்பியது · 402 Raju-விடம்" data-hi="402 भेजे 12 नव॰ · 0 वापस · 402 Raju के पास">402 sent 12 Nov · 0 back · 402 at Raju</div>
+              <div class="row-gap" style="margin-top:4px"><span class="st late"><svg class="i"><use href="icons.svg#clock"/></svg><span data-ta="2 நாள் தாமதம்" data-hi="2 दिन देर">Late 2 days</span></span><span class="meta" data-ta="வர வேண்டியது 19 நவ." data-hi="आना था 19 नव॰">expected 19 Nov</span></div>
+            </a>
+            <div class="m" style="margin-top:6px" data-ta="1,002 அனுப்பியது = 420 திரும்பியது + 180 Lakshmi-யிடம் + 402 Raju-விடம்" data-hi="1,002 भेजे = 420 वापस + 180 Lakshmi के पास + 402 Raju के पास">1,002 sent = 420 back + 180 at Lakshmi + 402 at Raju</div>
+          </div>
+        </li>
+        <li class="stage">
+          <span class="dot go"><svg class="i"><use href="icons.svg#package"/></svg></span>
+          <div class="body">
+            <div class="sh"><h3 data-ta="பேக்கிங்" data-hi="पैकिंग">Packing</h3><span class="st due"><svg class="i"><use href="icons.svg#package"/></svg><span data-ta="1,002-ல் 420" data-hi="1,002 में से 420">420 of 1,002</span></span></div>
+            <div class="m" data-ta="நம்ம யூனிட் · Godown" data-hi="अपनी यूनिट · Godown">In-house · Godown</div>
+            <div class="q"><span class="num">420</span> <span data-ta="பேக் ஆனது" data-hi="पैक हुए">packed</span></div>
+            <div class="m" data-ta="400 Amit Hosiery-க்கு போனது (S 200 · M 200) · 20 S Godown-ல்" data-hi="400 Amit Hosiery को गए (S 200 · M 200) · 20 S Godown में">400 gone to Amit Hosiery (S 200 · M 200) · 20 S at Godown</div>
+          </div>
+        </li>
+        <li class="stage">
+          <span class="dot go"><svg class="i"><use href="icons.svg#truck"/></svg></span>
+          <div class="body">
+            <div class="sh"><h3 data-ta="அனுப்புதல்" data-hi="डिस्पैच">Dispatch</h3><span class="st due"><svg class="i"><use href="icons.svg#truck"/></svg><span data-ta="1,002-ல் 400" data-hi="1,002 में से 400">400 of 1,002</span></span></div>
+            <div class="br ready"><div class="t">Amit Hosiery <span class="meta">Kolkata</span></div>
+              <div data-ta="600-ல் 400 அனுப்பியது 20 நவ. (S 200 · M 200) · மீதி L 80 · XL 80 · XXL 40 Raju-விடமிருந்து" data-hi="600 में से 400 भेजे 20 नव॰ (S 200 · M 200) · बाकी L 80 · XL 80 · XXL 40 Raju से">400 of 600 sent 20 Nov (S 200 · M 200) · still needs L 80 · XL 80 · XXL 40 from Raju</div>
+              <span class="st neutral" style="margin-top:4px"><svg class="i"><use href="icons.svg#truck"/></svg><span data-ta="வழியில் · 25 நவ. சேரும்" data-hi="रास्ते में · 25 नव॰ पहुँचेगा">In transit · expected 25 Nov</span></span></div>
+            <div class="br"><div class="t">Murugan Fashions</div>
+              <div data-ta="300-ல் 0 அனுப்பியது · S 100 · M 100 பேக் ஆன 20 S + Lakshmi-யின் 180-லிருந்து · L 50 · XL 30 · XXL 20 Raju-விடமிருந்து" data-hi="300 में से 0 भेजे · S 100 · M 100 पैक 20 S + Lakshmi के 180 से · L 50 · XL 30 · XXL 20 Raju से">0 of 300 sent · S 100 · M 100 from the 20 packed S + Lakshmi's 180 · L 50 · XL 30 · XXL 20 from Raju</div>
+              <span class="st neutral" style="margin-top:4px"><svg class="i"><use href="icons.svg#clock"/></svg><span data-ta="தையலுக்காக காத்திருக்கு" data-hi="सिलाई का इंतज़ार">Waiting for stitching</span></span></div>
+            <div class="br"><div class="t">Rahul Traders <span class="meta">Delhi</span></div>
+              <div data-ta="102-ல் 0 அனுப்பியது · எல்லாம் Raju-விடமிருந்து (L 30 · XL 50 · XXL 22)" data-hi="102 में से 0 भेजे · सब Raju से (L 30 · XL 50 · XXL 22)">0 of 102 sent · all from Raju (L 30 · XL 50 · XXL 22)</div>
+              <span class="st neutral" style="margin-top:4px"><svg class="i"><use href="icons.svg#clock"/></svg><span data-ta="தையலுக்காக காத்திருக்கு" data-hi="सिलाई का इंतज़ार">Waiting for stitching</span></span></div>
+          </div>
+        </li>
+      </ol>
+
+      <p class="anno"><b>Question:</b> for this run, where is every piece now, what's done, what's late? <b>Decision:</b> what date to tell each buyer; chase Raju; collect from Lakshmi. Mobile is a stepped list with branches indented; desktop is the same five stages as columns joined by plain CSS lines. No Sankey, no graph library. kg (fabric, cut waste) and pcs (sets onward) are never added together. Stitching shows its own reconciliation line.</p>
+    </div>
+    <nav class="nav" data-active="goods" data-badgegoods="1"></nav>
+  </div>
+</div>
+<script src="mockup.js"></script>
+</body>
+</html>

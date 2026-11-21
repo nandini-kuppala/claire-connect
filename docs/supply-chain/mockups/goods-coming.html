@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Goods · Coming in</title>
+<link rel="stylesheet" href="mockup.css">
+<style>
+/* Rows here carry an action button, so the row is a div and only the name links to the ledger. */
+.lrow .t a{color:inherit;text-decoration:none}
+.lrow .act{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap}
+.todo{margin-top:10px;display:flex;gap:8px;align-items:flex-start}
+</style>
+</head>
+<body>
+<!-- S1c · Goods → Coming in. Viewer: Ravi (owner), Ravi Knit Fashions. Today Sat 21 Nov 2026. -->
+<div class="frame wide">
+  <aside class="rail" data-active="goods"></aside>
+  <div class="app">
+    <header class="hdr">
+      <h1 data-ta="சரக்கு" data-hi="माल">Goods</h1>
+      <button class="iconbtn lbl"><svg class="i"><use href="icons.svg#search"/></svg><span data-ta="தேடு" data-hi="खोजें">Find</span></button>
+      <button class="iconbtn lbl"><svg class="i"><use href="icons.svg#chart"/></svg><span data-ta="அறிக்கைகள்" data-hi="रिपोर्ट">Reports</span></button>
+      <button class="btn primary only-desk"><svg class="i"><use href="icons.svg#plus"/></svg><span data-ta="பதிவு செய்" data-hi="दर्ज करें">Record</span></button>
+      <button class="btn tint only-desk"><svg class="i"><use href="icons.svg#mic"/></svg><span data-ta="சொல்லுங்கள்" data-hi="बोलकर बताएँ">Say it</span></button>
+    </header>
+    <div class="wrap">
+      <div class="chips">
+        <button class="chip danger"><svg class="i sm"><use href="icons.svg#clock"/></svg><span class="n">2</span> <span data-ta="தாமதம்" data-hi="देर">late</span></button>
+        <button class="chip danger"><svg class="i sm"><use href="icons.svg#scale"/></svg><span class="n">1</span> <span data-ta="வித்தியாசம்" data-hi="फ़र्क">dispute</span></button>
+      </div>
+      <div class="seg" role="tablist">
+        <button role="tab" data-ta="வெளியே உள்ளது" data-hi="दूसरों के पास">Out with others</button>
+        <button role="tab" data-ta="என் யூனிட்டில்" data-hi="मेरी यूनिट में">In my unit</button>
+        <button class="on" role="tab" data-ta="வர வேண்டியது" data-hi="आने वाला">Coming in</button>
+      </div>
+
+      <div class="sec-h">
+        <h2 data-ta="5 சரக்கு வர வேண்டும்" data-hi="5 माल आने हैं">5 things to come in</h2>
+        <button class="hint"><span data-ta="வரிசை: தாமதம் முதலில்" data-hi="क्रम: देर वाले पहले">Sorted: late first</span> <svg class="i sm" style="vertical-align:-3px"><use href="icons.svg#chev-d"/></svg></button>
+      </div>
+
+      <!-- Mobile: one row per expected receipt, status under the name, one action per row -->
+      <div class="list only-mob">
+        <div class="groupl" data-ta="தாமதம்" data-hi="देर से">Late</div>
+        <div class="lrow">
+          <span class="av" style="background:#8a5a12">KT</span>
+          <div class="main">
+            <div class="t"><a href="party.html">Kumaran Trims</a></div>
+            <div class="stl"><span class="st late"><svg class="i"><use href="icons.svg#clock"/></svg><span data-ta="3 நாள் தாமதம்" data-hi="3 दिन देर">Late 3 days</span></span></div>
+            <div class="q"><span class="num">20</span> <span data-ta="கிராஸ் பட்டன் · வாங்கியது" data-hi="ग्रोस बटन · खरीदे">gross buttons · bought</span></div>
+            <div class="m" data-ta="50 கிராஸ் ஆர்டர் 14 நவ. · 30 கிராஸ் 15 நவ. வந்தது · வர வேண்டியது 18 நவ." data-hi="50 ग्रोस ऑर्डर 14 नव॰ · 30 ग्रोस 15 नव॰ आए · आना था 18 नव॰">50 gross ordered 14 Nov · 30 gross came 15 Nov · expected 18 Nov</div>
+            <div class="act"><button class="btn tint sm"><svg class="i sm"><use href="icons.svg#in"/></svg><span data-ta="வந்தது" data-hi="आ गया">Arrived</span></button></div>
+          </div>
+        </div>
+        <div class="lrow">
+          <span class="av" style="background:#1F2A44">RS</span>
+          <div class="main">
+            <div class="t"><a href="party.html">Raju Stitching Works</a></div>
+            <div class="stl"><span class="st late"><svg class="i"><use href="icons.svg#clock"/></svg><span data-ta="2 நாள் தாமதம்" data-hi="2 दिन देर">Late 2 days</span></span></div>
+            <div class="q"><span class="num">402</span> <span data-ta="பீஸ் போலோ தைத்து · L, XL, XXL" data-hi="पीस पोलो सिलकर · L, XL, XXL">pcs polos, stitched · L, XL, XXL</span></div>
+            <div class="m" data-ta="கிட் அனுப்பியது 12 நவ. · வர வேண்டியது 19 நவ. · இன்னும் எதுவும் வரவில்லை" data-hi="किट भेजे 12 नव॰ · आना था 19 नव॰ · अभी कुछ नहीं आया">Kits sent 12 Nov · expected 19 Nov · nothing back yet</div>
+            <div class="act"><button class="btn tint sm"><svg class="i sm"><use href="icons.svg#in"/></svg><span data-ta="வந்தது" data-hi="आ गया">Arrived</span></button></div>
+          </div>
+        </div>
+
+        <div class="groupl" data-ta="இன்று" data-hi="आज">Today</div>
+        <div class="lrow">
+          <span class="av" style="background:#15803D">ND</span>
+          <div class="main">
+            <div class="t"><a href="party.html">Noyyal Dyeing</a></div>
+            <div class="stl"><span class="st due"><svg class="i"><use href="icons.svg#clock"/></svg><span data-ta="இன்று வர வேண்டும்" data-hi="आज आना है">Due today</span></span></div>
+            <div class="q"><span class="num">≈ 89</span> kg <span data-ta="நேவி SJ இன்று வர வேண்டும்" data-hi="नेवी SJ आज आना है">navy SJ expected today</span></div>
+            <div class="m" data-ta="≈ 95 kg கிரே இன்னும் சாயத்தில் · வழக்கமான 7 % சேதாரத்துக்குப் பின் மதிப்பீடு · J-0412" data-hi="≈ 95 kg ग्रे अभी रंगाई में · आम 7 % घटत के बाद अंदाज़ा · J-0412">≈ 95 kg grey still being dyed · estimate after usual 7 % loss · J-0412</div>
+            <div class="act"><button class="btn tint sm"><svg class="i sm"><use href="icons.svg#in"/></svg><span data-ta="வந்தது" data-hi="आ गया">Arrived</span></button></div>
+          </div>
+        </div>
+        <div class="lrow">
+          <span class="av" style="background:#0D9488">LG</span>
+          <div class="main">
+            <div class="t"><a href="party.html">Lakshmi Garments</a></div>
+            <div class="stl"><span class="st ready"><svg class="i"><use href="icons.svg#check"/></svg><span data-ta="எடுக்க தயார்" data-hi="लेने को तैयार">Ready to collect</span></span></div>
+            <div class="q"><span class="num">180</span> <span data-ta="பீஸ் போலோ · S 80 · M 100" data-hi="पीस पोलो · S 80 · M 100">pcs polos · S 80 · M 100</span></div>
+            <div class="m" data-ta="இன்று தயார் எனக் குறித்தார் · சொன்னது திங்கள் 23 நவ. · 600 அனுப்பியது · 420 வந்தது · J-0415" data-hi="आज तैयार बताया · वादा सोम 23 नव॰ · 600 भेजे · 420 आए · J-0415">Marked ready today · promised Mon 23 Nov · 600 sent · 420 back · J-0415</div>
+            <div class="act"><button class="btn tint sm"><svg class="i sm"><use href="icons.svg#in"/></svg><span data-ta="வந்தது" data-hi="आ गया">Arrived</span></button></div>
+          </div>
+        </div>
+
+        <div class="groupl" data-ta="அடுத்த நாட்களில்" data-hi="अगले दिनों में">Next days</div>
+        <div class="lrow">
+          <span class="av" style="background:#6d4466">AK</span>
+          <div class="main">
+            <div class="t"><a href="party.html">Arul Knitting Mills</a></div>
+            <div class="stl"><span class="st neutral"><svg class="i"><use href="icons.svg#truck"/></svg><span data-ta="வர வேண்டியது 24 நவ." data-hi="आना है 24 नव॰">Expected 24 Nov</span></span></div>
+            <div class="q"><span class="num">300</span> kg <span data-ta="கிரே SJ 180 GSM · வாங்கியது" data-hi="ग्रे SJ 180 GSM · खरीदा">grey SJ 180 GSM · bought</span></div>
+            <div class="m"><svg class="i sm" style="vertical-align:-3px"><use href="icons.svg#forward"/></svg> <span data-ta="நேராக Noyyal Dyeing-க்கு வரும், உங்களிடம் அல்ல · Noyyal வந்ததை உறுதி செய்வார்" data-hi="सीधे Noyyal Dyeing पहुँचेगा, आपके पास नहीं · Noyyal आने की पुष्टि करेंगे">Delivered to Noyyal Dyeing, not to you · Noyyal confirms when it lands</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Desktop: the same as a table -->
+      <div class="only-desk card" style="margin:8px 0 0;padding:4px 8px">
+        <table class="t">
+          <thead><tr><th data-ta="யாரிடமிருந்து" data-hi="किससे">From</th><th data-ta="என்ன" data-hi="क्या">What</th><th class="r" data-ta="வர வேண்டிய அளவு" data-hi="आने वाली मात्रा">Coming</th><th data-ta="எதிர்பார்ப்பு" data-hi="कब तक">Expected</th><th data-ta="நிலை" data-hi="स्थिति">Status</th><th></th></tr></thead>
+          <tbody>
+            <tr><td><b>Kumaran Trims</b><div class="meta" data-ta="உங்கள் தொடர்பு" data-hi="आपका संपर्क">Your contact</div></td><td data-ta="பட்டன் · 50 கிராஸ் ஆர்டரில் 30 வந்தது" data-hi="बटन · 50 ग्रोस में से 30 आए">Buttons · 30 of 50 gross came</td><td class="r num" data-ta="20 கிராஸ்" data-hi="20 ग्रोस">20 gross</td><td data-ta="18 நவ." data-hi="18 नव॰">18 Nov</td><td><span class="st late"><svg class="i"><use href="icons.svg#clock"/></svg><span data-ta="3 நாள் தாமதம்" data-hi="3 दिन देर">Late 3 days</span></span></td><td><button class="btn tint sm" data-ta="வந்தது" data-hi="आ गया">Arrived</button></td></tr>
+            <tr><td><b>Raju Stitching Works</b><div class="meta" data-ta="CLAIRE-ல் உள்ளனர்" data-hi="CLAIRE पर हैं">On CLAIRE</div></td><td data-ta="போலோ தைத்து L, XL, XXL · J-0416" data-hi="पोलो सिलकर L, XL, XXL · J-0416">Polos stitched L, XL, XXL · J-0416</td><td class="r num" data-ta="402 பீஸ்" data-hi="402 पीस">402 pcs</td><td data-ta="19 நவ." data-hi="19 नव॰">19 Nov</td><td><span class="st late"><svg class="i"><use href="icons.svg#clock"/></svg><span data-ta="2 நாள் தாமதம்" data-hi="2 दिन देर">Late 2 days</span></span></td><td><button class="btn tint sm" data-ta="வந்தது" data-hi="आ गया">Arrived</button></td></tr>
+            <tr><td><b>Noyyal Dyeing</b><div class="meta" data-ta="CLAIRE-ல் உள்ளனர்" data-hi="CLAIRE पर हैं">On CLAIRE</div></td><td><span data-ta="நேவி SJ 180 GSM, லாட் K-221 · J-0412" data-hi="नेवी SJ 180 GSM, लॉट K-221 · J-0412">Navy SJ 180 GSM, lot K-221 · J-0412</span><div class="meta" data-ta="≈ 95 kg கிரே இன்னும் சாயத்தில் · வழக்கமான 7 % சேதாரத்துக்குப் பின்" data-hi="≈ 95 kg ग्रे अभी रंगाई में · आम 7 % घटत के बाद">≈ 95 kg grey still being dyed · after usual 7 % loss</div></td><td class="r num">≈ 89 kg</td><td data-ta="21 நவ." data-hi="21 नव॰">21 Nov</td><td><span class="st due"><svg class="i"><use href="icons.svg#clock"/></svg><span data-ta="இன்று வர வேண்டும்" data-hi="आज आना है">Due today</span></span></td><td><button class="btn tint sm" data-ta="வந்தது" data-hi="आ गया">Arrived</button></td></tr>
+            <tr><td><b>Lakshmi Garments</b><div class="meta" data-ta="CLAIRE-ல் உள்ளனர்" data-hi="CLAIRE पर हैं">On CLAIRE</div></td><td data-ta="போலோ S 80 · M 100 · J-0415" data-hi="पोलो S 80 · M 100 · J-0415">Polos S 80 · M 100 · J-0415</td><td class="r num" data-ta="180 பீஸ்" data-hi="180 पीस">180 pcs</td><td data-ta="திங்கள் 23 நவ." data-hi="सोम 23 नव॰">Mon 23 Nov</td><td><span class="st ready"><svg class="i"><use href="icons.svg#check"/></svg><span data-ta="எடுக்க தயார்" data-hi="लेने को तैयार">Ready to collect</span></span></td><td><button class="btn tint sm" data-ta="வந்தது" data-hi="आ गया">Arrived</button></td></tr>
+            <tr><td><b>Arul Knitting Mills</b><div class="meta" data-ta="CLAIRE-ல் உள்ளனர்" data-hi="CLAIRE पर हैं">On CLAIRE</div></td><td><span data-ta="கிரே SJ 180 GSM · வாங்கியது" data-hi="ग्रे SJ 180 GSM · खरीदा">Grey SJ 180 GSM · bought</span><div class="meta" data-ta="Noyyal Dyeing-க்கு நேராக, உங்களிடம் அல்ல" data-hi="सीधे Noyyal Dyeing को, आपके पास नहीं">Delivered to Noyyal Dyeing, not to you</div></td><td class="r num">300 kg</td><td data-ta="24 நவ." data-hi="24 नव॰">24 Nov</td><td><span class="st neutral"><svg class="i"><use href="icons.svg#truck"/></svg><span data-ta="வழியில்" data-hi="रास्ते में">On the way</span></span></td><td class="meta" data-ta="Noyyal உறுதி செய்வார்" data-hi="Noyyal पुष्टि करेंगे">Noyyal confirms</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p class="anno"><b>Question:</b> what should arrive, from whom, and when? <b>Decision:</b> plan labour for tomorrow; chase late suppliers before the line stops. One action per row: <b>Arrived</b> (staff-friendly); once the sender records a figure (none at 10:30), the row switches to <b>Check and confirm</b>. ≈ is a read-time estimate; tapping it shows the sum. A direct delivery to a job worker appears here but is confirmed by the job worker, not by you.</p>
+    </div>
+    <div class="bottombar">
+      <button class="btn primary lg"><svg class="i"><use href="icons.svg#plus"/></svg><span data-ta="பதிவு செய்" data-hi="दर्ज करें">Record</span></button>
+      <button class="btn tint lg"><svg class="i"><use href="icons.svg#mic"/></svg><span data-ta="சொல்லுங்கள்" data-hi="बोलें">Say it</span></button>
+    </div>
+    <nav class="nav" data-active="goods" data-badgegoods="1"></nav>
+  </div>
+</div>
+<script src="mockup.js"></script>
+</body>
+</html>

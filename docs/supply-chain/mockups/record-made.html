@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Record · Cut</title>
+<link rel="stylesheet" href="mockup.css">
+<style>
+  /* Form screens have no bottom nav: the action bar sits at the bottom edge and wraps when labels are long. */
+  .bottombar.form{bottom:0;flex-wrap:wrap}
+  .bottombar.form .btn{flex:1 1 150px}
+  .app{padding-bottom:150px}
+  /* "usual" meta must wrap in Tamil, never push the value off-screen */
+  .input .usual{white-space:normal;text-align:right;line-height:1.3;max-width:55%}
+  .input .val{flex:1;min-width:0;font-size:16px;font-weight:600}
+  .fmeta{margin-top:4px;font-size:12.5px;color:var(--meta)}
+  .gridwrap{overflow-x:auto;margin:10px -6px 0}
+  .grid tbody th,.grid tfoot th{text-align:left;font-size:13px;color:var(--ink-2);padding-right:6px;white-space:nowrap}
+  .input.qty{width:136px;flex:none;min-height:44px;padding:0 10px}
+  .input.qty input{text-align:right;font-family:var(--head);font-weight:700;font-variant-numeric:tabular-nums}
+  .unitchips .chip{min-height:44px}
+  .linehead{display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap}
+  .linehead .t{flex:1;min-width:0;font-weight:650;font-size:15.5px}
+  .qtyrow{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-top:10px}
+  /* Live balance strip: in = sets + cut waste + unexplained */
+  .strip{margin:12px 16px 0}
+  .strip .line{font-size:15px;margin-bottom:8px;line-height:1.5}
+  .strip .legend{flex-direction:column;gap:4px}
+</style>
+</head>
+<body>
+<!-- S4b · Record form: Made here → Cut (in-house), Run R-13's cutting on 20 Nov. Viewer: Ravi (owner), Ravi Knit Fashions. -->
+<div class="frame">
+  <div class="app">
+    <header class="hdr">
+      <button class="iconbtn" aria-label="Back"><svg class="i"><use href="icons.svg#chev-l"/></svg></button>
+      <h1><span data-ta="கட்டிங்" data-hi="कटिंग">Cut</span><span class="sub" data-ta="இங்கே செய்தது · R-13 · 20 நவ." data-hi="यहीं बनाया · R-13 · 20 नव॰">Made here · Run R-13 · 20 Nov</span></h1>
+    </header>
+
+    <div class="field">
+      <label data-ta="ஸ்டைல்" data-hi="स्टाइल">Style</label>
+      <div class="input"><span class="val"><span data-ta="RKF-P22 போலோ" data-hi="RKF-P22 पोलो">RKF-P22 polo</span></span><span class="usual" data-ta="R-13 ரன்னிலிருந்து" data-hi="R-13 रन से">from run R-13</span><svg class="i sm faint"><use href="icons.svg#chev-d"/></svg></div>
+    </div>
+
+    <div class="sec-h"><h2 data-ta="ஸ்டாக்கிலிருந்து எடுத்தது" data-hi="स्टॉक से लिया">Taken from stock</h2></div>
+    <div class="card">
+      <div class="linehead">
+        <div class="t" data-ta="நேவி SJ 180 GSM ஃபினிஷ்டு" data-hi="नेवी SJ 180 GSM फ़िनिश्ड">Navy SJ 180 GSM finished</div>
+        <span class="tagp"><span data-ta="லாட்" data-hi="लॉट">Lot</span>&nbsp;N-0398</span>
+      </div>
+      <div class="qtyrow">
+        <button class="chip"><svg class="i sm"><use href="icons.svg#store"/></svg><span data-ta="Godown-லிருந்து" data-hi="Godown से">from Godown</span></button>
+        <label class="input qty"><input inputmode="decimal" value="100" aria-label="Fabric kg">kg</label>
+      </div>
+    </div>
+    <div class="field"><button class="btn secondary block"><svg class="i"><use href="icons.svg#plus"/></svg><span data-ta="இன்னொரு துணி / லாட் சேர்" data-hi="एक और कपड़ा / लॉट जोड़ें">Add another fabric or lot</span></button></div>
+
+    <div class="sec-h"><h2 data-ta="என்ன வந்தது" data-hi="क्या बना">What came out</h2></div>
+    <div class="card">
+      <div class="linehead">
+        <div class="t"><span data-ta="நேவி போலோ கிட்" data-hi="नेवी पोलो किट">Navy polo kits</span> · RKF-P22</div>
+        <span class="tagp"><span data-ta="லாட்" data-hi="लॉट">Lot</span>&nbsp;N-0398</span>
+      </div>
+      <div class="fmeta" data-ta="ஸ்டைல்படி ஒரு செட்டுக்கு ≈ 0.23 kg" data-hi="स्टाइल के हिसाब से एक सेट ≈ 0.23 kg">≈ 0.23 kg per set, as per the style</div>
+      <div class="row-gap" style="margin-top:10px">
+        <div class="unitchips">
+          <button class="chip sel"><svg class="i sm"><use href="icons.svg#check"/></svg><span data-ta="செட்" data-hi="सेट">sets</span></button>
+          <button class="chip" data-ta="டஜன்" data-hi="दर्जन">dozen</button>
+        </div>
+      </div>
+      <div class="gridwrap">
+        <table class="grid">
+          <thead><tr><th data-ta="நிறம்" data-hi="रंग">Colour</th><th>S</th><th>M</th><th>L</th><th>XL</th><th>XXL</th><th data-ta="மொத்தம்" data-hi="कुल">Total</th></tr></thead>
+          <tbody><tr><th data-ta="நேவி" data-hi="नेवी">Navy</th>
+            <td><input inputmode="numeric" value="200" aria-label="Navy S"></td>
+            <td><input inputmode="numeric" value="200" aria-label="Navy M"></td>
+            <td><input inputmode="numeric" placeholder="0" aria-label="Navy L"></td>
+            <td><input inputmode="numeric" placeholder="0" aria-label="Navy XL"></td>
+            <td><input inputmode="numeric" placeholder="0" aria-label="Navy XXL"></td>
+            <td class="tot">400</td></tr></tbody>
+          <tfoot><tr><th data-ta="மொத்தம்" data-hi="कुल">Total</th><td class="tot">200</td><td class="tot">200</td><td class="tot faint">0</td><td class="tot faint">0</td><td class="tot faint">0</td><td class="tot">400</td></tr></tfoot>
+        </table>
+      </div>
+      <div class="fmeta"><span class="num" style="color:var(--ink)">400</span> <span data-ta="செட் · S, M மட்டும் · Cutting floor ஸ்டாக்கில் சேரும்" data-hi="सेट · सिर्फ़ S, M · Cutting floor के स्टॉक में जुड़ेंगे">sets · S and M only · added to stock at Cutting floor</span></div>
+    </div>
+
+    <div class="field">
+      <label data-ta="கட் வேஸ்ட்" data-hi="कटिंग वेस्ट (झूट)">Cut waste</label>
+      <div class="input"><input inputmode="decimal" value="7.5" aria-label="Cut waste kg">kg<span class="usual" data-ta="வேஸ்ட் மூட்டை எடை" data-hi="वेस्ट बोरी का वज़न">weighed waste bag</span></div>
+    </div>
+
+    <div class="sec-h"><h2 data-ta="துணி கணக்கு சரியா?" data-hi="कपड़े का हिसाब मिलता है?">Does the fabric add up?</h2></div>
+    <div class="panel strip">
+      <div class="line"><b class="num">100</b> kg <span data-ta="உள்ளே" data-hi="अंदर">in</span> → <b class="num">400</b> <span data-ta="செட்" data-hi="सेट">sets</span> × ≈ 0.23 kg = <b class="num">≈ 92</b> kg <span data-ta="செட்டில்" data-hi="सेट में">in sets</span> + <b class="num">7.5</b> kg <span data-ta="கட் வேஸ்ட்" data-hi="कटिंग वेस्ट">cut waste</span> → <b class="num">≈ 0.5</b> kg <span data-ta="கணக்கில் வரவில்லை" data-hi="हिसाब में नहीं">unexplained</span></div>
+      <div class="sbar" role="img" aria-label="100 kg in: about 92 kg in 400 sets, 7.5 kg cut waste, about 0.5 kg unexplained"><span class="a" style="width:92%"></span><span class="b" style="width:7.5%"></span><span class="d" style="width:0.5%;min-width:4px"></span></div>
+      <div class="legend">
+        <span><i style="background:var(--primary)"></i><span data-ta="≈ 92 kg · 400 செட்டில்" data-hi="≈ 92 kg · 400 सेट में">≈ 92 kg · in 400 sets</span></span>
+        <span><i style="background:var(--accent)"></i><span data-ta="7.5 kg · கட் வேஸ்ட்" data-hi="7.5 kg · कटिंग वेस्ट">7.5 kg · cut waste</span></span>
+        <span><i style="background:var(--line-strong)"></i><span data-ta="≈ 0.5 kg · கணக்கில் வரவில்லை" data-hi="≈ 0.5 kg · हिसाब में नहीं">≈ 0.5 kg · unexplained</span></span>
+        <span class="meta" data-ta="= 100 kg உள்ளே" data-hi="= 100 kg अंदर">= 100 kg in</span>
+      </div>
+      <div style="margin-top:10px"><span class="st ok"><svg class="i"><use href="icons.svg#check"/></svg><span data-ta="≈ 0.5 kg (0.5 %) · கட்டிங் அளவுக்குள்" data-hi="≈ 0.5 kg (0.5 %) · कटिंग के आम दायरे में">≈ 0.5 kg (0.5 %) · within the cutting norm</span></span></div>
+    </div>
+
+    <div class="field">
+      <label data-ta="இடம்" data-hi="जगह">Place</label>
+      <div class="input"><span class="val" data-ta="கட்டிங் ஃப்ளோர்" data-hi="कटिंग फ़्लोर">Cutting floor</span><span class="usual" data-ta="வழக்கம்" data-hi="हमेशा वाला">usual</span><svg class="i sm faint"><use href="icons.svg#chev-d"/></svg></div>
+    </div>
+
+    <div class="field">
+      <label data-ta="தேதி" data-hi="तारीख">Date</label>
+      <div class="input"><span class="val" data-ta="வெள்ளி 20 நவ." data-hi="शुक्र 20 नव॰">Fri 20 Nov</span></div>
+    </div>
+
+    <div class="field">
+      <label data-ta="செய்தது" data-hi="किसने किया">Done by</label>
+      <div class="input"><span class="val"><span data-ta="உள்ளே (Ravi Knit Fashions)" data-hi="अंदर (Ravi Knit Fashions)">In-house (Ravi Knit Fashions)</span></span><svg class="i sm faint"><use href="icons.svg#chev-d"/></svg></div>
+    </div>
+
+    <p class="anno"><b>Question:</b> what did this cutting produce and does the fabric add up? Covers Scenario A step 3 / B / packing (Pack uses the same form: inputs = garments + polybags, output = packed pcs).</p>
+
+    <div class="bottombar form">
+      <button class="btn primary lg"><svg class="i"><use href="icons.svg#check"/></svg><span data-ta="சேமி" data-hi="सेव करें">Save</span></button>
+      <button class="btn secondary lg"><span data-ta="சேமித்து, ஸ்டிச்சிங்கிற்கு அனுப்பு" data-hi="सेव करें, सिलाई के लिए भेजें">Save and send for stitching</span></button>
+    </div>
+  </div>
+</div>
+<script src="mockup.js"></script>
+</body>
+</html>

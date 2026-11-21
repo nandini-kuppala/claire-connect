@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Record · Got back from work</title>
+<link rel="stylesheet" href="mockup.css">
+<style>
+  /* Form screens have no bottom nav: the Save bar sits at the bottom edge. */
+  .bottombar.form{bottom:0}
+  .app{padding-bottom:100px}
+  .unitchips .chip{min-height:44px}
+  .input .usual{white-space:normal;text-align:right;line-height:1.3;max-width:55%}
+  .input .val{flex:1;min-width:0;font-size:16px;font-weight:600}
+  .pair{display:flex;gap:10px;flex-wrap:wrap}
+  .pair>div{flex:1 1 130px}
+  .input input.big{font-family:var(--head);font-weight:700;font-variant-numeric:tabular-nums;font-size:18px}
+  .card .kv{margin-top:10px}
+  .strip{margin:12px 16px 0}
+  .strip .line{font-size:15px;margin-bottom:8px}
+  .twofig{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:15px;margin:8px 0 6px}
+</style>
+</head>
+<body>
+<!-- S5 · Record form: Got back from work, from Noyyal Dyeing on J-0412. Filled with DATA.md "Got back (today)". Viewer: Ravi (owner). -->
+<div class="frame">
+  <div class="app">
+    <header class="hdr">
+      <button class="iconbtn" aria-label="Back"><svg class="i"><use href="icons.svg#chev-l"/></svg></button>
+      <h1><span data-ta="வேலையிலிருந்து திரும்ப வந்தது" data-hi="काम से वापस आया">Got back from work</span><span class="sub" data-ta="Noyyal Dyeing · இன்று, 21 நவ." data-hi="Noyyal Dyeing · आज, 21 नव॰">Noyyal Dyeing · today, 21 Nov</span></h1>
+    </header>
+    <p class="meta" style="margin:10px 16px 0" data-ta="Noyyal 14:00-க்கு 93 kg அனுப்பியதாகப் பதிவு செய்தது" data-hi="Noyyal ने 14:00 बजे 93 kg भेजना दर्ज किया">Noyyal recorded sending 93 kg at 14:00</p>
+
+    <div class="card">
+      <div class="row-gap" style="justify-content:space-between">
+        <h3><span data-ta="நேவி டையிங்" data-hi="नेवी रंगाई">Dyeing navy</span> · J-0412</h3>
+        <span class="st due"><svg class="i"><use href="icons.svg#clock"/></svg><span data-ta="இன்று வர வேண்டும்" data-hi="आज आना है">Due today</span></span>
+      </div>
+      <dl class="kv">
+        <dt data-ta="அனுப்பியது · 14 நவ. · DC 0412" data-hi="भेजा · 14 नव॰ · DC 0412">Sent 14 Nov · DC 0412</dt><dd><span data-ta="200 kg கிரே SJ 180 GSM, லாட் K-221" data-hi="200 kg ग्रे SJ 180 GSM, लॉट K-221">200 kg grey SJ 180 GSM, lot K-221</span></dd>
+        <dt data-ta="Noyyal பெற்றது" data-hi="Noyyal को मिला">Noyyal got</dt><dd>198.6 kg</dd>
+        <dt data-ta="இதுவரை திரும்பியது" data-hi="अब तक वापस">Back so far</dt><dd><span data-ta="96 kg நேவி ஃபினிஷ்டு · 19 நவ." data-hi="96 kg नेवी फ़िनिश्ड · 19 नव॰">96 kg navy finished · 19 Nov</span></dd>
+      </dl>
+    </div>
+
+    <div class="sec-h"><h2 data-ta="இன்று என்ன வந்தது" data-hi="आज क्या आया">What came back today</h2></div>
+    <div class="field" style="margin-top:0">
+      <label data-ta="பொருள்" data-hi="माल">Item</label>
+      <div class="input"><span class="val" data-ta="நேவி SJ 180 GSM ஃபினிஷ்டு" data-hi="नेवी SJ 180 GSM फ़िनिश्ड">Navy SJ 180 GSM finished</span><span class="usual" data-ta="வேலையிலிருந்து" data-hi="काम से लिया">from the job</span></div>
+    </div>
+    <div class="field pair">
+      <div><span class="flabel" data-ta="எடை" data-hi="वज़न">Weight</span>
+        <label class="input"><input class="big" inputmode="decimal" value="92" aria-label="Weight in kg"><span>kg</span></label></div>
+      <div><span class="flabel" data-ta="ரோல்" data-hi="रोल">Rolls</span>
+        <label class="input"><input class="big" inputmode="numeric" value="4" aria-label="Rolls"><span data-ta="ரோல்" data-hi="रोल">rolls</span></label></div>
+    </div>
+    <div class="field">
+      <span class="flabel" data-ta="தரம்" data-hi="क्वालिटी">Grade</span>
+      <div class="unitchips">
+        <button class="chip sel"><svg class="i sm"><use href="icons.svg#check"/></svg><span data-ta="நல்லது" data-hi="अच्छा">Good</span></button>
+        <button class="chip" data-ta="திருத்த வேலை" data-hi="दोबारा काम">Rework</button>
+        <button class="chip" data-ta="ரிஜெக்ட்" data-hi="रिजेक्ट">Reject</button>
+      </div>
+    </div>
+    <div class="field"><button class="btn secondary block"><svg class="i"><use href="icons.svg#plus"/></svg><span data-ta="இன்னொரு வரி (எ.கா. ரீவொர்க் ரோல்)" data-hi="एक और लाइन (जैसे दोबारा काम वाले रोल)">Add another line (e.g. rolls for rework)</span></button></div>
+
+    <div class="panel strip">
+      <div class="line"><span class="num">198.6</span> kg <span data-ta="Noyyal பெற்றது" data-hi="Noyyal को मिला">received by Noyyal</span> → <span class="num">189</span> kg <span data-ta="Noyyal-இன் வெளியீடு (96 + 93)" data-hi="Noyyal का आउटपुट (96 + 93)">Noyyal's outputs (96 + 93)</span> → <span class="num">188</span> kg <span data-ta="உங்களிடம் (96 + 92)" data-hi="आपके पास (96 + 92)">with you (96 + 92)</span></div>
+      <div class="sbar" role="img" aria-label="188 kg with you, 1 kg weighing difference, 9.6 kg dyeing loss, total 198.6 kg"><span class="a" style="width:94.7%"></span><span class="b" style="width:0.5%;min-width:4px"></span><span class="c" style="width:4.8%"></span></div>
+      <div class="legend">
+        <span><i style="background:var(--primary)"></i><span data-ta="உங்களிடம் 188 kg" data-hi="आपके पास 188 kg">188 kg with you</span></span>
+        <span><i style="background:var(--accent)"></i><span data-ta="1 kg எடை வித்தியாசம்" data-hi="1 kg तौल का फ़र्क">1 kg weighing</span></span>
+        <span><i style="background:var(--clay)"></i><span data-ta="9.6 kg சாய சேதாரம்" data-hi="9.6 kg रंगाई घटत">9.6 kg dyeing loss</span></span>
+        <span class="meta" data-ta="= 198.6 kg" data-hi="= 198.6 kg">= 198.6 kg</span>
+      </div>
+      <div class="meta" style="margin-top:6px" data-ta="சாய சேதாரம் 9.6 kg (4.8 %) · வழக்கம் 7 % (Noyyal-உடன் 3 வேலை முடியும் வரை நிலையான அளவு; இதுவரை 2) · மேலும் திரும்பும்போது எடை வித்தியாசம் 1 kg (நீங்கள் ஏற்கிறீர்கள்)" data-hi="रंगाई घटत 9.6 kg (4.8 %) · आम 7 % (Noyyal के साथ 3 काम पूरे होने तक तय आंकड़ा; अभी 2) · साथ में वापसी पर तौल का फ़र्क 1 kg (आपके खाते)">dyeing loss 9.6 kg (4.8 %) · usual 7 % (standard figure until 3 jobs with Noyyal; 2 so far) · plus weighing difference 1 kg on the way back (borne by you)</div>
+    </div>
+
+    <div class="card">
+      <div class="row-gap" style="justify-content:space-between">
+        <h3 data-ta="Noyyal-இன் கணக்கு" data-hi="Noyyal का हिसाब">Noyyal's own figure</h3>
+        <span class="st ok"><svg class="i"><use href="icons.svg#check"/></svg><span data-ta="1.5 %-க்குள்" data-hi="1.5 % के अंदर">Within 1.5 %</span></span>
+      </div>
+      <div class="twofig"><span>Noyyal: <b class="num">93</b> kg</span><span><span data-ta="நீங்கள்" data-hi="आप">You</span>: <b class="num">92</b> kg</span></div>
+      <div class="meta" data-ta="1 kg (1.1 %) அனுமதி 1.5 %-க்குள் · எடை வித்தியாசமாக பதிவாகும், நிபந்தனைப்படி உரிமையாளர் (நீங்கள்) ஏற்கிறீர்கள். இருவருக்கும் “உறுதி” காட்டும்." data-hi="1 kg (1.1 %) 1.5 % की छूट के अंदर है · तौल का फ़र्क दर्ज होगा, शर्त के अनुसार मालिक (आप) के खाते। दोनों को “पुष्टि” दिखेगी।">1 kg (1.1 %) is within the 1.5 % allowed · recorded as weighing difference, borne by the owner (you) as agreed. Both of you will see it confirmed.</div>
+    </div>
+
+    <div class="card">
+      <h3 data-ta="முடிந்தது போல் தெரிகிறது. இந்த வேலையிலிருந்து இன்னும் ஏதாவது வருமா?" data-hi="पूरा लग रहा है। इस काम से और कुछ आना है?">Looks complete. Anything else coming from this job?</h3>
+      <p class="meta" style="margin-top:6px" data-ta="188 kg திரும்பியது; வழக்கமான 7 % சேதாரத்துக்குப் பின் ≈ 185 kg எதிர்பார்த்தது." data-hi="188 kg वापस आया; आम 7 % घटत के बाद ≈ 185 kg की उम्मीद थी।">188 kg is back; ≈ 185 kg was expected after the usual 7 % loss.</p>
+      <div class="btns" style="margin-top:12px">
+        <button class="btn secondary"><span data-ta="இல்லை, இதுதான் கடைசி" data-hi="नहीं, यह आखिरी था">No, this was the last</span></button>
+        <button class="btn secondary"><span data-ta="இன்னும் வரும்" data-hi="और आएगा">More coming</span></button>
+      </div>
+      <p class="meta" style="margin-top:10px" data-ta="கடைசி என்றால்: J-0412 முடிந்ததாகும் · பில் 198.6 kg × ₹70 = ₹13,902 (உங்களுக்கு மட்டும்)" data-hi="आखिरी हो तो: J-0412 पूरा माना जाएगा · बिल 198.6 kg × ₹70 = ₹13,902 (सिर्फ़ आपको दिखेगा)">If last: J-0412 is marked complete · bill 198.6 kg × ₹70 = ₹13,902 (only you see this)</p>
+    </div>
+
+    <p class="anno"><b>Question:</b> what came back, and is that all of it? <b>Decision:</b> confirm Noyyal's 93 kg dispatch with his own 92 kg (within 1.5 %), and close the job or wait for more. Shown at 16:00, after Noyyal's 14:00 record. Dyeing loss uses Noyyal's outputs: 198.6 − (96 + 93) = 9.6 kg (4.8 %). The 1 kg between Noyyal's 93 and Ravi's 92 is a weighing difference on the way back, borne by the owner per the terms, not process loss. Bar: 188 + 1 + 9.6 = 198.6 kg. "≈ 185 kg expected" is a read-time estimate: 198.6 kg × (1 − 7 %). The completion question appears because back ≥ the estimate; the answer sets the job to Completed or keeps it open.</p>
+
+    <div class="bottombar form">
+      <button class="btn primary lg"><svg class="i"><use href="icons.svg#check"/></svg><span data-ta="சேமி" data-hi="सेव करें">Save</span></button>
+    </div>
+  </div>
+</div>
+<script src="mockup.js"></script>
+</body>
+</html>

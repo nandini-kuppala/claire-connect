@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reports · Performance</title>
+<link rel="stylesheet" href="mockup.css">
+<style>
+/* Bullet bar: filled part = the party's figure, dark tick = the norm (days promised / usual loss).
+   Scales: days 0–10, loss and rejects 0–10 %, on-time 0–100 %. Meaning is always in the text next to it. */
+.bb{position:relative;height:8px;border-radius:999px;background:var(--sunken);margin-top:6px;width:100%;max-width:180px}
+.bb i{position:absolute;left:0;top:0;bottom:0;border-radius:999px;background:var(--primary)}
+.bb i.w{background:var(--warning)}
+.bb i.n{background:var(--meta)}
+.bb b{position:absolute;top:-4px;bottom:-4px;width:2px;margin-left:-1px;background:var(--ink)}
+.mets{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px 16px;margin-top:10px}
+.mets .ml{font-size:12.5px;color:var(--meta)}
+.mets .mv{font-size:14px;font-weight:600}
+.w-t{color:var(--warning)}
+.cols-help{margin:12px 16px 0;font-size:13px}
+.cols-help dt{font-weight:650;color:var(--ink-2)}
+.cols-help dd{color:var(--meta);margin:0 0 6px}
+table.t tr.grp td{background:#fafbfb;font-size:12px;font-weight:700;color:var(--meta);padding:8px 12px}
+@media (min-width:1024px){.frame.wide .cols-help{margin-left:0;margin-right:0;display:grid;grid-template-columns:repeat(4,1fr);gap:0 20px}}
+</style>
+</head>
+<body>
+<!-- S13 · Reports → Performance. Viewer: Ravi (owner). Rows from DATA.md "Performance". -->
+<div class="frame wide">
+  <aside class="rail" data-active="goods"></aside>
+  <div class="app">
+    <header class="hdr">
+      <button class="iconbtn" aria-label="Back"><svg class="i"><use href="icons.svg#chev-l"/></svg></button>
+      <h1><span data-ta="செயல்திறன்" data-hi="काम का रिकॉर्ड">Performance</span><span class="sub" data-ta="ஜாப் வொர்க் மற்றும் சப்ளையர் · உங்கள் பதிவுகளிலிருந்து" data-hi="जॉब वर्क और सप्लायर · आपके रिकॉर्ड से">Job workers and suppliers · from your records</span></h1>
+    </header>
+    <div class="wrap">
+      <div class="chips">
+        <button class="chip sel" data-ta="எல்லாம்" data-hi="सब">All</button>
+        <button class="chip" data-ta="தையல்" data-hi="सिलाई">Stitching</button>
+        <button class="chip" data-ta="சாயம்" data-hi="रंगाई">Dyeing</button>
+        <button class="chip" data-ta="பிரிண்டிங்" data-hi="प्रिंटिंग">Printing</button>
+        <button class="chip" data-ta="வாங்குதல்" data-hi="खरीद">Buying</button>
+      </div>
+
+      <dl class="cols-help panel">
+        <div><dt data-ta="வேலைகள்" data-hi="काम">Jobs</dt><dd data-ta="முடிந்த வேலைகள். 3-க்கு குறைவானால் எண்கள் காட்டப்படாது." data-hi="पूरे हुए काम। 3 से कम हों तो आँकड़े नहीं दिखते।">Closed jobs counted. Below 3, no figures are shown.</dd></div>
+        <div><dt data-ta="ஆன நாள் vs சொன்ன நாள்" data-hi="लगे दिन बनाम वादा">Days vs promised</dt><dd data-ta="முடிந்த வேலைகளின் நடு மதிப்பு. கோடு = சொன்ன நாள்." data-hi="पूरे कामों का बीच का आँकड़ा। लकीर = वादे के दिन।">Median of closed jobs. The tick marks the days promised.</dd></div>
+        <div><dt data-ta="சேதாரம் / ரிஜெக்ட்" data-hi="घटत / रिजेक्ट">Loss / rejects</dt><dd data-ta="சாயத்தில் எடை சேதாரம்; பீஸில் ரிஜெக்ட். கோடு = வழக்கமான அளவு, இருந்தால்." data-hi="रंगाई में वज़न की घटत; पीस में रिजेक्ट। लकीर = आम आँकड़ा, अगर तय हो।">Weight loss for dyeing; rejects for pieces. The tick is the usual figure, where one is agreed.</dd></div>
+        <div><dt data-ta="வித்தியாசம்" data-hi="फ़र्क">Disputes</dt><dd data-ta="இந்த வேலைகளில் எழுந்த வித்தியாசங்கள்." data-hi="इन कामों पर उठे फ़र्क।">Disputes raised on those jobs.</dd></div>
+      </dl>
+
+      <!-- Mobile: stacked rows per party, grouped by process -->
+      <div class="list only-mob">
+        <div class="groupl" data-ta="தையல்" data-hi="सिलाई">Stitching</div>
+        <div class="lrow"><div class="main">
+          <div class="t">Lakshmi Garments <span class="meta" data-ta="· 7 வேலை" data-hi="· 7 काम">· 7 jobs</span></div>
+          <div class="mets">
+            <div><div class="ml" data-ta="ஆன நாள் vs சொன்ன நாள்" data-hi="लगे दिन बनाम वादा">Days vs promised</div><div class="mv" data-ta="6 vs 7 · 1 நாள் முன்னதாக" data-hi="6 बनाम 7 · 1 दिन जल्दी">6 vs 7 · 1 day faster</div><div class="bb"><i style="width:60%"></i><b style="left:70%"></b></div></div>
+            <div><div class="ml" data-ta="ரிஜெக்ட்" data-hi="रिजेक्ट">Rejects</div><div class="mv">0.9 %</div><div class="bb"><i class="n" style="width:9%"></i></div></div>
+            <div><div class="ml" data-ta="வித்தியாசம்" data-hi="फ़र्क">Disputes</div><div class="mv">0</div></div>
+          </div>
+        </div></div>
+        <div class="lrow"><div class="main">
+          <div class="t">Raju Stitching Works <span class="meta" data-ta="· 4 வேலை" data-hi="· 4 काम">· 4 jobs</span></div>
+          <div class="mets">
+            <div><div class="ml" data-ta="ஆன நாள் vs சொன்ன நாள்" data-hi="लगे दिन बनाम वादा">Days vs promised</div><div class="mv w-t"><svg class="i sm" style="vertical-align:-3px"><use href="icons.svg#clock"/></svg> <span data-ta="9 vs 7 · 2 நாள் தாமதம்" data-hi="9 बनाम 7 · 2 दिन धीमा">9 vs 7 · 2 days slower</span></div><div class="bb"><i class="w" style="width:90%"></i><b style="left:70%"></b></div></div>
+            <div><div class="ml" data-ta="ரிஜெக்ட்" data-hi="रिजेक्ट">Rejects</div><div class="mv">2.6 %</div><div class="bb"><i class="n" style="width:26%"></i></div></div>
+            <div><div class="ml" data-ta="வித்தியாசம்" data-hi="फ़र्क">Disputes</div><div class="mv">1</div></div>
+          </div>
+        </div></div>
+        <div class="lrow"><div class="main">
+          <div class="t">Elango Job Works <span class="meta" data-ta="· 3 வேலை · உங்கள் தொடர்பு" data-hi="· 3 काम · आपका संपर्क">· 3 jobs · your contact</span></div>
+          <div class="mets">
+            <div><div class="ml" data-ta="ஆன நாள் vs சொன்ன நாள்" data-hi="लगे दिन बनाम वादा">Days vs promised</div><div class="mv" data-ta="7 vs 7 · சொன்னபடி" data-hi="7 बनाम 7 · वादे पर">7 vs 7 · on time</div><div class="bb"><i style="width:70%"></i><b style="left:70%"></b></div></div>
+            <div><div class="ml" data-ta="ரிஜெக்ட்" data-hi="रिजेक्ट">Rejects</div><div class="mv">1.8 %</div><div class="bb"><i class="n" style="width:18%"></i></div></div>
+            <div><div class="ml" data-ta="வித்தியாசம்" data-hi="फ़र्क">Disputes</div><div class="mv">0</div></div>
+          </div>
+        </div></div>
+
+        <div class="groupl" data-ta="சாயம்" data-hi="रंगाई">Dyeing</div>
+        <div class="lrow"><div class="main">
+          <div class="t">Sakthi Dyeing <span class="meta" data-ta="· 6 வேலை · உங்கள் தொடர்பு" data-hi="· 6 काम · आपका संपर्क">· 6 jobs · your contact</span></div>
+          <div class="mets">
+            <div><div class="ml" data-ta="ஆன நாள் vs சொன்ன நாள்" data-hi="लगे दिन बनाम वादा">Days vs promised</div><div class="mv w-t"><svg class="i sm" style="vertical-align:-3px"><use href="icons.svg#clock"/></svg> <span data-ta="7 vs 6 · 1 நாள் தாமதம்" data-hi="7 बनाम 6 · 1 दिन धीमा">7 vs 6 · 1 day slower</span></div><div class="bb"><i class="w" style="width:70%"></i><b style="left:60%"></b></div></div>
+            <div><div class="ml" data-ta="சேதாரம்" data-hi="घटत">Loss</div><div class="mv w-t"><svg class="i sm" style="vertical-align:-3px"><use href="icons.svg#alert"/></svg> <span data-ta="8.4 % vs 7 % · அதிகம்" data-hi="8.4 % बनाम 7 % · ज़्यादा">8.4 % vs 7 % · higher</span></div><div class="bb"><i class="w" style="width:84%"></i><b style="left:70%"></b></div></div>
+            <div><div class="ml" data-ta="வித்தியாசம்" data-hi="फ़र्क">Disputes</div><div class="mv">1</div></div>
+          </div>
+        </div></div>
+        <div class="lrow"><div class="main">
+          <div class="t">Noyyal Dyeing <span class="meta" data-ta="· 2 வேலை" data-hi="· 2 काम">· 2 jobs</span></div>
+          <div class="m" style="margin-top:6px"><svg class="i sm" style="vertical-align:-3px"><use href="icons.svg#info"/></svg> <span data-ta="போதிய வரலாறு இல்லை (3-இல் 2 வேலை)" data-hi="अभी काफ़ी रिकॉर्ड नहीं (3 में से 2 काम)">Not enough history yet (2 of 3 jobs)</span></div>
+        </div></div>
+
+        <div class="groupl" data-ta="பிரிண்டிங்" data-hi="प्रिंटिंग">Printing</div>
+        <div class="lrow"><div class="main">
+          <div class="t">Colour Craft Prints <span class="meta" data-ta="· 5 வேலை" data-hi="· 5 काम">· 5 jobs</span></div>
+          <div class="mets">
+            <div><div class="ml" data-ta="ஆன நாள் vs சொன்ன நாள்" data-hi="लगे दिन बनाम वादा">Days vs promised</div><div class="mv" data-ta="4 vs 4 · சொன்னபடி" data-hi="4 बनाम 4 · वादे पर">4 vs 4 · on time</div><div class="bb"><i style="width:40%"></i><b style="left:40%"></b></div></div>
+            <div><div class="ml" data-ta="மிஸ்பிரிண்ட்" data-hi="मिसप्रिंट">Misprints</div><div class="mv">1.5 %</div><div class="bb"><i class="n" style="width:15%"></i></div></div>
+            <div><div class="ml" data-ta="வித்தியாசம்" data-hi="फ़र्क">Disputes</div><div class="mv"><span class="st disp"><svg class="i"><use href="icons.svg#scale"/></svg><span data-ta="1 திறந்துள்ளது" data-hi="1 खुला">1 open</span></span></div></div>
+          </div>
+        </div></div>
+
+        <div class="groupl" data-ta="வாங்குதல்" data-hi="खरीद">Buying</div>
+        <div class="lrow"><div class="main">
+          <div class="t">Kumaran Trims <span class="meta" data-ta="· 9 ஆர்டர் · உங்கள் தொடர்பு" data-hi="· 9 ऑर्डर · आपका संपर्क">· 9 orders · your contact</span></div>
+          <div class="mets">
+            <div><div class="ml" data-ta="நேரத்தில் வந்தது" data-hi="समय पर आया">On time</div><div class="mv w-t"><svg class="i sm" style="vertical-align:-3px"><use href="icons.svg#clock"/></svg> <span data-ta="9-இல் 6 · நடு மதிப்பு 1 நாள் தாமதம்" data-hi="9 में 6 · आम तौर पर 1 दिन देर">6 of 9 · median 1 day late</span></div><div class="bb"><i class="w" style="width:67%"></i></div></div>
+            <div><div class="ml" data-ta="வித்தியாசம்" data-hi="फ़र्क">Disputes</div><div class="mv">0</div></div>
+          </div>
+        </div></div>
+        <div class="lrow"><div class="main">
+          <div class="t">Sri Amman Fabrics <span class="meta" data-ta="· 5 ஆர்டர் · உங்கள் தொடர்பு" data-hi="· 5 ऑर्डर · आपका संपर्क">· 5 orders · your contact</span></div>
+          <div class="mets">
+            <div><div class="ml" data-ta="நேரத்தில் வந்தது" data-hi="समय पर आया">On time</div><div class="mv" data-ta="5-இல் 5" data-hi="5 में 5">5 of 5</div><div class="bb"><i style="width:100%"></i></div></div>
+            <div><div class="ml" data-ta="வித்தியாசம்" data-hi="फ़र्क">Disputes</div><div class="mv">0</div></div>
+          </div>
+        </div></div>
+      </div>
+
+      <!-- Desktop: one table, grouped by process -->
+      <div class="only-desk card" style="margin:12px 0 0;padding:4px 8px">
+        <table class="t">
+          <thead><tr><th data-ta="யார்" data-hi="कौन">Party</th><th class="r" data-ta="வேலைகள்" data-hi="काम">Jobs</th><th data-ta="ஆன நாள் vs சொன்ன நாள்" data-hi="लगे दिन बनाम वादा">Days vs promised</th><th data-ta="சேதாரம் / ரிஜெக்ட்" data-hi="घटत / रिजेक्ट">Loss / rejects</th><th data-ta="வித்தியாசம்" data-hi="फ़र्क">Disputes</th></tr></thead>
+          <tbody>
+            <tr class="grp"><td colspan="5" data-ta="தையல்" data-hi="सिलाई">Stitching</td></tr>
+            <tr><td><b>Lakshmi Garments</b></td><td class="r tnum">7</td><td><span data-ta="6 vs 7 · 1 நாள் முன்னதாக" data-hi="6 बनाम 7 · 1 दिन जल्दी">6 vs 7 · 1 day faster</span><div class="bb"><i style="width:60%"></i><b style="left:70%"></b></div></td><td><span data-ta="ரிஜெக்ட் 0.9 %" data-hi="रिजेक्ट 0.9 %">Rejects 0.9 %</span><div class="bb"><i class="n" style="width:9%"></i></div></td><td class="tnum">0</td></tr>
+            <tr><td><b>Raju Stitching Works</b></td><td class="r tnum">4</td><td class="w-t"><svg class="i sm" style="vertical-align:-3px"><use href="icons.svg#clock"/></svg> <span data-ta="9 vs 7 · 2 நாள் தாமதம்" data-hi="9 बनाम 7 · 2 दिन धीमा">9 vs 7 · 2 days slower</span><div class="bb"><i class="w" style="width:90%"></i><b style="left:70%"></b></div></td><td><span data-ta="ரிஜெக்ட் 2.6 %" data-hi="रिजेक्ट 2.6 %">Rejects 2.6 %</span><div class="bb"><i class="n" style="width:26%"></i></div></td><td class="tnum">1</td></tr>
+            <tr><td><b>Elango Job Works</b><div class="meta" data-ta="உங்கள் தொடர்பு" data-hi="आपका संपर्क">Your contact</div></td><td class="r tnum">3</td><td><span data-ta="7 vs 7 · சொன்னபடி" data-hi="7 बनाम 7 · वादे पर">7 vs 7 · on time</span><div class="bb"><i style="width:70%"></i><b style="left:70%"></b></div></td><td><span data-ta="ரிஜெக்ட் 1.8 %" data-hi="रिजेक्ट 1.8 %">Rejects 1.8 %</span><div class="bb"><i class="n" style="width:18%"></i></div></td><td class="tnum">0</td></tr>
+            <tr class="grp"><td colspan="5" data-ta="சாயம்" data-hi="रंगाई">Dyeing</td></tr>
+            <tr><td><b>Sakthi Dyeing</b><div class="meta" data-ta="உங்கள் தொடர்பு" data-hi="आपका संपर्क">Your contact</div></td><td class="r tnum">6</td><td class="w-t"><svg class="i sm" style="vertical-align:-3px"><use href="icons.svg#clock"/></svg> <span data-ta="7 vs 6 · 1 நாள் தாமதம்" data-hi="7 बनाम 6 · 1 दिन धीमा">7 vs 6 · 1 day slower</span><div class="bb"><i class="w" style="width:70%"></i><b style="left:60%"></b></div></td><td class="w-t"><svg class="i sm" style="vertical-align:-3px"><use href="icons.svg#alert"/></svg> <span data-ta="சேதாரம் 8.4 % vs 7 %" data-hi="घटत 8.4 % बनाम 7 %">Loss 8.4 % vs 7 %</span><div class="bb"><i class="w" style="width:84%"></i><b style="left:70%"></b></div></td><td class="tnum">1</td></tr>
+            <tr><td><b>Noyyal Dyeing</b></td><td class="r tnum">2</td><td colspan="3" class="meta"><svg class="i sm" style="vertical-align:-3px"><use href="icons.svg#info"/></svg> <span data-ta="போதிய வரலாறு இல்லை (3-இல் 2 வேலை)" data-hi="अभी काफ़ी रिकॉर्ड नहीं (3 में से 2 काम)">Not enough history yet (2 of 3 jobs)</span></td></tr>
+            <tr class="grp"><td colspan="5" data-ta="பிரிண்டிங்" data-hi="प्रिंटिंग">Printing</td></tr>
+            <tr><td><b>Colour Craft Prints</b></td><td class="r tnum">5</td><td><span data-ta="4 vs 4 · சொன்னபடி" data-hi="4 बनाम 4 · वादे पर">4 vs 4 · on time</span><div class="bb"><i style="width:40%"></i><b style="left:40%"></b></div></td><td><span data-ta="மிஸ்பிரிண்ட் 1.5 %" data-hi="मिसप्रिंट 1.5 %">Misprints 1.5 %</span><div class="bb"><i class="n" style="width:15%"></i></div></td><td><span class="st disp"><svg class="i"><use href="icons.svg#scale"/></svg><span data-ta="1 திறந்துள்ளது" data-hi="1 खुला">1 open</span></span></td></tr>
+            <tr class="grp"><td colspan="5" data-ta="வாங்குதல் · ஆர்டர் எண்ணிக்கை" data-hi="खरीद · ऑर्डर की गिनती">Buying · counted in orders</td></tr>
+            <tr><td><b>Kumaran Trims</b><div class="meta" data-ta="உங்கள் தொடர்பு" data-hi="आपका संपर्क">Your contact</div></td><td class="r tnum">9</td><td class="w-t"><svg class="i sm" style="vertical-align:-3px"><use href="icons.svg#clock"/></svg> <span data-ta="9-இல் 6 நேரத்தில் · நடு மதிப்பு 1 நாள் தாமதம்" data-hi="9 में 6 समय पर · आम तौर पर 1 दिन देर">On time 6 of 9 · median 1 day late</span><div class="bb"><i class="w" style="width:67%"></i></div></td><td class="meta">—</td><td class="tnum">0</td></tr>
+            <tr><td><b>Sri Amman Fabrics</b><div class="meta" data-ta="உங்கள் தொடர்பு" data-hi="आपका संपर्क">Your contact</div></td><td class="r tnum">5</td><td><span data-ta="5-இல் 5 நேரத்தில்" data-hi="5 में 5 समय पर">On time 5 of 5</span><div class="bb"><i style="width:100%"></i></div></td><td class="meta">—</td><td class="tnum">0</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p class="anno"><b>Question:</b> who is reliable for which process? <b>Decision:</b> who gets the next job; what to renegotiate. Rows with fewer than 3 closed jobs show no figures. Bars are plain CSS: green-teal = at or better than the norm, amber (warning colour) = worse than the norm (always with an icon and a word: slower, higher, late); open disputes use the danger colour. Clay is reserved for prices and offers, grey = no agreed norm to compare against. Sample size on every row. No single score per party.</p>
+    </div>
+    <nav class="nav" data-active="goods" data-badgegoods="1"></nav>
+  </div>
+</div>
+<script src="mockup.js"></script>
+</body>
+</html>
