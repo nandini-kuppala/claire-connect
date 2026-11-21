@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import clsx from 'clsx';
 import { api, errorText } from '../../lib/api';
+import { postOrQueue } from '../../lib/offline';
 import { Button } from '../../components/Button';
 import { ArrowLeft } from '../../icons';
 import { useSession } from '../../store/session';
@@ -93,11 +94,12 @@ export default function GotBackForm() {
     setBusy(true);
     setError(null);
     try {
-      const r = await api.post<{ movement: { id: string }; undo_until: number }>(`/api/sc/jobs/${job.id}/return`, {
+      const r = await postOrQueue<{ movement: { id: string }; undo_until: number }>(`/api/sc/jobs/${job.id}/return`, {
         client_id: cid, business_date: todayIST(), last: last === true,
         lines: [{ spec_id: spec.spec.id, qty: Number(q), unit, grade, rolls: Number(rolls) > 0 ? Number(rolls) : undefined, they_sent: Number(theySent) > 0 ? Number(theySent) : undefined, unprocessed: unprocessed || undefined }],
-      });
-      nav(`/goods?saved=${r.movement.id}&until=${r.undo_until}&tab=coming`, { replace: true });
+      }, `${s('got_back')} · ${spec.spec.label_en}`);
+      if ('queued' in r) nav('/goods?queued=1&tab=coming', { replace: true });
+      else nav(`/goods?saved=${r.movement.id}&until=${r.undo_until}&tab=coming`, { replace: true });
     } catch (e) {
       setError(errorText(e) || s('error'));
     } finally {

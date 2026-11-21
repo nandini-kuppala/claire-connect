@@ -154,7 +154,7 @@ router.post(
   '/sc/jobs/:id/output',
   h(async (req: ScRequest, res) => {
     const ctx = req.ctx;
-    const b = parse(z.object({ lines: qtyLines, ready: z.boolean().optional(), business_date: date.optional() }), req.body);
+    const b = parse(z.object({ lines: qtyLines, ready: z.boolean().optional(), business_date: date.optional(), client_id: z.string().min(8).max(40).optional() }), req.body);
     const j = await myWork(ctx, req.params.id);
     const businessDate = b.business_date ?? todayIST();
     const postings: Posting[] = [];
@@ -166,10 +166,12 @@ router.post(
       postings.push(...postOutput({ goods, qty: q, owner: j.owner_party, performer: me(ctx), via: j.via ?? null, jobId: j._id }));
       outputs.push({ line_id: newId('ou'), spec_id: info.id, grade: l.grade, lot: goods.lot, dim: info.dim, qty: q, business_date: businessDate, recorded_by: ctx.businessId });
     }
-    await post(ctx, { type: 'output', ref: { kind: 'job', id: j._id }, business_date: businessDate }, postings, async (session) => {
+    // A client id makes an offline retry of the same "work done" record count once.
+    const result = await post(ctx, { type: 'output', ref: { kind: 'job', id: j._id }, business_date: businessDate, ...(b.client_id ? { client_id: b.client_id } : {}) }, postings, async (session) => {
       await col('sc_jobs').updateOne({ _id: j._id } as any, { $push: { outputs: { $each: outputs } } as any, $set: { status: 'in_progress', ...(b.ready ? { ready_at: Date.now() } : {}) }, $inc: { version: 1 } }, { session });
       if (j.parent_job_id) await col('sc_jobs').updateOne({ _id: j.parent_job_id } as any, { $set: { child_progress_at: Date.now() } }, { session });
     });
+    if ((result as { duplicate?: boolean } | undefined)?.duplicate) return res.json({ duplicate: true });
     res.status(201).json({ outputs });
   }),
 );

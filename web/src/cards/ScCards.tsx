@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import clsx from 'clsx';
 import { api } from '../lib/api';
+import { postOrQueue } from '../lib/offline';
 import { formatQty } from '@shared/sc/units';
 import type { Dimension } from '@shared/sc/types';
 import type { CardOf } from './types';
@@ -50,7 +51,7 @@ export function MovementCard({ payload: p, ctx }: { payload: CardOf<'movement'>;
   const confirmAll = async () => {
     setBusy(true);
     try {
-      await api.post(`/api/sc/movements/${p.movementId}/${isReturn ? 'sender-figure' : 'confirm'}`, { lines: p.lines.map((l) => ({ line_id: l.lineId })) });
+      await postOrQueue(`/api/sc/movements/${p.movementId}/${isReturn ? 'sender-figure' : 'confirm'}`, { lines: p.lines.map((l) => ({ line_id: l.lineId })) }, p.lines.map((l) => l.label).join(', '));
       setDone(true);
       ctx.refresh();
     } finally {

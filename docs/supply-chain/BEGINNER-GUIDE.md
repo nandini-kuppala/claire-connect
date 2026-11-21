@@ -147,31 +147,41 @@ When you and the other business both use Goods, a marketplace order and its good
 
 **Try it:** as Ravi, open Orders: the recent "Navy tees LG-T10 M" order shows "600 of 600 pcs received · 12 pcs returned". Tap the Goods link on its card in chat to see each delivery.
 
+### 4.13 No network
+- **Recording without signal:** sending, receiving, confirming, work done and stock counts are kept on the phone and sent by themselves when the network returns. The Goods home shows how many are waiting.
+- **After they send:** each shows "Sent: …" with **Undo** for a few minutes, counted from when it reached the server.
+- **If a record can't be sent** (for example, you had less stock than you recorded), it stays on the phone marked **Check this**, for you to record anyway or remove.
+- **Lists offline:** the lists show the last copy with **Last updated 10:42**.
+- **Needs the network:** settling differences, payments and approvals.
+- **Languages:** Goods screens are now in all ten app languages. Telugu, Kannada, Malayalam, Bengali, Odia, Marathi and Gujarati still need a native speaker's check.
+
 ## 5. What is not built yet
 - **Money extras:** reminders for unpaid bills, sharing a bill, closed days and per-receipt rate changes.
 - **Orders:** replacing the order's advance and balance buttons with Record payment, and using "what work you do" in search ranking.
-- **Flow view** of a whole order (9).
 - **Claire's paid backup model:** needs an Anthropic key.
-- **Language:** Tamil and Hindi wording still needs a native speaker's check.
+- **Language:** all ten languages' Goods wording still needs a native speaker's check.
+- **Flow view** of a whole order (S9 in the UX plan), and opening the app with no network at all (needs a service worker).
 
 ## 6. How it is tested
 - **Automatic checks:** typecheck and style rules, unit tests, and one walkthrough script per slice that plays the stories above against the dev server:
-  - `scripts/sc-smoke-s1.py`, `s2`, `s3`, `s4`, `s45`, `s6`, `s7`, `s8a`, `s8b`;
+  - `scripts/sc-smoke-s1.py`, `s2`, `s3`, `s4`, `s45`, `s6`, `s7`, `s8a`, `s8b`, `s9`;
   - Claire's script.
 - **Ledger check** (`npm run sc:verify -w server`): every record balances, and every stock figure equals its history.
 - See **Test results** below for the latest run.
 
 ## Test results
-**Retest on 21 Nov 2026**, local dev server on the dev database, with slices 0–8b active. **Everything passed:**
+**Retest on 21 Nov 2026**, local dev server on the dev database, with slices 0–9 active. **Everything passed:**
 
 | Check | Result |
 |---|---|
-| Typecheck + style rules (`npm run lint`) | 90 files, 0 problems |
+| Typecheck + style rules (`npm run lint`) | 92 files, 0 problems |
 | Unit tests (`npm test`) | 24 pass, 0 fail |
 | Slice 1 walkthrough | no errors |
-| Slices 2, 3, 4, 4.5, 6, 7, 8a, 8b walkthroughs | all pass |
+| Slices 2, 3, 4, 4.5, 6, 7, 8a, 8b, 9 walkthroughs | all pass |
 | Claire walkthrough | all pass |
-| Ledger check (`sc:verify`) | 1330 event groups, 1269 stock rows, 0 problems |
+| Ledger check (`sc:verify`) | 1494 event groups, 1406 stock rows, 0 problems |
 | Web build | OK |
+| Goods size budget (`sc:budget`) | largest route 41.3 KB gz of 150 KB |
+| Translations (`i18n:check all`) | 7 languages × web + server, 100 % |
 
 Browser passes were done per slice as each was built (slice 8a: Ravi at phone width, English and Tamil; slice 8b: Ravi in English, Lakshmi in Tamil).

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import clsx from 'clsx';
 import { api, ApiError, errorText } from '../../lib/api';
+import { postOrQueue } from '../../lib/offline';
 import { Button } from '../../components/Button';
 import { Sheet } from '../../components/Sheet';
 import { ArrowLeft, ChevronRight, Package, Plus, Trash2 } from '../../icons';
@@ -86,7 +87,8 @@ export default function TradeForm() {
           ...(Number(l.theySent) > 0 ? { they_sent: Number(l.theySent) } : {}),
         })),
       };
-      const res = await api.post<{ movement: { id: string }; undo_until: number | null }>('/api/sc/movements/trade', body);
+      const res = await postOrQueue<{ movement: { id: string }; undo_until: number | null }>('/api/sc/movements/trade', body, `${t(`t_${kind}` as 't_sell')}${party ? ` · ${party.name}` : ''}`);
+      if ('queued' in res) { nav('/goods?queued=1', { replace: true }); return; }
       nav(res.undo_until ? `/goods?saved=${res.movement.id}&until=${res.undo_until}` : '/goods', { replace: true });
     } catch (e) {
       const b = (e as ApiError).body as { code?: string; lines?: { available: number; needed: number; dim: string }[] } | undefined;

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import clsx from 'clsx';
 import { api, ApiError, errorText } from '../../lib/api';
+import { postOrQueue } from '../../lib/offline';
 import { Button } from '../../components/Button';
 import { ArrowLeft, ChevronRight, LayoutGrid, Plus, Trash2 } from '../../icons';
 import { useSession } from '../../store/session';
@@ -117,7 +118,8 @@ export default function MadeForm() {
         ...(isCut && Number(waste) > 0 ? { waste: { qty: Number(waste), unit: 'kg' } } : {}),
         ...(untracked ? { allow_untracked: true, untracked_reason: untracked } : {}),
       };
-      const res = await api.post<{ job: { id: string } }>('/api/sc/made', body);
+      const res = await postOrQueue<{ job: { id: string } }>('/api/sc/made', body, s('made'));
+      if ('queued' in res) { nav('/goods?queued=1', { replace: true }); return; }
       if (next === 'send') {
         const prefill = outs.filter((l) => l.spec && Number(l.qty) > 0 && l.grade === 'A').map((l) => ({ spec: l.spec, qty: l.qty, unit: l.unit, lot: l.lot }));
         nav('/goods/record/send', { replace: true, state: { prefill } });

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import clsx from 'clsx';
 import { api, errorText } from '../../lib/api';
+import { postOrQueue } from '../../lib/offline';
 import { Button } from '../../components/Button';
 import { Sheet } from '../../components/Sheet';
 import { ArrowLeft, Plus } from '../../icons';
@@ -78,7 +79,8 @@ export default function AdjustScreen() {
   const submit = async (body: Record<string, unknown>, done: string) => {
     setBusy(true); setError(null);
     try {
-      const r = await api.post<{ adjustment?: { pending?: boolean } }>('/api/sc/adjust', { ...body, client_id: clientId(), business_date: todayIST() });
+      const r = await postOrQueue<{ adjustment?: { pending?: boolean } }>('/api/sc/adjust', { ...body, client_id: clientId(), business_date: todayIST() }, `${opLabel(String(body.op))} · ${sel?.spec?.label_en ?? found?.spec.label_en ?? ''}`);
+      if ('queued' in r) { nav('/goods?queued=1'); return; }
       setSel(null); setFound(null); setMsg(r.adjustment?.pending ? sf('pending_sent') : done); setTimeout(() => setMsg(null), 2500);
       await load();
     } catch (e) { setError(errorText(e)); } finally { setBusy(false); }

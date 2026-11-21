@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import clsx from 'clsx';
 import { api, errorText } from '../../lib/api';
+import { postOrQueue } from '../../lib/offline';
 import { Button } from '../../components/Button';
 import { Sheet } from '../../components/Sheet';
 import { ArrowLeft, ArrowRight, Check, Clock, Plus } from '../../icons';
@@ -133,7 +134,7 @@ export default function WorkScreen() {
       {msg && <p className="mx-4 mt-3 rounded-[14px] bg-sunken px-3 py-2 text-[14px] text-ink-2">{msg}</p>}
 
       <Sheet open={sheet === 'done'} onClose={() => setSheet(null)} title={w('work_done_title')}
-        footer={<Button block size="lg" loading={busy} disabled={!spec || !(Number(q) > 0)} onClick={() => void run(() => api.post(`/api/sc/jobs/${j.id}/output`, { ready: readyToo, lines: [{ spec_id: spec!.spec.id, qty: Number(q), unit: unitOf(spec!.dimension), grade }] }))}>{r('save')}</Button>}>
+        footer={<Button block size="lg" loading={busy} disabled={!spec || !(Number(q) > 0)} onClick={() => void run(async () => { const r0 = await postOrQueue(`/api/sc/jobs/${j.id}/output`, { ready: readyToo, lines: [{ spec_id: spec!.spec.id, qty: Number(q), unit: unitOf(spec!.dimension), grade }], client_id: clientId() }, `${w('work_done_title')} · ${spec!.spec.label_en}`); if (r0 && typeof r0 === 'object' && 'queued' in r0) nav('/goods?queued=1'); })}>{r('save')}</Button>}>
         <div className="space-y-3 pb-2">
           <button className="min-h-12 w-full rounded-[14px] bg-sunken px-3 text-left text-[15px] font-semibold text-ink" onClick={() => setPick(true)}>{spec?.spec.label_en ?? <span className="font-normal text-meta">{r('material')} · {r('pick')}</span>}</button>
           <div className="flex items-center gap-2"><input className={inputCls} inputMode="decimal" value={q} onChange={(e) => setQ(e.target.value.replace(/[^\d.]/g, ''))} aria-label={w('how_many')} /><span className="text-ink-2">{spec ? unitOf(spec.dimension) : ''}</span></div>

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import clsx from 'clsx';
 import { api, errorText } from '../../lib/api';
+import { postOrQueue } from '../../lib/offline';
 import { Button } from '../../components/Button';
 import { ArrowLeft, ChevronRight } from '../../icons';
 import { useSession } from '../../store/session';
@@ -43,8 +44,8 @@ export default function ReceiveFirstForm() {
     setBusy(true);
     setError(null);
     try {
-      await api.post('/api/sc/movements/receive-first', { from: party.ref, process_key: proc, lines: [{ spec_id: spec.spec.id, qty: Number(q), unit, lot: lot.trim() || undefined }], business_date: todayIST(), client_id: cid, dc_no: dc.trim() || undefined });
-      nav('/goods?tab=coming', { replace: true });
+      const r = await postOrQueue('/api/sc/movements/receive-first', { from: party.ref, process_key: proc, lines: [{ spec_id: spec.spec.id, qty: Number(q), unit, lot: lot.trim() || undefined }], business_date: todayIST(), client_id: cid, dc_no: dc.trim() || undefined }, `${party.name} · ${spec.spec.label_en}`);
+      nav(r && typeof r === 'object' && 'queued' in r ? '/goods?queued=1&tab=coming' : '/goods?tab=coming', { replace: true });
     } catch (e) {
       setError(errorText(e));
     } finally {

@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { api, errorText } from '../../lib/api';
+import { postOrQueue } from '../../lib/offline';
 import { Button } from '../../components/Button';
 import { JobS } from './Job.strings';
 import { ArrowLeft } from '../../icons';
@@ -54,7 +55,8 @@ export default function MovementScreen() {
     setError(null);
     try {
       const lines = pending.map((l) => ({ line_id: l.line_id, qty: Number(vals[l.line_id]), unit: l.dim === 'mass' ? 'kg' : l.dim === 'length' ? 'm' : 'pcs' }));
-      const res = await api.post<{ results: { disputeId?: string | null }[] }>(`/api/sc/movements/${m.id}/${isReturn ? 'sender-figure' : 'confirm'}`, { lines });
+      const res = await postOrQueue<{ results: { disputeId?: string | null }[] }>(`/api/sc/movements/${m.id}/${isReturn ? 'sender-figure' : 'confirm'}`, { lines }, `${s('confirmed')}`);
+      if ('queued' in res) { nav('/goods?queued=1', { replace: true }); return; }
       const dq = res.results.find((x) => x.disputeId)?.disputeId;
       if (dq) nav(`/goods/dispute/${dq}`, { replace: true });
       else {

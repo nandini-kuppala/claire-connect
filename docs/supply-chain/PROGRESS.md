@@ -634,8 +634,49 @@ Governing brief: `docs/supply-chain/BRIEF.md` (re-read at the start of every pha
   - Not built: the onboarding step itself (the card covers existing businesses), the store listing stock label, the Home "Today" strip, and the exchange flow for a wrong-size return (send the right size as a new dispatch).
   - History shows on single-supplier cards only, not on combined (split) cards. In the demo data no search lists a business Ravi has jobs with, so it was checked through the API and the request, not on screen.
 
+### Slice 9 — Offline, translations and polish (2026-11-21)
+- **Built:**
+  - **Offline outbox** (`web/src/lib/offline.ts`, 04 §5.4, 03 §6.4):
+    - Create-only records queue in IndexedDB when there is no network: send for work, got back, trade, confirm / sender figure, work done, send back, count, made here, receive first, order dispatch / send material.
+    - They are sent oldest first when the network returns, when the app comes back to the front, and every 30 s.
+    - Each carries its client id, so a retry that already reached the server is recorded once. The undo window starts when the server receives it (at sync).
+    - Checks re-run on the server. A refused record is kept and marked: **Check this** (short stock: the owner can Record anyway) or **Could not send** (Try again / Remove).
+    - Disputes, settlements, edits and approvals stay online-only.
+    - The queue and cached lists are per login, so a shared phone never shows one person's queue or copies to another.
+  - **Last updated:** Goods home lists read through a device copy. Offline they show the last copy, with "Offline · Last updated 19:47".
+  - **The strip on Goods home:** records waiting with their time and state, then a "Sent: …" toast with **Undo** once each one syncs.
+  - The forms using it: Send for work (incl. order Send material), Got back, Trade, the movement screen, the chat card's Received, Work done, Correct stock, Made here, Received for work, order Send goods.
+  - **Server idempotency gaps closed:**
+    - `POST /sc/jobs/:id/output` takes a client id (the retry → `duplicate`).
+    - Receive-first and adjust answer `duplicate` instead of a second 201.
+    - **A staff count waiting for the owner is no longer queued twice on retry** (it now stores its client id).
+  - **Translations:** all Goods strings (752–793 new keys per language) translated into te, kn, ml, bn, or, mr and gu; `i18n:check all` is 100 % (1,725 / 1,725 web, 123 / 123 server). Made by model, placeholder-checked; *to verify* by native speakers like ta / hi.
+  - **Budget:** Vite writes a manifest; `npm run sc:budget` sums each Goods route's own chunks (gzipped) beyond the app shell. The largest is Goods home at 41.3 KB (budget 150 KB).
+  - **Accessibility:** an in-page audit of 8 Goods screens found no unnamed buttons, unlabelled fields or images without alt text. The Goods home status chips were 36 px and are now 44 px.
+- **Checks:**
+  - typecheck + lint green.
+  - **`scripts/sc-smoke-s9.py`: 15/15, and again on a second run.** Every queueable record is sent twice with the same body:
+    - send, work done, got back, sale, made here and count → "duplicate"; the book moved by 1, not 2;
+    - receive-first;
+    - a queued confirmation after the job changed → 200, the retry "unchanged", one receipt assertion;
+    - a staff count waiting for approval → one approval;
+    - the budget and `i18n:check` pass.
+  - **Browser:**
+    - Ravi, network cut in the page: a stock count went to the outbox; Goods home showed the saved copy with "Offline · Last updated 19:47 · 1 record waiting".
+    - Network back: it synced within about 2 s ("Sent: Count · …"), and the server had exactly one count.
+    - Telugu renders on Goods and Reports.
+- **Fixed during checks:**
+  - The "saved on this phone" toast overlapped the "Sent" toast; it now clears when a record sends.
+  - The dev server hung once during an auto-restart (not a code fault; a clean restart was fine).
+- **Known gaps:**
+  - **No 4× CPU-throttled pass:** the in-app browser can't throttle the CPU. Unthrottled, the money pages answer in about 1 s on the dev DB.
+  - Offline reads cover the Goods home lists only. Detail pages (a job, a movement, a party) need the network.
+  - No service worker, so a cold start with no network can't load the app shell.
+  - The offline queue lives in one browser profile; clearing site data loses records not yet sent.
+  - **Translations of the seven overlay languages are machine-made and need native review**, like Tamil and Hindi.
+
 ## Open questions
 - T8: a separate free Atlas cluster for integration tests needs to be created by the user (not blocking slice 0's pure tests).
 
 ## Next
-Slice 9 (offline outbox, polish, performance), then Phase 7. Optional: add the Anthropic key and verify the Haiku tier.
+Phase 7 (seed scenarios A and B, end-to-end from every account, independent audit). Optional: add the Anthropic key and verify the Haiku tier.

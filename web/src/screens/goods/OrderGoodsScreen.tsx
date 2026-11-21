@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import clsx from 'clsx';
 import { api, errorText, ApiError } from '../../lib/api';
+import { postOrQueue } from '../../lib/offline';
 import { Button } from '../../components/Button';
 import { Sheet } from '../../components/Sheet';
 import { ArrowLeft, ChevronRight, Truck, Repeat, Send, CircleCheck, Clock, AlertCircle } from '../../icons';
@@ -63,7 +64,8 @@ export default function OrderGoodsScreen() {
     try {
       if (sheet === 'send' && spec) {
         const unit = spec.units.find((u) => !['rolls', 'cones', 'bundles', 'bags', 'boxes'].includes(u)) ?? spec.units[0];
-        await api.post(`/api/sc/orders/${o.id}/dispatch`, { lines: [{ spec_id: spec.spec.id, qty: Number(qty), unit }], ...(dc.trim() ? { dc_no: dc.trim() } : {}), business_date: todayIST(), client_id: cid, ...(untracked ? { allow_untracked: true, untracked_reason: 'Sent against an order' } : {}) });
+        const r0 = await postOrQueue(`/api/sc/orders/${o.id}/dispatch`, { lines: [{ spec_id: spec.spec.id, qty: Number(qty), unit }], ...(dc.trim() ? { dc_no: dc.trim() } : {}), business_date: todayIST(), client_id: cid, ...(untracked ? { allow_untracked: true, untracked_reason: 'Sent against an order' } : {}) }, `${t('send_goods')} · ${o.code}`);
+        if (r0 && typeof r0 === 'object' && 'queued' in r0) { nav('/goods?queued=1'); return; }
         flash(t('saved_dispatch', { name: other }));
       } else if (sheet === 'return' && retSpec) {
         await api.post(`/api/sc/orders/${o.id}/return`, { lines: [{ spec_id: retSpec.spec_id, qty: Number(qty), unit: o.dim === 'mass' ? 'kg' : o.dim === 'length' ? 'm' : 'pcs' }], reason, business_date: todayIST(), client_id: cid });

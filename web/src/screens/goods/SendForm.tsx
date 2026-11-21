@@ -4,6 +4,7 @@ import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { OrderGoodsS } from './OrderGoods.strings';
 import clsx from 'clsx';
 import { api, errorText, ApiError } from '../../lib/api';
+import { postOrQueue } from '../../lib/offline';
 import { Button } from '../../components/Button';
 import { Sheet } from '../../components/Sheet';
 import { AlertTriangle, ArrowLeft, Camera, ChevronRight, LayoutGrid, Plus, Trash2 } from '../../icons';
@@ -114,8 +115,9 @@ export default function SendForm() {
         lines: lines.map((l) => ({ spec_id: l.spec!.spec.id, qty: Number(l.qty), unit: l.unit, lot: l.lot.trim() || undefined, they_got: Number(l.theyGot) > 0 ? Number(l.theyGot) : undefined })),
         ...(override ? { allow_untracked: true, untracked_reason: override.reason } : {}),
       };
-      const r = await api.post<{ movement: { id: string }; undo_until: number }>(orderId ? `/api/sc/orders/${orderId}/send-material` : '/api/sc/movements/send', body);
-      nav(`/goods?saved=${r.movement.id}&until=${r.undo_until}`, { replace: true });
+      const r = await postOrQueue<{ movement: { id: string }; undo_until: number }>(orderId ? `/api/sc/orders/${orderId}/send-material` : '/api/sc/movements/send', body, `${s('send')} · ${party.name}`);
+      if ('queued' in r) nav('/goods?queued=1', { replace: true });
+      else nav(`/goods?saved=${r.movement.id}&until=${r.undo_until}`, { replace: true });
     } catch (e) {
       const body = (e as ApiError).body as { code?: string; lines?: { index: number; available: number; needed: number; dim: string }[] } | undefined;
       if (e instanceof ApiError && body?.code === 'negative' && body.lines?.length) {

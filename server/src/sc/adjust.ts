@@ -97,7 +97,10 @@ router.post(
         // D5: a staff count that differs from the book by more than 5 pcs / 2 kg waits for the owner; nothing posts yet.
         if (ctx.role === 'staff' && Math.abs(q - have) > COUNT_THRESHOLD[dim]) {
           const pid = newId('aj');
-          await col('sc_adjustments').insertOne({ _id: pid, id: pid, business_id: ctx.businessId, op: 'count', state: 'pending', key, dim, qty: q, book: have, to: {}, reason: b.reason ?? null, business_date: businessDate, by: ctx.userId, at: Date.now() } as any);
+          // An offline retry of the same count must not ask the owner twice.
+          const again: any = await col('sc_adjustments').findOne({ business_id: ctx.businessId, client_id: b.client_id } as any);
+          if (again) return res.status(202).json({ adjustment: { id: again._id, op: 'count', qty: again.qty, difference: again.qty - again.book, pending: again.state === 'pending' }, duplicate: true });
+          await col('sc_adjustments').insertOne({ _id: pid, id: pid, business_id: ctx.businessId, client_id: b.client_id, op: 'count', state: 'pending', key, dim, qty: q, book: have, to: {}, reason: b.reason ?? null, business_date: businessDate, by: ctx.userId, at: Date.now() } as any);
           return res.status(202).json({ adjustment: { id: pid, op: 'count', qty: q, difference: q - have, pending: true } });
         }
         postings.push(...postCount(key, dim, have, q, 'count'));
@@ -105,9 +108,10 @@ router.post(
       }
     }
     const id = newId('aj');
-    await post(ctx, { type: `adjust_${b.op}`, ref: { kind: 'adjustment', id }, payload: { op: b.op }, business_date: businessDate, client_id: b.client_id }, postings, async (session) => {
+    const result = await post(ctx, { type: `adjust_${b.op}`, ref: { kind: 'adjustment', id }, payload: { op: b.op }, business_date: businessDate, client_id: b.client_id }, postings, async (session) => {
       await col('sc_adjustments').insertOne({ _id: id, id, business_id: ctx.businessId, op: b.op, key, dim, qty: q, book: have, to: { grade: b.to_grade ?? null, spec_id: b.to_spec_id ?? null, lot: b.to_lot ?? null }, reason: b.reason ?? null, business_date: businessDate, by: ctx.userId, at: Date.now() } as any, { session });
     });
+    if ((result as { duplicate?: boolean } | undefined)?.duplicate) return res.json({ duplicate: true });
     res.status(201).json({ adjustment: { id, op: b.op, qty: q, difference: b.op === 'count' ? q - have : null } });
   }),
 );

@@ -20,7 +20,8 @@ Read this first in a new session, then `PROGRESS.md` (a report per slice), `BUIL
 | 6 | 9ecc75e | Statement links (`/l/:token`), WhatsApp share, contact linking (`link_rekey`) |
 | 7 | 20c3b64 | Staff: provisioning, PIN, staff guard on every route, count approvals, suggestions |
 | 8a | 0ec68b3 | Reports and money: derived bills, record payment / set-off, balances and oldest unpaid, performance, GST clock, CSV |
-| 8b | see `git log` | Orders ↔ goods: deliveries as movements, auto-delivered, returns, Send material, order prices in Bills, history in search, work profile, migration |
+| 8b | ff628ea | Orders ↔ goods: deliveries as movements, auto-delivered, returns, Send material, order prices in Bills, history in search, work profile, migration |
+| 9 | see `git log` | Offline outbox + Last updated, retry idempotency, all Goods strings in 7 more languages, bundle budget, accessibility pass |
 
 ## Slice 7 (staff): done
 Server, web, the 34-check smoke (`scripts/sc-smoke-s7.py`) and a browser pass are all complete; see the slice 7 report in `PROGRESS.md`. The demo staff user on the dev DB is **Kavitha, 9600000001, PIN 2468**, staff of Ravi.
@@ -31,9 +32,14 @@ Server `sc/money.ts`, web `ReportsScreen` / `BillScreen`, the 27-check smoke (`s
 ## Slice 8b (orders ↔ goods): done
 Server `sc/orders.ts`, web `OrderGoodsScreen` (+ Orders line, chat card link, work card, history in search), the 34-check smoke (`scripts/sc-smoke-s8b.py`) and a browser pass; gaps in the slice 8b report in `PROGRESS.md`. The qty_done migration (`npm run sc:migrate-orders -w server`, dry run by default) has **not** been run on production; that's the owner's call at deploy time.
 
-## After slice 8b (from `05-build-plan.md`)
-- **9** flow view
-- Then Phase 7 (field test, polish).
+## Slice 9 (offline, translations, polish): done
+See the slice 9 report in `PROGRESS.md` (gaps: no CPU-throttled pass, no service worker, overlay translations need native review).
+
+## Next: Phase 7 (from `05-build-plan.md`)
+- Seed scenarios A and B from `mockups/DATA.md` and run both end to end from every account.
+- An independent audit (correctness, isolation, UX, regressions); fix what it finds.
+- Update `HANDOVER.md`, `BUILD_CONTRACT.md`, `DESIGN_SYSTEM.md`.
+- The Flow view (S9 in the UX doc) is still unbuilt.
 
 Demo stops agreed: after S1, S2, S4.5 and S5 (all passed).
 
@@ -55,9 +61,10 @@ SC_ENABLED=1 MONGODB_DB=nexconn_sc_dev npm run dev   # API :8787, web :5173 (pro
 - Flag a business: `MONGODB_DB=nexconn_sc_dev npm run sc:flag -w server -- <id|phone> on` (refuses non-dev DBs).
 - Checks:
   - `npm run lint` (typecheck + `scripts/sc-lint.mjs`); `npm test` (24 unit tests);
-  - smokes `python3 scripts/sc-smoke-s{1,2,3,4,45,6,7,8a,8b}.py` (dev server running);
+  - smokes `python3 scripts/sc-smoke-s{1,2,3,4,45,6,7,8a,8b,9}.py` (dev server running);
   - `cd server && MONGODB_DB=nexconn_sc_dev SC_ENABLED=1 npx tsx src/sc/claire/smoke.mts`;
   - `MONGODB_DB=nexconn_sc_dev npm run sc:verify -w server` (ledger: every event balances, every holding equals its postings);
+  - `npm run sc:budget` (after a build) and `npm run i18n:check -- all`;
   - Claire fixtures: `npm run sc:claire-fixtures -w server` (`SC_LLM_OFF=1` = rules only).
 
 ## Rules that still apply (from the brief)

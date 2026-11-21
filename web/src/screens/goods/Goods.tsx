@@ -19,6 +19,9 @@ import { JobS } from './Job.strings';
 import { TradeS } from './Trade.strings';
 import { LinkBanners } from './LinkBanners';
 import { WorkCard } from './WorkCard';
+import { OutboxBar } from './OutboxBar';
+import { OfflineS } from './Offline.strings';
+import { cachedGet } from '../../lib/offline';
 import { Others } from './Others';
 import { qty as fmtQty, shortDate } from './format';
 
@@ -62,6 +65,8 @@ export default function Goods() {
   const [params, setParams] = useSearchParams();
   const isStaff = useSession((st) => st.user?.role === 'staff');
   const mo = MoneyS.use();
+  const off = OfflineS.use();
+  const [staleAt, setStaleAt] = useState<number | null>(null);
   const [tab, setTabState] = useState<Tab>(() => (params.get('tab') as Tab) || (isStaff && !(() => { try { return localStorage.getItem(TAB_KEY); } catch { return null; } })() ? 'coming' : readTab()));
   const [home, setHome] = useState<Home | null>(null);
   const [out, setOut] = useState<OutRow[] | null>(null);
@@ -88,6 +93,13 @@ export default function Goods() {
   useEffect(() => {
     const id = params.get('saved');
     const until = Number(params.get('until'));
+    if (params.get('queued')) {
+      setToastText(off('kept'));
+      const keep = params.get('tab');
+      setParams(keep ? { tab: keep } : {}, { replace: true });
+      const t = setTimeout(() => setToastText(null), 4000);
+      return () => clearTimeout(t);
+    }
     if (id && until > Date.now()) {
       setToast({ id, until });
       setToastText(r('saved'));
@@ -95,12 +107,15 @@ export default function Goods() {
       setParams({}, { replace: true });
       return () => clearTimeout(t);
     }
-  }, [params, setParams, r]);
+  }, [params, setParams, r, off]);
 
   const load = useCallback(async () => {
     setError(null);
+    let stale: number | null = null;
+    // Offline, each list shows the last copy saved on this phone ("Last updated 10:42").
+    const get = async <T,>(path: string): Promise<T> => { const r0 = await cachedGet<T>(path); if (r0.staleAt) stale = Math.min(stale ?? r0.staleAt, r0.staleAt); return r0.data; };
     try {
-      const h = await api.get<Home>('/api/sc/home');
+      const h = await get<Home>('/api/sc/home');
       setHome(h);
       if (tab === 'in' && sub === 'mine') {
         const o = await api.get<{ groups: { jobs: unknown[] }[] }>('/api/sc/goods/others');
@@ -108,7 +123,7 @@ export default function Goods() {
         setOthersCount(n);
       }
       if (tab === 'out') {
-        const rows = (await api.get<{ rows: OutRow[] }>('/api/sc/goods/out')).rows;
+        const rows = (await get<{ rows: OutRow[] }>('/api/sc/goods/out')).rows;
         setOut(rows);
         // A job worker (nothing of its own out, others' goods here) opens on Others' goods unless it chose a tab (03 §4.5).
         let chosen = false;
@@ -126,12 +141,13 @@ export default function Goods() {
         }
       }
       if (tab === 'coming') {
-        const c = await api.get<{ rows: Job[]; toConfirm: ToConfirm[]; unmatched: Unmatched[] }>('/api/sc/goods/coming');
+        const c = await get<{ rows: Job[]; toConfirm: ToConfirm[]; unmatched: Unmatched[] }>('/api/sc/goods/coming');
         setComing(c.rows);
         setToConfirm(c.toConfirm);
         setUnmatched(c.unmatched);
       }
-      if (tab === 'in') setMine((await api.get<{ mine: InRow[] }>('/api/sc/goods/in')).mine);
+      if (tab === 'in') setMine((await get<{ mine: InRow[] }>('/api/sc/goods/in')).mine);
+      setStaleAt(stale);
     } catch (e) {
       setError(errorText(e));
     }
@@ -140,6 +156,8 @@ export default function Goods() {
   useEffect(() => {
     void load();
   }, [load]);
+  // A kept record was sent: drop the "saved on this phone" note (the strip shows "Sent") and refresh the lists.
+  const onSent = useCallback(() => { setToastText(null); void load(); }, [load]);
 
   const undo = async () => {
     if (!toast) return;
@@ -186,10 +204,10 @@ export default function Goods() {
 
         {chips && (chips.late > 0 || chips.toConfirm > 0 || chips.disputes > 0) && (
           <div className="mt-3 flex flex-wrap gap-2">
-            {chips.late > 0 && <button onClick={() => setTab('out')} className="min-h-9 rounded-full bg-danger-tint px-3 text-[14px] font-semibold text-danger">{s('chip_late', { n: chips.late })}</button>}
-            {chips.toConfirm > 0 && <button onClick={() => setTab('coming')} className="min-h-9 rounded-full bg-accent-tint px-3 text-[14px] font-semibold text-accent-ink">{s('chip_confirm', { n: chips.toConfirm })}</button>}
+            {chips.late > 0 && <button onClick={() => setTab('out')} className="min-h-11 rounded-full bg-danger-tint px-3 text-[14px] font-semibold text-danger">{s('chip_late', { n: chips.late })}</button>}
+            {chips.toConfirm > 0 && <button onClick={() => setTab('coming')} className="min-h-11 rounded-full bg-accent-tint px-3 text-[14px] font-semibold text-accent-ink">{s('chip_confirm', { n: chips.toConfirm })}</button>}
             {chips.disputes > 0 && (
-              <button onClick={async () => { setDisputes((await api.get<{ disputes: DisputeRow[] }>('/api/sc/disputes')).disputes); setSheet('disputes'); }} className="min-h-9 rounded-full bg-danger-tint px-3 text-[14px] font-semibold text-danger">
+              <button onClick={async () => { setDisputes((await api.get<{ disputes: DisputeRow[] }>('/api/sc/disputes')).disputes); setSheet('disputes'); }} className="min-h-11 rounded-full bg-danger-tint px-3 text-[14px] font-semibold text-danger">
                 {s('chip_dispute', { n: chips.disputes })}
               </button>
             )}
@@ -206,6 +224,7 @@ export default function Goods() {
         </div>
       </header>
 
+      <OutboxBar staleAt={staleAt} onSent={onSent} />
       {home?.role === 'owner' && <WorkCard />}
       <LinkBanners owner={home?.role === 'owner'} onChange={() => void load()} />
 

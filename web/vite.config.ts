@@ -29,5 +29,6 @@ export default defineConfig({
       '/l/': { target: backend, changeOrigin: true },
     },
   },
-  build: { target: 'es2022', chunkSizeWarningLimit: 1600 },
+  // The manifest lets scripts/sc-budget.mjs measure what the Goods route loads (slice 9 budget).
+  build: { target: 'es2022', chunkSizeWarningLimit: 1600, manifest: true },
 });

@@ -394,7 +394,8 @@ router.post(
       await col('sc_receive_first').insertOne(doc as any, { session });
       await col('sc_holdings').updateMany({ 'key.state.reason': 'unmatched', 'key.state.ref': id } as any, { $set: { provisional_by: ctx.businessId } }, { session });
     });
-    if (!r.duplicate) await matchReceiverFirst(ctx.businessId, sender.id);
+    if (r.duplicate) return res.json({ duplicate: true });
+    await matchReceiverFirst(ctx.businessId, sender.id);
     res.status(201).json({ receiveFirst: await col('sc_receive_first').findOne({ _id: id } as any) });
   }),
 );
