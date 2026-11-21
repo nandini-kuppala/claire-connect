@@ -1090,7 +1090,9 @@ async function autoReply(convId: string, buyerUser: UserRow, buyerText: string, 
 const DESK_COUNTERPART = { id: BOT.desk, name: 'CLAIRE Trade Desk', accent: '#0D9488', city: null, trust: null, language: 'en' };
 
 export async function inbox(user: UserRow) {
-  const filter = user.business_id ? { $or: [{ business_ids: user.business_id }, { user_ids: user.id }] } : { user_ids: user.id };
+  const base = user.business_id ? { $or: [{ business_ids: user.business_id }, { user_ids: user.id }] } : { user_ids: user.id };
+  // Staff see only Goods conversations: no deal rooms, offers or prices (04 §10.3b).
+  const filter = user.role === 'staff' ? { ...base, kind: 'goods' } : base;
   const convs = await find<ConversationDoc>('conversations', filter, { sort: { last_at: -1, updated_at: -1 }, limit: 200 });
   const otherIds = [...new Set(convs.flatMap((c) => c.business_ids.filter((b) => b !== user.business_id)))];
   const businesses = await find('businesses', { _id: { $in: otherIds } }, { projection: { name: 1, accent: 1, city: 1, language: 1 } });

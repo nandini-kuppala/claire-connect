@@ -131,11 +131,16 @@ const outcomeBody = z.object({ outcome: z.enum(['sent', 'received', 'split', 'cr
 /** Propose an outcome. Conceding (using the other side's figure) settles at once; one-sided disputes settle at once. */
 router.post(
   '/sc/disputes/:id/propose',
-  requireOwner,
   h(async (req: ScRequest, res) => {
     const b = outcomeBody.parse(req.body);
     const d = await myDispute(req.ctx.businessId, req.params.id);
     if (!OPEN.includes(d.state)) throw new HttpError(409, 'This difference is already settled.');
+    // Staff suggest; only the owner settles or proposes to the other side (03 §4.4). The other side never sees this.
+    if (req.ctx.role === 'staff') {
+      const { staffName } = await import('./staff.js');
+      await col('sc_discrepancies').updateOne({ _id: d._id } as any, { $push: { staff_suggestions: { by_user_id: req.ctx.userId, by_name: await staffName(req.ctx.userId), outcome: b.outcome, note: b.note ?? null, at: Date.now() } } } as any);
+      return res.status(202).json({ suggested: true });
+    }
     const me = req.ctx.businessId;
     const oneSided = (d.parties?.length ?? 0) < 2;
     const concedes = (d.sent_by === me && b.outcome === 'received') || (d.received_by === me && b.outcome === 'sent');

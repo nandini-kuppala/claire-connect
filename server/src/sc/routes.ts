@@ -17,6 +17,7 @@ import adjust from './adjust.js';
 import drafts from './claire/drafts.js';
 import { ownerRouter as statements } from './statement.js';
 import linking from './link.js';
+import staff from './staff.js';
 
 const router = Router();
 router.use('/sc', requireAuth, requireSc);
@@ -31,6 +32,7 @@ router.use(adjust);
 router.use(drafts);
 router.use(statements);
 router.use(linking);
+router.use(staff);
 
 /** Action chips and the Goods badge (03 §4.2). Late/confirm/dispute counts arrive with slices 1–2. */
 router.get(

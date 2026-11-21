@@ -3,7 +3,7 @@
 Governing brief: `docs/supply-chain/BRIEF.md` (re-read at the start of every phase and after any context compaction).
 
 ## Current phase
-**Phase 6 — slices 0 to 6 done. Next: slice 7 (staff). The Haiku tier of personal Claire is still off until `ANTHROPIC_API_KEY` is set and verified (slice 5).** Work stays on local branch `supply-chain`. Phase 0 done: `00-current-state.md`.
+**Phase 6 — slices 0 to 6 done; slice 7 (staff) in progress: server side written and typechecked, web + smoke left. See `HANDOVER.md` for exactly what is left.** Work stays on branch `supply-chain` (pushed; not merged to main).
 
 ## Phase status
 | Phase | Doc | Status |

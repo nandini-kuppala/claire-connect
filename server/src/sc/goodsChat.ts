@@ -18,8 +18,9 @@ export async function goodsConversation(a: string, b: string) {
   const channelId = `goods_${pairKey(a, b)}`;
   const existing = await col('conversations').findOne({ channel_id: channelId } as any);
   if (existing) return existing;
-  const [ua, ub, biz] = await Promise.all([usersOf([a]), usersOf([b]), find('businesses', { _id: { $in: [a, b] } }, { projection: { name: 1 } })]);
-  const members = [...new Set([...ua, ...ub, BOT.claire])];
+  const [ua, ub, biz, staff] = await Promise.all([usersOf([a]), usersOf([b]), find('businesses', { _id: { $in: [a, b] } }, { projection: { name: 1 } }), find('users', { business_id: { $in: [a, b] }, role: 'staff' }, { projection: { id: 1 } })]);
+  // Staff of both sides join Goods conversations (never deal rooms).
+  const members = [...new Set([...ua, ...ub, ...staff.map((u: any) => u.id ?? u._id), BOT.claire])];
   const names = new Map(biz.map((x: any) => [x._id, x.name]));
   const now = Date.now();
   const conv = {

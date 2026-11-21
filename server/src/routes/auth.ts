@@ -21,9 +21,9 @@ export function normalizePhone(raw: unknown): string {
 
 /** User as sent to the client: the stored row without internal fields. */
 export function publicUser(u: UserRow) {
-  const { chat_token: _token, ...rest } = u as UserRow & { _id?: string };
+  const { chat_token: _token, pin_hash: pinHash, ...rest } = u as UserRow & { _id?: string; pin_hash?: string | null };
   delete (rest as { _id?: string })._id;
-  return { ...rest, onboarded: u.onboarded ? 1 : 0 };
+  return { ...rest, onboarded: u.onboarded ? 1 : 0, has_pin: !!pinHash };
 }
 
 /** Returns the user's Nexconn token, issuing (and caching) one if needed. Null in local mode or on failure. */

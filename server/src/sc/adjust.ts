@@ -8,6 +8,7 @@ import type { Ctx, ScRequest } from './flag.js';
 import { newId, post } from './repo.js';
 import { me, qtyBase, sameParty, specInfo } from './ledgerOps.js';
 import { enqueueCard } from './goodsChat.js';
+import { COUNT_THRESHOLD } from './staff.js';
 import { postCount, postRegrade, postRespec, pseudo, real, type Goods } from '../../../shared/sc/postings.js';
 import { todayIST } from '../../../shared/sc/dates.js';
 import type { Dimension, PartyRef, Posting, RealKey } from '../../../shared/sc/types.js';
@@ -93,6 +94,12 @@ router.post(
         break;
       case 'count': {
         if (b.qty === undefined) throw new HttpError(400, 'Enter what you counted.');
+        // D5: a staff count that differs from the book by more than 5 pcs / 2 kg waits for the owner; nothing posts yet.
+        if (ctx.role === 'staff' && Math.abs(q - have) > COUNT_THRESHOLD[dim]) {
+          const pid = newId('aj');
+          await col('sc_adjustments').insertOne({ _id: pid, id: pid, business_id: ctx.businessId, op: 'count', state: 'pending', key, dim, qty: q, book: have, to: {}, reason: b.reason ?? null, business_date: businessDate, by: ctx.userId, at: Date.now() } as any);
+          return res.status(202).json({ adjustment: { id: pid, op: 'count', qty: q, difference: q - have, pending: true } });
+        }
         postings.push(...postCount(key, dim, have, q, 'count'));
         break;
       }

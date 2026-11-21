@@ -3,6 +3,7 @@ import 'dotenv/config';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { staffGuard } from './staffGuard.js';
 import express, { type NextFunction, type Request, type Response, type Router } from 'express';
 import cors from 'cors';
 import multer from 'multer';
@@ -62,6 +63,8 @@ async function main() {
     }),
   );
   app.use(express.json({ limit: '15mb' }));
+  // Staff logins reach only Goods, Claire and Goods conversations, on every route (04 §10.3b).
+  app.use('/api', staffGuard);
   app.use('/uploads', express.static(uploadsDir, { maxAge: '7d', fallthrough: false }));
 
   await connectDb();

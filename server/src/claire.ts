@@ -76,6 +76,8 @@ export async function homeCard(user: UserRow): Promise<Out[]> {
   ];
   const first = (user.name || biz?.owner_name || '').split(' ')[0];
   const goods = await goodsChips(user);
+  // Staff: goods only, no buying or selling.
+  if (user.role === 'staff') return [{ kind: 'chips', text: t(lang, 'greet', { name: (user.name || '').split(' ')[0] }), hint: undefined, chips: goods, layout: 'grid' }];
   return [{ kind: 'chips', text: t(lang, 'greet', { name: first }), hint: t(lang, 'greet_sub'), chips: [...goods, ...chips], layout: 'grid' }];
 }
 
@@ -89,6 +91,10 @@ export async function claireTurn(user: UserRow, input: { text?: string; chipId?:
   // Goods questions and records (supply-chain flag on): answered from the user's own records, else the flow below.
   const goods = await scClaireTurn(user, input).catch((e) => { console.error('[claire] goods turn failed', e); return null; });
   if (goods) return say(user, goods as Out[]);
+  if (user.role === 'staff') {
+    const msg = { en: 'I can help you with goods: what came in, what is out, what is late. Buying and selling are for the owner.', ta: 'சரக்கு பற்றி உதவ முடியும்: என்ன வந்தது, என்ன வெளியே உள்ளது, என்ன தாமதம். வாங்குவதும் விற்பதும் உரிமையாளருக்கு.', hi: 'मैं माल में मदद कर सकती हूँ: क्या आया, क्या बाहर है, क्या देर है। खरीद-बिक्री मालिक के लिए है।' } as Record<string, string>;
+    return say(user, [{ kind: 'text', text: msg[user.language] ?? msg.en }]);
+  }
   const s = await load(user.id);
   const lang = user.language;
   const biz = user.business_id ? await getBiz(user.business_id) : null;
