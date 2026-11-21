@@ -26,6 +26,9 @@ import { CallLayer } from './call/CallLayer';
 // Supply-chain screens are lazy routes: they add nothing to the first load (docs/supply-chain/04 §6.3).
 const Goods = lazy(() => import('./screens/goods/Goods'));
 const GoodsSetup = lazy(() => import('./screens/goods/GoodsSetup'));
+const SendForm = lazy(() => import('./screens/goods/SendForm'));
+const GotBackForm = lazy(() => import('./screens/goods/GotBackForm'));
+const PartyLedger = lazy(() => import('./screens/goods/PartyLedger'));
 
 /** The Goods routes exist only for businesses with the supply-chain flag; others go Home. */
 function RequireGoods({ children }: { children: ReactNode }) {
@@ -200,6 +203,48 @@ export default function App() {
                 <AppShell>
                   <Suspense fallback={<Splash />}>
                     <GoodsSetup />
+                  </Suspense>
+                </AppShell>
+              </RequireGoods>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/goods/record/send"
+          element={
+            <RequireAuth agentOk={false}>
+              <RequireGoods>
+                <AppShell nav={false}>
+                  <Suspense fallback={<Splash />}>
+                    <SendForm />
+                  </Suspense>
+                </AppShell>
+              </RequireGoods>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/goods/job/:id/return"
+          element={
+            <RequireAuth agentOk={false}>
+              <RequireGoods>
+                <AppShell nav={false}>
+                  <Suspense fallback={<Splash />}>
+                    <GotBackForm />
+                  </Suspense>
+                </AppShell>
+              </RequireGoods>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/goods/party/:k/:id"
+          element={
+            <RequireAuth agentOk={false}>
+              <RequireGoods>
+                <AppShell >
+                  <Suspense fallback={<Splash />}>
+                    <PartyLedger />
                   </Suspense>
                 </AppShell>
               </RequireGoods>

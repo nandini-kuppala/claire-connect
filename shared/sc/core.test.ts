@@ -37,6 +37,9 @@ test('units: Indian grouping and display', () => {
   assert.equal(groupIndian(120000), '1,20,000');
   assert.deepEqual(formatQty(198600, 'mass'), { value: '198.6', unit: 'kg' });
   assert.deepEqual(formatQty(1224, 'count'), { value: '1,224', unit: 'pcs' });
+  assert.deepEqual(formatQty(1400, 'mass'), { value: '1.4', unit: 'kg' });
+  assert.deepEqual(formatQty(250, 'mass'), { value: '0.25', unit: 'kg' });
+  assert.deepEqual(formatQty(95374, 'mass'), { value: '95.4', unit: 'kg' });
   assert.equal(dozenHint(600), '50 dozen');
   assert.equal(dozenHint(601), null);
 });

@@ -69,9 +69,10 @@ export function groupIndian(n: number, decimals = 0): string {
 /** Formats base atoms for display: grams as kg (1 decimal when needed), pieces as pcs, centimetres as m. */
 export function formatQty(base: number, dim: Dimension): { value: string; unit: string } {
   if (dim === 'mass') {
-    const kg = base / 1000;
-    const decimals = Number.isInteger(kg) ? 0 : Math.abs(kg) < 10 ? 2 : 1;
-    return { value: groupIndian(Number(kg.toFixed(decimals)), decimals), unit: 'kg' };
+    // Up to 2 decimals below 10 kg and 1 above, with no trailing zeros (1.4 kg, 198.6 kg, 0.25 kg).
+    const kg = Number((base / 1000).toFixed(Math.abs(base) < 10_000 ? 2 : 1));
+    const decimals = Number.isInteger(kg) ? 0 : String(kg).split('.')[1].length;
+    return { value: groupIndian(kg, decimals), unit: 'kg' };
   }
   if (dim === 'length') {
     const m = base / 100;

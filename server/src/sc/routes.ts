@@ -5,18 +5,27 @@ import { h, requireAuth } from '../util.js';
 import { requireSc, type ScRequest } from './flag.js';
 import { positions } from './repo.js';
 import setup from './setup.js';
+import records from './records.js';
+import views from './views.js';
 import { todayIST } from '../../../shared/sc/dates.js';
+import { jobSummaries } from './views.js';
 
 const router = Router();
 router.use('/sc', requireAuth, requireSc);
 router.use(setup);
+router.use(records);
+router.use(views);
 
 /** Action chips and the Goods badge (03 §4.2). Late/confirm/dispute counts arrive with slices 1–2. */
 router.get(
   '/sc/home',
   h(async (req: ScRequest, res) => {
-    const disputes = await col('sc_discrepancies').countDocuments({ parties: req.ctx.businessId, state: { $in: ['open', 'proposed', 'countered'] } } as any);
-    res.json({ today: todayIST(), chips: { late: 0, toConfirm: 0, disputes }, badge: disputes, role: req.ctx.role });
+    const [disputes, jobs] = await Promise.all([
+      col('sc_discrepancies').countDocuments({ parties: req.ctx.businessId, state: { $in: ['open', 'proposed', 'countered'] } } as any),
+      jobSummaries(req.ctx),
+    ]);
+    const late = jobs.filter((j) => j.late.status === 'late' && j.pending > 0).length;
+    res.json({ today: todayIST(), chips: { late, toConfirm: 0, disputes }, badge: disputes, role: req.ctx.role });
   }),
 );
 
