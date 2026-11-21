@@ -3,7 +3,7 @@
 Governing brief: `docs/supply-chain/BRIEF.md` (re-read at the start of every phase and after any context compaction).
 
 ## Current phase
-**Phase 6 — slices 0 and 0.5 done; next slice 1 (Out with others, single-player), then a demo stop** on local branch `supply-chain`. Phase 0 done: `00-current-state.md`.
+**Phase 6 — slices 0, 0.5 and 1 done. DEMO STOP after slice 1 (B2): waiting for the user's go-ahead to continue with slice 2** (two-sided records and disputes) on local branch `supply-chain`. Phase 0 done: `00-current-state.md`.
 
 ## Phase status
 | Phase | Doc | Status |
@@ -14,7 +14,7 @@ Governing brief: `docs/supply-chain/BRIEF.md` (re-read at the start of every pha
 | 3 Product & UX | `03-product-ux.md`, `ui-principles.md`, `mockups/` (16 screens) | Done 2026-11-21, rendered at 375/1280 px en+ta, red-teamed, **approved** (U1–U9 defaults) |
 | 4 Technical design | `04-technical-design.md` | Done 2026-11-21, model check run, red-teamed, **approved** (T1–T9 defaults) |
 | 5 Build plan | `05-build-plan.md` (v2) | Done 2026-11-21, red-teamed, **approved** (B1–B3 defaults) |
-| 6 Implementation | slices on branch `supply-chain` | Slices 0, 0.5 done 2026-11-21 |
+| 6 Implementation | slices on branch `supply-chain` | Slices 0, 0.5, 1 done 2026-11-21 — demo stop |
 | 7 Final verification | | Not started |
 
 ## Decisions made
@@ -84,6 +84,36 @@ Governing brief: `docs/supply-chain/BRIEF.md` (re-read at the start of every pha
   - the terms and rate editors' UI → the party ledger in slice 1;
   - the process-offerings editor → slice 3 (job workers);
   - Tamil/Hindi labels for material choice values (grey, rfd, single jersey…) → slice 1, with the glossary.
+
+### Slice 1 — Out with others, single-player (2026-11-21)
+- **Built:**
+  - **Server** (`server/src/sc/records.ts`, `views.ts`):
+    - **Send for work** to an off-platform contact: lines with units and lots, an optional "They told me they got" figure, and DC no.
+    - **Owner-only rate**, kept in `sc_prices`.
+    - **Expected date** from the process turnaround in working days.
+    - **Never-negative**: 409 with the stock available, and an owner override with a reason that posts from `EXTERNAL(self)`.
+    - **Got back from work**: output = the performer's figure if given, else what came back (P6). A weighing difference within tolerance → `LOSS(weighing_difference)` borne per terms; beyond → an open discrepancy. "As sent (unprocessed)" returns. Last / more coming.
+    - **The receiver's figure later**: supersession with reversal and resettlement.
+    - **Undo** within 10 min: reverses all of the movement's postings, and is refused once goods came back.
+    - **Read views**: read-time approx pending (P7); Out with others grouped by party, late first; Coming in; In my unit; party ledger; job detail with a default output spec.
+  - **Web**: Goods lists, the Record sheet, the **Send for work** form (party picker with inline new contact, work chips, material picker, qty + unit chips, lot, their figure, expected date, DC, owner rate, short-stock sheet), the **Got back** form (live balance strip from the shared core, grade, rolls, their figure, unprocessed, completion question), the **party ledger** (open jobs, history with Undo, terms with the owner's editor), and the Undo toast. `formatQty` now drops trailing zeros (1.4 kg).
+- **Checks:**
+  - typecheck + lint green; 15/15 tests.
+  - **API walkthrough of J-0412** (`scripts/sc-smoke-s1.py`, dev server only) reproduces the dataset: 0.7 % weighing difference within tolerance; ≈ 95.4 kg grey / ≈ 88.7 kg navy after 96 kg back; the last 92 kg (Noyyal said 93) → 1 kg weighing difference and dyeing loss 4.8 % vs the usual 7 %. Also: duplicate retry, undo, wrong-unit refusal.
+  - **Browser at 375 px** (en, ta): send flow incl. the short-stock sheet and Undo toast, ledger, Got back with the strip, Coming in, Out with others in Tamil.
+- **Fixed during the browser check:**
+  - "loss so far 51.7 %" was shown while goods were still at the dyer; loss now shows only when nothing is estimated to be left;
+  - "about" only on estimates;
+  - "1 places";
+  - the ledger header says "Your contact";
+  - the Got back output material defaults to what this unit last returned for the same work.
+- **Known gaps:**
+  - material names are English-only;
+  - the Work chips list all 13 processes (should show the party's and recent ones first);
+  - DC photo upload moved to slice 2;
+  - Undo uses a repeat icon;
+  - desktop wide layout is slice 3;
+  - integration tests wait for T8.
 
 ## Open questions
 - T8: a separate free Atlas cluster for integration tests needs to be created by the user (not blocking slice 0's pure tests).

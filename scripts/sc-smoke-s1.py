@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 # Slice 1 smoke walkthrough (J-0412: 200 kg grey to a dyer contact, 198.6 kg received, 96 + 92 kg back).
 # Runs against the LOCAL dev server only (SC_ENABLED=1, MONGODB_DB=nexconn_sc_dev, Ravi flagged). Writes demo records to the dev database.
-B='http://localhost:8787'
+import json, urllib.request, uuid
+B='http://localhost:8787'  # local dev server only; never production
 def call(method, path, body=None, tok=None):
     req=urllib.request.Request(B+path, method=method, data=json.dumps(body).encode() if body is not None else None, headers={'content-type':'application/json', **({'authorization':'Bearer '+tok} if tok else {})})
     try:
