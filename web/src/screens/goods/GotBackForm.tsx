@@ -179,7 +179,8 @@ export default function GotBackForm() {
             )}
           </section>
 
-          {strip && (entered ?? 0) > 0 && (
+          {/* Only when this return is in the same dimension as what was sent (kg in, pcs back has no common unit). */}
+          {strip && (entered ?? 0) > 0 && spec?.dimension === job.dim && (
             <section className="rounded-[16px] bg-sunken px-4 py-3 text-[14.5px] text-ink-2">
               <p className="tabular-nums">
                 <span className="font-semibold text-ink">{fmtQty(job.issued, dim)}</span> → {s('back_so_far').toLowerCase()} <span className="font-semibold text-ink">{fmtQty(strip.outputs, dim)}</span>
@@ -203,9 +204,10 @@ export default function GotBackForm() {
             </section>
           )}
 
-          {error && <p className="rounded-[14px] bg-danger-tint px-3 py-2 text-[14px] text-danger">{error}</p>}
         </div>
       )}
+      {/* Outside the job block, so a failed load still says why the form is empty. */}
+      {error && <p role="alert" className="mx-4 mt-4 rounded-[14px] bg-danger-tint px-3 py-2 text-[14px] text-danger">{error}</p>}
 
       <div className="fixed inset-x-0 bottom-0 z-30 mx-auto w-full max-w-[480px] border-t border-line bg-surface px-4 py-3 pb-[calc(12px+var(--safe-bottom))]">
         <Button block size="lg" loading={busy} disabled={!spec || !(entered && entered > 0) || last === null} onClick={() => void save()}>

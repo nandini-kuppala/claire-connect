@@ -6,7 +6,7 @@ import { col } from '../db/index.js';
 import { h, HttpError } from '../util.js';
 import type { Ctx, ScRequest } from './flag.js';
 import { newId, post } from './repo.js';
-import { UNDO_MS, assertion, me, qtyBase, sameParty, specInfo, termsFor } from './ledgerOps.js';
+import { UNDO_MS, assertion, me, qtyBase, sameParty, specInfo, termsFor, unreturnedOutput } from './ledgerOps.js';
 import { enqueueCard } from './goodsChat.js';
 import { lineLabel, partyNames } from './views.js';
 import { postOutput, postReceipt, postSend, type Goods } from '../../../shared/sc/postings.js';
@@ -181,6 +181,8 @@ router.post(
   h(async (req: ScRequest, res) => {
     const b = parse(z.object({ ready: z.boolean() }), req.body);
     const j = await myWork(req.ctx, req.params.id);
+    // "Ready to collect" means finished work is waiting: nothing done yet can't be ready.
+    if (b.ready && !((j.outputs ?? []) as any[]).length) throw new HttpError(409, 'Nothing is done on this job yet.');
     await col('sc_jobs').updateOne({ _id: j._id } as any, b.ready ? { $set: { ready_at: Date.now() } } : { $unset: { ready_at: '' } });
     res.json({ ready: b.ready });
   }),
@@ -220,23 +222,21 @@ router.post(
     const postings: Posting[] = [];
     const movLines: any[] = [];
     const newOutputs: any[] = [];
-    // Outputs recorded but not yet returned, per spec: a send-back larger than that implies the missing output (model §3.5).
-    const returnedBySpec = new Map<string, number>();
-    for (const rid of j.returns ?? []) {
-      const m = await col('sc_movements').findOne({ _id: rid, cancelled_at: null } as any, { projection: { lines: 1 } });
-      for (const l of m?.lines ?? []) if (l.job_id === j._id) returnedBySpec.set(l.spec_id, (returnedBySpec.get(l.spec_id) ?? 0) + (winningAssertion(l.sent)?.base_qty ?? 0));
-    }
+    // Outputs recorded but not yet returned, per item and grade: a send-back larger than that implies the missing output.
+    // Two lines of the same item and grade in one send-back share what is in hand.
+    const taken = new Map<string, number>();
+    const takenNow = (spec: string, grade: string) => taken.get(`${spec}|${grade}`) ?? 0;
     for (const l of b.lines) {
       const info = await specInfo(l.spec_id);
       const q = qtyBase(l.qty, l.unit, info).base;
       const goods: Goods = { spec: info.id, lot: l.lot || null, grade: l.grade, dim: info.dim };
       const lineId = newId('ln');
       if (!l.unprocessed) {
-        const done = (j.outputs as any[]).filter((o) => o.spec_id === info.id && o.grade === l.grade).reduce((a, o) => a + o.qty, 0);
-        const here = Math.max(0, done - (returnedBySpec.get(info.id) ?? 0));
+        const here = (await unreturnedOutput(j, info.id, l.grade)) - takenNow(info.id, l.grade);
+        taken.set(`${info.id}|${l.grade}`, takenNow(info.id, l.grade) + Math.min(q, Math.max(0, here)));
         if (q > here) {
-          postings.push(...postOutput({ goods, qty: q - here, owner, performer, via, jobId: j._id }));
-          newOutputs.push({ movement_id: movementId, line_id: lineId, spec_id: info.id, grade: l.grade, lot: goods.lot, dim: info.dim, qty: q - here, business_date: businessDate });
+          postings.push(...postOutput({ goods, qty: q - Math.max(0, here), owner, performer, via, jobId: j._id }));
+          newOutputs.push({ movement_id: movementId, line_id: lineId, spec_id: info.id, grade: l.grade, lot: goods.lot, dim: info.dim, qty: q - Math.max(0, here), business_date: businessDate });
         }
       }
       postings.push(...postSend({ goods, qty: q, owner, from: { party: performer, via, state: l.unprocessed ? { s: 'allocated', ref: j._id } : { s: 'available' } }, movementId, transitCustodian: performer }));
@@ -246,6 +246,7 @@ router.post(
       movLines.push({
         line_id: lineId, spec_id: info.id, label_en: info.label_en, ...(j.parent_job_id && performer.k === 'b' ? { label_generic: await genericLabel(info.id), generic_viewer: performer.id } : {}), lot: goods.lot, grade: l.grade, dim: info.dim, class: info.cls,
         entered: { value: l.qty, unit: l.unit }, owner_before: owner, owner_after: owner, job_id: j._id, line_kind: l.unprocessed ? 'unprocessed_return' : 'goods', viewer_business_ids: parties,
+        ...(j.parent_job_id ? { parent_job_id: j.parent_job_id } : {}), from_state: l.unprocessed ? { s: 'allocated', ref: j._id } : { s: 'available' }, from_via: l.unprocessed ? null : via,
         sent: [assertion(ctx, q, 'account', businessDate, { final: true })],
         received: receivedNow === null ? [] : [assertion(ctx, q, 'self', businessDate, { reason: 'based_on_sent' })],
         settled: null,
@@ -359,11 +360,14 @@ router.post(
         else sentOutputs += q;
       }
       const goods: Goods = { spec: info.id, lot: l.lot || null, grade: l.grade, dim: info.dim };
-      postings.push(...postSend({ goods, qty: q, owner, from: { party: me(ctx), state: { s: 'allocated', ref: j._id } }, movementId }));
+      // Unprocessed inputs leave the job's allocation; finished work (outputs) leaves the available row it was put in.
+      const fromState = inputSpecs.has(info.id) || info.role === 'secondary' ? { s: 'allocated' as const, ref: j._id } : { s: 'available' as const };
+      postings.push(...postSend({ goods, qty: q, owner, from: { party: me(ctx), state: fromState, ...(fromState.s === 'available' ? { via: (j.via ?? null) as PartyRef | null } : {}) }, movementId }));
       if (to.k === 'c') postings.push(...postReceipt({ goods, owner, movementId, transitCustodian: me(ctx), to: { party: to, state: { s: 'allocated', ref: childId }, via }, delta: q }));
       movLines.push({
         line_id: newId('ln'), spec_id: info.id, role: info.role, label_en: info.label_en, ...(!hop && to.k === 'b' ? { label_generic: await genericLabel(info.id), generic_viewer: to.id } : {}), lot: goods.lot, grade: l.grade, dim: info.dim, class: info.cls,
         entered: { value: l.qty, unit: l.unit }, owner_before: owner, owner_after: owner, job_id: childId, line_kind: 'goods', viewer_business_ids: viewers,
+        from_state: fromState, from_via: fromState.s === 'available' ? (j.via ?? null) : null,
         sent: [assertion(ctx, q, 'account', businessDate, { final: true })], received: to.k === 'c' ? [assertion(ctx, q, 'self', businessDate, { reason: 'based_on_sent' })] : [], settled: null,
       });
     }

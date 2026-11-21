@@ -34,6 +34,7 @@ s, c = call('POST','/api/sc/contacts',{'name':'Selvi Tailoring','phone':selvi_ph
 kit = spec('mt_kit',{'style':'LG-T10','colour':'white','size':'M'},L); tee = spec('mt_garment',{'style':'LG-T10','colour':'white','size':'M'},L)
 s, m = call('POST','/api/sc/movements/send',{'to':selvi,'process_key':'stitching','lines':[{'spec_id':kit,'qty':200,'unit':'pcs'}],'client_id':cid(),'allow_untracked':True,'untracked_reason':'demo'},L)
 job = m['job']['id']; line = m['movement']['lines'][0]['line_id']; mv = m['movement']['id']
+call('POST',f'/api/sc/movements/{mv}/share-now',{},L)  # the link shows records once past the recorder's undo window
 s, lk = call('POST','/api/sc/links',{'party':selvi},L)
 token = lk['link']['url'].rsplit('/',1)[1]
 check('link created with a WhatsApp message in Tamil to her number', s==201 and f'wa.me/91{selvi_phone}' in lk['whatsapp'] and 'சரிபார்த்து' in urllib.parse.unquote(lk['whatsapp']), lk['whatsapp'][:60])

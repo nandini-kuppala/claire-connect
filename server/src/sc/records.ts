@@ -9,7 +9,7 @@ import { h, HttpError } from '../util.js';
 import type { Ctx, ScRequest } from './flag.js';
 import { holdingId, newId, post } from './repo.js';
 import {
-  UNDO_MS, applyReceipt, applySenderFigure, assertion, discrepancyDoc, goodsOf, me, qtyBase, sameParty, settleCtxFor, settleLine, specInfo, termsFor,
+  UNDO_MS, applyReceipt, applySenderFigure, assertion, discrepancyDoc, goodsOf, me, qtyBase, sameParty, settleCtxFor, settleLine, specInfo, termsFor, unreturnedOutput,
 } from './ledgerOps.js';
 import { cancelCards, dueNow, enqueueCard, processDueCards } from './goodsChat.js';
 import { postOutput, postReceipt, postSend, real, reverse, pseudo, type Goods } from '../../../shared/sc/postings.js';
@@ -211,8 +211,13 @@ export async function gotBack(ctx: Ctx, raw: unknown, jobId: string): Promise<Re
       const goods: Goods = { spec: info.id, lot: l.lot || null, grade: l.grade, dim: info.dim };
       const lineId = newId('ln');
       if (!l.unprocessed) {
-        postings.push(...postOutput({ goods, qty: declared, owner, performer, via, jobId: job._id }));
-        outputs.push({ movement_id: movementId, line_id: lineId, spec_id: info.id, grade: l.grade, lot: goods.lot, dim: info.dim, qty: declared, business_date: businessDate });
+        // Only the part not already recorded (Work done, a sub-contractor's roll-up) is new output; the rest is in hand.
+        const inHand = await unreturnedOutput(job, info.id, l.grade);
+        const fresh = Math.max(0, declared - inHand);
+        if (fresh > 0) {
+          postings.push(...postOutput({ goods, qty: fresh, owner, performer, via, jobId: job._id }));
+          outputs.push({ movement_id: movementId, line_id: lineId, spec_id: info.id, grade: l.grade, lot: goods.lot, dim: info.dim, qty: fresh, business_date: businessDate });
+        }
       }
       postings.push(...postSend({ goods, qty: declared, owner, from: { party: performer, via, state: l.unprocessed ? { s: 'allocated', ref: job._id } : { s: 'available' } }, movementId, transitCustodian: performer }));
       // Unprocessed goods from a sub-contractor go back into the parent job's allocation (model §3.5 roll-up).
@@ -253,7 +258,9 @@ export async function gotBack(ctx: Ctx, raw: unknown, jobId: string): Promise<Re
       );
       // Roll-up: a sub-contractor's outputs count for the parent job the owner sees (with the intermediary).
       if (job.parent_job_id && outputs.length) {
-        await col('sc_jobs').updateOne({ _id: job.parent_job_id } as any, { $push: { outputs: { $each: outputs.map((o) => ({ ...o, source: 'child', child_job_id: job._id })) } } as any, $set: { status: 'in_progress' } }, { session });
+        await col('sc_jobs').updateOne({ _id: job.parent_job_id } as any, { $push: { outputs: { $each: outputs.map((o) => ({ ...o, source: 'child', child_job_id: job._id })) } } as any }, { session });
+        // Never flip a closed parent back to in progress (its closure would be orphaned); otherwise work is moving again.
+        await col('sc_jobs').updateOne({ _id: job.parent_job_id, status: { $nin: ['closed', 'cancelled'] } } as any, { $set: { status: 'in_progress' } }, { session });
       }
       if (discrepancies.length) await col('sc_discrepancies').insertMany(discrepancies, { session });
     });
@@ -310,7 +317,9 @@ router.post(
       if (!line || !line.viewer_business_ids?.includes(ctx.businessId)) throw new HttpError(404, 'Not found');
       const info = await specInfo(line.spec_id);
       const base = l.qty !== undefined ? qtyBase(l.qty, l.unit ?? info.units[0], info, l.factor).base : winningAssertion(line.sent)!.base_qty;
-      const mine = (line.received as any[]).find((a) => a.evidence === 'account' && a.by?.business_id === ctx.businessId && a.base_qty === base);
+      // "Unchanged" only if it matches my latest figure; going back to an earlier figure is a real change.
+      const myLast = (line.received as any[]).filter((a) => a.evidence === 'account' && a.by?.business_id === ctx.businessId).at(-1);
+      const mine = myLast && myLast.base_qty === base;
       if (mine) { results.push({ line_id: l.line_id, unchanged: true, disputeId: null }); continue; } // a second tap or a second staff member
       try {
         results.push({ line_id: l.line_id, ...(await applyReceipt(ctx, m._id, l.line_id, base, 'account', b.business_date ?? todayIST())) });
@@ -335,6 +344,8 @@ router.post(
     const b = parse(z.object({ lines: figureLines, business_date: date.optional() }), req.body);
     const m = await visibleMovement(ctx, req.params.id);
     if (!sameParty(m.from.party, me(ctx))) throw new HttpError(403, 'Only the sender can give its figure.');
+    // Only for a return the other side recorded (the job worker's own figure, P6) — never on a record you made yourself.
+    if (m.action !== 'return_from_work' || m.recorder_business_id === ctx.businessId) throw new HttpError(409, 'Give your figure only on a return the other side recorded.');
     const results = [];
     for (const l of b.lines) {
       const line = (m.lines as any[]).find((x) => x.line_id === l.line_id);
@@ -477,9 +488,11 @@ router.post(
     if (actedOn) return res.status(409).json({ error: 'They have already confirmed this. Record a correction instead.', code: 'acted_on' });
     const jobId = m.lines?.[0]?.job_id as string | undefined;
     if (jobId && (await col('sc_jobs').findOne({ _id: jobId, status: 'closed' } as any, { projection: { _id: 1 } }))) return res.status(409).json({ error: 'This job is closed. Reopen it first.', code: 'job_closed' });
-    if (m.action === 'send_for_work' && jobId) {
-      const job = await col('sc_jobs').findOne({ _id: jobId } as any);
-      if (job?.returns?.length) return res.status(409).json({ error: 'Undo the goods that came back first.', code: 'has_returns' });
+    const jobDoc: any = jobId ? await col('sc_jobs').findOne({ _id: jobId } as any) : null;
+    if (m.action === 'send_for_work' && jobDoc) {
+      if (jobDoc.returns?.length) return res.status(409).json({ error: 'Undo the goods that came back first.', code: 'has_returns' });
+      // The job worker has worked on it (work done, sent part on, sold part, marked ready): undo would strand their record.
+      if (jobDoc.outputs?.length || jobDoc.forwards?.length || jobDoc.splits?.length || jobDoc.ready_at) return res.status(409).json({ error: 'They have already worked on this. Record a correction instead.', code: 'acted_on' });
     }
     const events = await col('sc_events').find({ 'ref.kind': 'movement', 'ref.id': m._id, type: { $ne: 'undo' } } as any).toArray();
     const rows = await col('sc_postings').find({ event_id: { $in: events.map((e) => e._id) } } as any).toArray();
@@ -493,8 +506,11 @@ router.post(
         await col('sc_jobs').updateOne({ _id: m.parent_job_id } as any, { $pull: { splits: { movement_id: m._id } } as any }, { session });
       }
       if (m.action === 'return_from_work' && jobId) {
-        const back = (m.lines as any[]).filter((l) => l.line_kind === 'unprocessed_return').reduce((x: number, l: any) => x + (winningAssertion(l.sent)?.base_qty ?? 0), 0);
+        // Same rule as when it was recorded: trims (secondary inputs) sent back unprocessed don't count.
+        const back = (m.lines as any[]).filter((l) => l.line_kind === 'unprocessed_return' && (((jobDoc?.inputs ?? []) as any[]).find((i) => i.spec_id === l.spec_id)?.role ?? 'primary') !== 'secondary').reduce((x: number, l: any) => x + (winningAssertion(l.sent)?.base_qty ?? 0), 0);
         await col('sc_jobs').updateOne({ _id: jobId } as any, { $pull: { outputs: { movement_id: m._id }, returns: m._id } as any, $set: { status: 'in_progress', completed_at: null }, $inc: { version: 1, unprocessed_back: -back } }, { session });
+        // A sub-contractor's return was rolled up into the parent job: take it out there too.
+        if (jobDoc?.parent_job_id) await col('sc_jobs').updateOne({ _id: jobDoc.parent_job_id } as any, { $pull: { outputs: { movement_id: m._id } } as any, $inc: { version: 1 } }, { session });
       }
     });
     await cancelCards('movement', m._id);

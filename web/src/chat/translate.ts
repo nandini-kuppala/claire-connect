@@ -255,6 +255,35 @@ export async function translateItems(items: TranslateRequest[], to: string): Pro
   return out;
 }
 
+const SCRIPTS: [RegExp, string][] = [
+  [/[஀-௿]/g, 'ta'],
+  [/[ऀ-ॿ]/g, 'hi'],
+  [/[ఀ-౿]/g, 'te'],
+  [/[ಀ-೿]/g, 'kn'],
+  [/[ഀ-ൿ]/g, 'ml'],
+  [/[ঀ-৿]/g, 'bn'],
+  [/[଀-୿]/g, 'or'],
+  [/[઀-૿]/g, 'gu'],
+];
+
+/**
+ * The language a message is written in, from its script (Tamil script → 'ta', Devanagari → 'hi', …);
+ * `hint` breaks the Devanagari tie for Marathi. Latin-script text (English, Hinglish, Tanglish) → null.
+ */
+export function scriptLang(text: string, hint?: string | null): string | null {
+  let best: string | null = null;
+  let most = 0;
+  for (const [re, lang] of SCRIPTS) {
+    const n = text.match(re)?.length ?? 0;
+    if (n > most) {
+      most = n;
+      best = lang;
+    }
+  }
+  if (!best) return null;
+  return best === 'hi' && hint === 'mr' ? 'mr' : best;
+}
+
 const sameLang = (a: string, b: string) => a.toLowerCase().split(/[-_]/)[0] === b.toLowerCase().split(/[-_]/)[0];
 
 /** True when the translation differs meaningfully from the source (avoid "Translated" labels on same-language text). */

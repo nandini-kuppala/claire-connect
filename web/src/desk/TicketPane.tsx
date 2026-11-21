@@ -15,6 +15,8 @@ export function TicketPane({
   const now = useNow(1000);
   const [sending, setSending] = useState<string | null>(null);
   const [sendError, setSendError] = useState<string | null>(null);
+  // Suggestions already sent on this ticket (the intro line, once used, is not offered again).
+  const [usedReplies, setUsedReplies] = useState<Record<string, string[]>>({});
 
   if (!ticket)
     return (
@@ -29,14 +31,16 @@ export function TicketPane({
       </section>
     );
 
-  const replies = ticket.suggestedReplies.length
+  const used = usedReplies[ticket.id] ?? [];
+  const replies = (ticket.suggestedReplies.length
     ? ticket.suggestedReplies
     : [
         `Namaste, I am ${agentName} from CLAIRE Trade Desk. I am looking into this now.`,
         ...(ticket.nextStep ? [ticket.nextStep] : []),
         'Can you share a photo or the LR number, please?',
         'Thank you both. I will update you within the hour.',
-      ];
+      ]
+  ).filter((r) => !used.includes(r));
   // The console reads in English; parties may write in different languages, so detect per message.
   const counterpartLang = 'auto';
 
@@ -46,6 +50,7 @@ export function TicketPane({
     setSendError(null);
     try {
       await engine.sendText(channel, text);
+      setUsedReplies((cur) => ({ ...cur, [ticket!.id]: [...(cur[ticket!.id] ?? []), text] }));
     } catch (e) {
       setSendError(errMsg(e));
     } finally {
@@ -114,7 +119,7 @@ export function TicketPane({
           <div className="min-h-0 flex-1">
             <ChatView key={channel.targetId} channel={channel} conversationId={ticket.conversationId ?? undefined} counterpartLang={counterpartLang} compact uiLang="en" placeholder="Message" />
           </div>
-          {ticket.status !== 'resolved' && (
+          {ticket.status !== 'resolved' && replies.length > 0 && (
             <div className="border-t bg-surface px-4 py-2.5" style={{ borderColor: C.border }}>
               <p className="mb-1.5 flex items-center gap-1.5 text-[12px] font-semibold" style={{ color: C.ink2 }}>
                 <ClaireMark size={18} /> Claire suggests

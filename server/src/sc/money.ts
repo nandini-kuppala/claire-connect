@@ -42,7 +42,8 @@ type Rate = { basis: string; value_paise: number };
 function orderRate(o: any): number {
   const u = orderUnit(o);
   const display = u.dim === 'mass' ? 1000 : u.dim === 'length' ? 100 : 1;
-  return Math.round((o.unit_price * 100 * (1 + (o.gst_pct ?? 0) / 100) * display) / u.perUnitBase);
+  // Exact (not rounded per piece): amounts are rounded once, so the bill matches the order's own total.
+  return (o.unit_price * 100 * (1 + (o.gst_pct ?? 0) / 100) * display) / u.perUnitBase;
 }
 
 function jobRate(j: any, agreed: Map<string, Rate>, cards: any[], orders: Map<string, any> = new Map()): Rate | null {
@@ -71,8 +72,9 @@ function billable(j: any, basis: string, movements: Map<string, any>, procs: Map
     return { base: issued, dim };
   }
   const grades: string[] = basis === 'per_good_output_piece' ? procs.get(j.process_key)?.billable_grades ?? ['A'] : ['A', 'B', 'rework', 'reject', 'scrap'];
-  const outs = (j.outputs as any[]).filter((o) => grades.includes(o.grade ?? 'A'));
-  return { base: outs.reduce((a, o) => a + o.qty, 0), dim: outs[0]?.dim ?? dim };
+  // A piece rate counts pieces only (fabric or scrap back in kg is not "pieces").
+  const outs = (j.outputs as any[]).filter((o) => grades.includes(o.grade ?? 'A') && (o.dim ?? 'count') === 'count');
+  return { base: outs.reduce((a, o) => a + o.qty, 0), dim: 'count' };
 }
 
 /** Every bill line between me and others (or one party): a handful of batched reads, no per-job lookups. */
@@ -106,12 +108,29 @@ export async function billItems(ctx: Ctx, party?: PartyRef): Promise<BillItem[]>
     if (rate && q.base === 0) continue; // nothing billable yet
     const amount = rate ? Math.round(rate.basis === 'lump_sum' ? rate.value_paise : toUnit(q.base, q.dim) * rate.value_paise) : 0;
     const date = j.closure?.business_date ?? j.outputs?.at(-1)?.business_date ?? j.business_date;
-    items.push({ party: other, dir: iAmClient ? 'i_owe' : 'they_owe', date, label: label(j.process_key), qty: rate?.basis === 'lump_sum' ? null : q.base ? fmt(q.base, q.dim) : null, rate_paise: rate?.value_paise ?? null, amount_paise: amount, source: { kind: 'job', id: j._id }, ...(rate ? {} : { note: 'no_rate' }) });
+    items.push({ party: other, dir: iAmClient ? 'i_owe' : 'they_owe', date, label: label(j.process_key), qty: rate?.basis === 'lump_sum' ? null : q.base ? fmt(q.base, q.dim) : null, rate_paise: rate ? Math.round(rate.value_paise) : null, amount_paise: amount, source: { kind: 'job', id: j._id }, ...(rate ? {} : { note: 'no_rate' }) });
     // Bill adjustments from closing (leftovers they kept: they pay for them, so it reduces what the client owes).
     for (const a of (j.closure?.adjustments ?? []) as any[]) items.push({ party: other, dir: iAmClient ? 'they_owe' : 'i_owe', date: a.date, label: a.label, qty: `${a.qty} ${a.unit}`, rate_paise: a.rate_paise, amount_paise: a.amount_paise, source: { kind: 'job', id: j._id }, note: 'leftover_kept' });
   }
+  // Work done before Goods on a job-work order (migrated opening position): billed at the order price, because the
+  // order's advance and balance taps are mirrored as payments and would otherwise look like an overpayment.
+  const openings = (await col('sc_order_openings').find({} as any).limit(2000).toArray()) as any[];
+  if (openings.length) {
+    const oo = new Map(((await col('orders').find({ _id: { $in: openings.map((x) => x._id) }, $or: [{ buyer_business_id: ctx.businessId }, { seller_business_id: ctx.businessId }] } as any, { projection: { code: 1, unit: 1, unit_price: 1, gst_pct: 1, buyer_business_id: 1, seller_business_id: 1 } }).toArray()) as any[]).map((o) => [o._id, o]));
+    for (const op of openings) {
+      const o = oo.get(op._id);
+      if (!o || !(op.qty_done > 0)) continue;
+      const iBuy = o.buyer_business_id === ctx.businessId;
+      const other: PartyRef = { k: 'b', id: iBuy ? o.seller_business_id : o.buyer_business_id };
+      if (party && pk(other) !== pk(party)) continue;
+      const u = orderUnit(o);
+      const base = Math.round(op.qty_done * u.perUnitBase);
+      const rate = orderRate(o);
+      items.push({ party: other, dir: iBuy ? 'i_owe' : 'they_owe', date: op.business_date, label: `${o.code} · opening`, qty: fmt(base, u.dim), rate_paise: Math.round(rate), amount_paise: Math.round(toUnit(base, u.dim) * rate), source: { kind: 'job', id: o._id }, note: 'order' });
+    }
+  }
   // Sales and purchases recorded with a rate (a return is a negative line on the same side).
-  const prices = (await col('sc_prices').find({ business_id: ctx.businessId, movement_id: { $exists: true } } as any).limit(1500).toArray()) as any[];
+  const prices = (await col('sc_prices').find({ business_id: ctx.businessId, movement_id: { $exists: true } } as any).sort({ created_at: -1 }).limit(5000).toArray()) as any[];
   const tmov = new Map(((await col('sc_movements').find({ _id: { $in: prices.map((p) => p.movement_id) }, cancelled_at: null } as any, { projection: { from: 1, to: 1, lines: 1, business_date: 1, order_id: 1 } }).toArray()) as any[]).map((m) => [m._id, m]));
   for (const pr of prices) {
     const m = tmov.get(pr.movement_id);
@@ -119,8 +138,12 @@ export async function billItems(ctx: Ctx, party?: PartyRef): Promise<BillItem[]>
     const other = (isMe(ctx, m.from.party) ? m.to.party : m.from.party) as PartyRef;
     if (party && pk(other) !== pk(party)) continue;
     const line = m.lines?.[0];
-    const base = (m.lines as any[]).reduce((a, l) => a + (winningAssertion(l.received)?.base_qty ?? winningAssertion(l.sent)?.base_qty ?? 0), 0);
-    const per = toBase(1, pr.unit ?? unitOf(line?.dim ?? 'count'), line?.dim ?? 'count');
+    // The rate was typed per one unit (per kg, per piece…): price only lines counted in that unit's dimension, each on
+    // its settled figure (a resolved difference wins over the raw receipt).
+    const rateDim = line?.dim ?? 'count';
+    const per = toBase(1, pr.unit ?? unitOf(rateDim), rateDim);
+    const priced = (m.lines as any[]).filter((l) => (l.dim ?? 'count') === (per.ok ? rateDim : l.dim));
+    const base = priced.reduce((a, l) => a + (l.resolved_received ?? winningAssertion(l.received)?.base_qty ?? winningAssertion(l.sent)?.base_qty ?? 0), 0);
     const amount = Math.round((base / (per.ok && per.base > 0 ? per.base : 1)) * pr.rate_paise);
     const dir = pr.kind === 'sell' || pr.kind === 'buyer_returned' ? 'they_owe' : 'i_owe';
     const neg = pr.kind === 'return_to_supplier' || pr.kind === 'buyer_returned';
@@ -152,7 +175,7 @@ export async function billItems(ctx: Ctx, party?: PartyRef): Promise<BillItem[]>
     for (const l of m.lines as any[]) {
       const lp = lastPrice.get(`${iBought ? 'buy' : 'sell'}|${pk(other)}|${l.spec_id}`);
       if (!lp) continue;
-      const base = winningAssertion(l.received)?.base_qty ?? winningAssertion(l.sent)?.base_qty ?? 0;
+      const base = l.resolved_received ?? winningAssertion(l.received)?.base_qty ?? winningAssertion(l.sent)?.base_qty ?? 0;
       const per = toBase(1, lp.unit ?? unitOf(l.dim ?? 'count'), l.dim ?? 'count');
       const amount = Math.round((base / (per.ok && per.base > 0 ? per.base : 1)) * lp.rate);
       items.push({ party: other, dir: iBought ? 'i_owe' : 'they_owe', date: m.business_date, label: l.label_en ?? '', qty: fmt(base, l.dim ?? 'count'), rate_paise: lp.rate, amount_paise: -amount, source: { kind: 'movement', id: m._id }, note: 'return' });
@@ -176,7 +199,7 @@ export async function billItems(ctx: Ctx, party?: PartyRef): Promise<BillItem[]>
     const rate = orderRate(o);
     const amount = Math.round(toUnit(base, u.dim) * rate);
     const iSell = o.seller_business_id === ctx.businessId;
-    items.push({ party: other, dir: iSell ? 'they_owe' : 'i_owe', date: m.business_date, label: `${o.code} · ${lines[0]?.label_en ?? ''}`, qty: fmt(base, u.dim), rate_paise: rate, amount_paise: m.action === 'return_to_supplier' ? -amount : amount, source: { kind: 'movement', id: m._id }, note: m.action === 'return_to_supplier' ? 'order_return' : 'order' });
+    items.push({ party: other, dir: iSell ? 'they_owe' : 'i_owe', date: m.business_date, label: `${o.code} · ${lines[0]?.label_en ?? ''}`, qty: fmt(base, u.dim), rate_paise: Math.round(rate), amount_paise: m.action === 'return_to_supplier' ? -amount : amount, source: { kind: 'movement', id: m._id }, note: m.action === 'return_to_supplier' ? 'order_return' : 'order' });
   }
   return items.sort((a, b) => a.date.localeCompare(b.date));
 }
@@ -382,7 +405,7 @@ export async function performance(ctx: Ctx) {
   const best = new Map<string, number>();
   for (const g of groups.values()) {
     const m = median(g.loss);
-    if (g.n >= 3 && m !== null && (best.get(g.process) === undefined || m < best.get(g.process)!)) best.set(g.process, m);
+    if (g.loss.length >= 3 && m !== null && (best.get(g.process) === undefined || m < best.get(g.process)!)) best.set(g.process, m);
   }
   const names = await partyNames(ctx, [...groups.values()].map((g) => g.party));
   return [...groups.values()].map((g) => {
@@ -391,9 +414,10 @@ export async function performance(ctx: Ctx) {
     const r1 = (x: number | null) => (x === null ? null : Math.round(x * 10) / 10);
     return {
       party: g.party, name: names.get(pk(g.party))?.name ?? '—', process: g.process, process_label: pt?.labels?.[ctx.language] ?? pt?.labels?.en ?? g.process, n: g.n, enough,
-      median_days: enough ? r1(median(g.days)) : null, promised_days: enough ? r1(median(g.promised)) : null, excluded_days: g.excluded, excluded_why: [...g.excludedWhy],
-      loss_pct: enough ? r1(median(g.loss)) : null, loss_norm_pct: pt?.loss_norm_pct ?? null, best_loss_pct: r1(best.get(g.process) ?? null),
-      rejects_pct: enough ? r1(median(g.rejects)) : null, disputes: g.disputes,
+      // Each figure needs its own 3 data points (three jobs with one loss figure is not a median).
+      median_days: g.days.length >= 3 ? r1(median(g.days)) : null, promised_days: g.days.length >= 3 ? r1(median(g.promised)) : null, excluded_days: g.excluded, excluded_why: [...g.excludedWhy],
+      loss_pct: g.loss.length >= 3 ? r1(median(g.loss)) : null, loss_norm_pct: pt?.loss_norm_pct ?? null, best_loss_pct: r1(best.get(g.process) ?? null),
+      rejects_pct: g.rejects.length >= 3 ? r1(median(g.rejects)) : null, disputes: g.disputes,
     };
   }).sort((a, b) => a.process.localeCompare(b.process) || b.n - a.n);
 }
@@ -414,7 +438,7 @@ router.get(
     const biz: any = await col('businesses').findOne({ _id: req.ctx.businessId } as any, { projection: { gstin: 1, gst: 1 } });
     const registered = !!(biz?.gstin || biz?.gst?.registered);
     const { jobSummaries } = await import('./views.js');
-    const jobs = (await jobSummaries(req.ctx)).filter((j) => j.pending > 0);
+    const jobs = (await jobSummaries(req.ctx, { statuses: ['issued', 'in_progress', 'completed'] })).filter((j) => j.pending > 0); // completed jobs can still have goods there
     const today = todayIST();
     const days = (d: string) => Math.round((Date.parse(today) - Date.parse(d)) / 86400e3);
     const names = await partyNames(req.ctx, jobs.map((j) => j.performer));

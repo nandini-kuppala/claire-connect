@@ -30,6 +30,8 @@ interface Slots {
   fabric?: string | null;
   gsm?: number | null;
   colours?: string[];
+  /** Garment for a job-work request ("T-shirts"), matched against the unit's listed garments. */
+  garment?: string | null;
 }
 
 interface Session {
@@ -131,6 +133,8 @@ export async function claireTurn(user: UserRow, input: { text?: string; chipId?:
     if (nlu.fabric) s.slots.fabric = nlu.fabric;
     if (nlu.gsm) s.slots.gsm = nlu.gsm;
     if (nlu.colours?.length) s.slots.colours = nlu.colours;
+    const garment = garmentOf(input.text);
+    if (garment) s.slots.garment = garment;
     // A rich one-sentence request skips the style question.
     if (learned && s.slots.qty && s.slots.budgetDone) s.slots.styleDone = true;
 
@@ -273,20 +277,22 @@ async function nextStep(user: UserRow, s: Session, reask: boolean): Promise<Out[
   const reqId = id('rq_');
   await insert('requirements', {
     id: reqId, buyer_business_id: user.business_id ?? 'unknown', type: cat.type, category: cat.id,
-    attrs: { fabric: sl.fabric ?? null, gsm: sl.gsm ?? null, colours: sl.colours ?? [] }, liked: sl.liked ?? [], qty: sl.qty, unit: cat.unit,
+    attrs: { fabric: sl.fabric ?? null, gsm: sl.gsm ?? null, colours: sl.colours ?? [], ...(isService && sl.garment ? { garment: sl.garment } : {}) }, liked: sl.liked ?? [], qty: sl.qty, unit: cat.unit,
     budget: sl.budget ?? null, deadline_days: sl.deadlineDays ?? null, city: sl.city ?? null, status: 'matched', created_at: now(),
   });
   const qtyText = `${sl.qty.toLocaleString('en-IN')} ${unitWord(lang, cat.unit)}`;
   const title = t(lang, 'results_title', { qty: qtyText, cat: catName(lang, cat.id), budget: sl.budget ? inr(sl.budget) : t(lang, 'no_limit'), city: sl.city || '—' });
   const need = {
     category: cat.id, qty: sl.qty, unit: cat.unit, budget: sl.budget ?? null, deadlineDays: sl.deadlineDays ?? null, city: sl.city ?? null,
-    attrs: { fabric: sl.fabric, gsm: sl.gsm, colours: sl.colours }, liked: sl.liked, excludeBusinessId: user.business_id ?? undefined,
+    attrs: { fabric: sl.fabric, gsm: sl.gsm, colours: sl.colours, garment: isService ? sl.garment ?? null : null }, liked: sl.liked, excludeBusinessId: user.business_id ?? undefined,
   };
 
   if (isService) {
     const split = await splitJob(need);
     const single = split.lines.length === 1;
-    const out: Out[] = [{ kind: 'summary', title: t(lang, 'summary_title'), lines: [title] }];
+    // Keep the buyer's deadline visible in the summary (single-unit titles do not carry it).
+    const summaryLines = sl.deadlineDays ? [title, t(lang, 'job_need_days', { days: sl.deadlineDays })] : [title];
+    const out: Out[] = [{ kind: 'summary', title: t(lang, 'summary_title'), lines: summaryLines }];
     if (!split.lines.length) out.push({ kind: 'text', text: t(lang, 'results_none') });
     else out.push({
       kind: 'job_split', requirementId: reqId,
@@ -306,6 +312,19 @@ async function nextStep(user: UserRow, s: Session, reask: boolean): Promise<Out[
     ];
   }
   return [{ kind: 'results', requirementId: reqId, title, singles: m.singles, combos: m.combos, mto: m.mto, band: m.band, note }];
+}
+
+const GARMENTS: [RegExp, string][] = [
+  [/t[\s-]?shirts?|\btees?\b|टी[\s-]?शर्ट|டி[\s-]?ஷர்ட்|டீ[\s-]?ஷர்ட்|பனியன்/i, 'T-shirts'],
+  [/\bpolos?\b|पोलो|போலோ/i, 'polos'],
+  [/track\s*pants?|ट्रैक\s*पैंट|ट्रैक\s*पेंट|டிராக்\s*பேண்ட்|ட்ராக்\s*பேண்ட்/i, 'track pants'],
+  [/\bshorts\b|शॉर्ट्स|ஷார்ட்ஸ்/i, 'shorts'],
+  [/leggings?|लेगिंग|லெகிங்ஸ்|லெக்கிங்ஸ்/i, 'leggings'],
+  [/hoodies?|हुडी|ஹூடி/i, 'hoodies'],
+];
+/** The garment named in a job-work request, in the words units use on their listings. */
+function garmentOf(text: string): string | null {
+  return GARMENTS.find(([re]) => re.test(text))?.[1] ?? null;
 }
 
 function tileColor(catId: string) {

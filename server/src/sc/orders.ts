@@ -8,6 +8,7 @@ import { col } from '../db/index.js';
 import { h, HttpError } from '../util.js';
 import type { Ctx, ScRequest } from './flag.js';
 import { recordTrade } from './trade.js';
+import { qtyBase, specInfo } from './ledgerOps.js';
 import { sendForWork } from './records.js';
 import { partyNames } from './views.js';
 import { orderEvent } from '../deals.js';
@@ -42,7 +43,13 @@ async function bothOnGoods(o: any): Promise<boolean> {
   return n === 2;
 }
 
+/** Orders (prices, buyers, sellers) are the owner's; staff record goods but never see orders (04 §10.3b). */
+function ownerOnly(ctx: Ctx) {
+  if (ctx.role !== 'owner') throw new HttpError(403, 'Orders are visible to the owner only.');
+}
+
 async function myOrder(ctx: Ctx, id: string) {
+  ownerOnly(ctx);
   const o: any = await col('orders').findOne({ _id: id, $or: [{ buyer_business_id: ctx.businessId }, { seller_business_id: ctx.businessId }] } as any);
   if (!o) throw new HttpError(404, 'Not found');
   return o;
@@ -60,8 +67,10 @@ export async function orderProgress(o: any, viewer?: string): Promise<OrderProgr
   const u = orderUnit(o);
   const ordered = Math.round(o.qty * u.perUnitBase);
   const now = Date.now();
+  // A viewer sees its own records at once and the other side's after their undo window. Without a viewer (deciding
+  // whether the order is delivered) only records past their undo window count, so an Undo can't leave it "delivered".
   const movs = ((await col('sc_movements').find({ order_id: o._id, cancelled_at: null } as any).sort({ recorded_at: 1 }).toArray()) as any[])
-    .filter((m) => !viewer || m.recorder_business_id === viewer || m.visible_at <= now);
+    .filter((m) => (viewer ? m.recorder_business_id === viewer || m.visible_at <= now : m.visible_at <= now));
   const p: OrderProgress = { ordered, dim: u.dim, sent: 0, received: 0, on_the_way: 0, returned: 0, done: 0, opening: 0, deliveries: [], returns: [], jobs: [] };
   for (const m of movs) {
     const lines = (m.lines as any[]).filter((l) => l.dim === u.dim);
@@ -85,8 +94,12 @@ export async function orderProgress(o: any, viewer?: string): Promise<OrderProgr
   }
   if (o.kind === 'job_work') {
     const jobs = (await col('sc_jobs').find({ order_id: o._id, status: { $ne: 'cancelled' } } as any, { projection: { status: 1, outputs: 1 } }).toArray()) as any[];
+    // Outputs that came with a return still in its undo window don't count yet for deciding delivery.
+    const outMovIds = [...new Set(jobs.flatMap((j) => (j.outputs as any[]).map((x) => x.movement_id).filter(Boolean)))];
+    const pendingMov = new Set(((await col('sc_movements').find({ _id: { $in: outMovIds }, $or: [{ visible_at: { $gt: now } }, { cancelled_at: { $ne: null } }] } as any, { projection: { _id: 1 } }).toArray()) as any[]).map((m) => m._id));
     for (const j of jobs) {
-      const back = (j.outputs as any[]).filter((x) => x.dim === u.dim || u.dim === 'count').reduce((a, x) => a + x.qty, 0);
+      // Only work counted in the order's unit (pieces for a piece order): 1 kg back is not 1,000 pieces.
+      const back = (j.outputs as any[]).filter((x) => x.dim === u.dim && (viewer || !x.movement_id || !pendingMov.has(x.movement_id))).reduce((a, x) => a + x.qty, 0);
       p.jobs.push({ id: j._id, status: j.status, back });
     }
     const opening: any = await col('sc_order_openings').findOne({ _id: o._id } as any);
@@ -126,6 +139,16 @@ export async function orderCoverage(orderId: string): Promise<boolean> {
   }
 }
 
+/** A movement just left its undo window (card job): re-check the order it belongs to, directly or through its job. */
+export async function orderCoverageForMovement(movementId: string) {
+  const m: any = await col('sc_movements').findOne({ _id: movementId } as any, { projection: { order_id: 1, lines: 1 } });
+  if (!m) return;
+  const ids = new Set<string>(m.order_id ? [m.order_id] : []);
+  const jobIds = [...new Set(((m.lines ?? []) as any[]).map((l) => l.job_id).filter(Boolean))];
+  if (jobIds.length) for (const j of (await col('sc_jobs').find({ _id: { $in: jobIds }, order_id: { $exists: true } } as any, { projection: { order_id: 1 } }).toArray()) as any[]) ids.add(j.order_id);
+  for (const id of ids) await orderCoverage(id);
+}
+
 const views = async (ctx: Ctx, o: any) => {
   const side = o.buyer_business_id === ctx.businessId ? 'buyer' : 'seller';
   const names = await partyNames(ctx, [{ k: 'b', id: o.buyer_business_id }, { k: 'b', id: o.seller_business_id }]);
@@ -155,6 +178,7 @@ router.get(
   '/sc/orders/goods-summary',
   h(async (req: ScRequest, res) => {
     const ctx = req.ctx;
+    ownerOnly(ctx);
     const orders = (await col('orders').find({ $or: [{ buyer_business_id: ctx.businessId }, { seller_business_id: ctx.businessId }] } as any).sort({ created_at: -1 }).limit(100).toArray()) as any[];
     const ids = orders.map((o) => o._id);
     const linked = new Set<string>([
@@ -204,6 +228,15 @@ router.post(
     const o = await myOrder(ctx, req.params.id);
     if (o.buyer_business_id !== ctx.businessId) throw new HttpError(403, 'Only the buyer returns goods.');
     if (!(await bothOnGoods(o))) throw new HttpError(409, 'The seller does not use Goods yet.');
+    if (o.status === 'cancelled') throw new HttpError(409, 'This order was cancelled.');
+    // You can only return what arrived on this order and hasn't gone back already.
+    const p = await orderProgress(o, ctx.businessId);
+    let asked = 0;
+    for (const l of b.lines) {
+      const info = await specInfo(l.spec_id);
+      if (info.dim === p.dim) asked += qtyBase(l.qty, l.unit, info).base;
+    }
+    if (asked > Math.max(0, p.received - p.returned)) throw new HttpError(409, 'That is more than arrived on this order.');
     const reason = { wrong_size: 'Wrong size', defect: 'Defect', other: 'Other' }[b.reason];
     const r = await recordTrade(ctx, { kind: 'return_to_supplier', party: { k: 'b', id: o.seller_business_id }, lines: b.lines, business_date: b.business_date, client_id: b.client_id, note: [reason, b.note].filter(Boolean).join(': ') }, { order_id: o._id });
     res.status(r.status).json(r.body);

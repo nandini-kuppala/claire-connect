@@ -734,6 +734,76 @@ Governing brief: `docs/supply-chain/BRIEF.md` (re-read at the start of every pha
   - check the Atlas tier and move off a shared tier if it is one;
   - batch the sequential queries in the hottest routes (coming, confirm, send, bills).
 
+### Bug hunt and logged-bug fixes (2026-11-22)
+Four independent reviews (ledger core; money/orders/staff/links/Claire; the Goods screens; every bug logged in the docs). Each finding was verified, then fixed. Regression smokes: `scripts/sc-smoke-ledger.py` (10 checks), `scripts/sc-smoke-money2.py` (8 checks), plus the existing suites.
+
+- **Ledger core (17):**
+  - **Goods created or lost on the books:**
+    - Got back no longer re-counts output already recorded by Work done or a sub-contract roll-up (a shared "done but not yet returned" helper; send-back uses it too, now by item *and grade*).
+    - "Sender figure" only on a return the other side recorded.
+    - Undo is refused once the worker has acted (work done, forward, split, ready).
+    - Undoing a sub-contract return also leaves the parent job.
+  - **Closing and late figures:**
+    - A parent job can't close while work is with a sub-contractor, and a late child return no longer flips a closed parent.
+    - A refused late figure never reopens a closed job (checks run before reopening; the re-close runs in a `finally` with the owner's own choices, never auto-accepting a shortage).
+    - A settled difference is final for its line.
+  - **Receipts, forwards and counts:**
+    - Going back to an earlier figure counts as a change.
+    - Finished work can be forwarded (drawn from available, not allocated).
+    - A casualty blocks every job it touched.
+    - A sub-contractor's unprocessed return lands back in the parent job.
+    - Counts compare-and-set against the book.
+    - Undo applies the same trims filter as the original record.
+    - A settled shortage's remainder goes back to the state it left from.
+    - The job page subtracts held-for-dues days like the lists.
+- **Money, orders, staff, links, Claire (14):**
+  - **Bills:**
+    - Piece bills count pieces only.
+    - Order prices are exact (rounded once).
+    - Priced sales and purchases use the settled figure per line and unit.
+    - Migrated opening positions are billed.
+    - Prices are read newest first.
+  - **Orders:**
+    - Coverage ignores records still in their undo window and re-checks when the window ends (card job), so an Undo can't leave an order "delivered".
+    - Coverage counts only the order's unit.
+    - Order returns are capped at received − returned and refused on cancelled orders.
+  - **Statement links:**
+    - Rate-limited per link, not per (forgeable) address.
+    - The page and its answers skip records in the undo window.
+    - The recorder's own phone doesn't mark it "seen".
+    - `trust proxy` is set to one hop.
+  - **Staff:**
+    - Support agents can't be added as staff.
+    - Staff get 403 on order goods and no link proposals.
+    - Changing or removing a PIN needs the current one, or a sign-in within 15 minutes.
+  - **Reports:** performance figures each need their own 3 data points; Claire's analytics use the same median and working days; the GST clock includes completed jobs with goods still out.
+- **Goods screens (17):**
+  - **Forms:**
+    - The tolerance input keeps decimals ("1.5" no longer becomes 10).
+    - The rate label follows the process's billing basis.
+    - Change grade preselects a valid grade.
+  - **Feedback:**
+    - The Undo toast expires.
+    - The "Difference open" chip loads disputes.
+    - Errors show inside sheets.
+    - A failed Got back load explains itself.
+    - A queued chat-card confirmation says "Saved on this phone".
+    - An undone movement shows "Cancelled".
+  - **Actions:**
+    - "Mark all ready" skips jobs with nothing done (the server refuses too).
+    - Desktop return saves can't double-post.
+    - Remove staff takes two taps.
+  - **Party ledger:** shows sent figures until confirmed, plus a "Sent on" line (new `sent_on` in the ledger response).
+  - **Offline:** In my unit works offline.
+- **Logged in the docs:**
+  - **The production database default:** a local `npm run dev` without `MONGODB_DB` used production. It now refuses to start; production sets it in `render.yaml`, and `.env.example` points at `nexconn_sc_dev`.
+  - **Marketplace bugs B1–B19 from `docs/web-test-report-2026-11-20.md`:** 18 fixed. B1 is the chat offer quantity; the counter sheet now edits quantity too. **B10** (agent history from before joining) needs a Nexconn server-side history capability and stays open.
+- **Found in the final regression:** "Out with others" loaded only the first 200 open jobs, so a busy unit's newest work disappeared. The cap is now 1,000.
+- **Still open:**
+  - B10.
+  - After a Trade Desk ticket resolves, the order card in chat keeps the dispute line (it isn't re-posted).
+  - The desk-only labels "Short delivery" and "Late delivery" are English.
+
 ## Open questions
 - T8: a separate free Atlas cluster for integration tests needs to be created by the user (not blocking slice 0's pure tests).
 

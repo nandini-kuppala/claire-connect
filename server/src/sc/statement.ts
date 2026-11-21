@@ -97,6 +97,7 @@ ownerRouter.delete(
 ownerRouter.get(
   '/sc/links/proposals',
   h(async (req: ScRequest, res) => {
+    if (req.ctx.role !== 'owner') return res.json({ proposals: [] }); // owner-only: what contacts said came back
     const rows = await col('sc_link_proposals').find({ recorder_business_id: req.ctx.businessId, state: 'pending' } as any).sort({ at: -1 }).limit(50).toArray();
     const names = await partyNames(req.ctx, rows.map((r: any) => r.party));
     res.json({ proposals: rows.map((r: any) => ({ id: r._id, job_id: r.job_id, party: r.party, name: names.get(pk(r.party))?.name ?? '—', qty: r.qty_base, dim: r.dim, label: r.label, note: r.note, at: r.at })) });
@@ -150,14 +151,17 @@ async function isRecorderDevice(req: Request, businessId: string) {
   return !!d && d.at > Date.now() - 30 * 86400e3;
 }
 
-// ── Rate limit: 30 requests a minute per token and IP ───────────────────────────────────────────
+// ── Rate limit: 30 requests a minute per link ───────────────────────────────────────────
 const hits = new Map<string, number[]>();
 function limited(req: Request, token: string) {
-  const k = `${sha(token).slice(0, 16)}|${req.ip}`;
+  // Per link, not per address: a link belongs to one contact, and keying on the IP let a forged X-Forwarded-For reset it.
+  void req;
+  const k = sha(token).slice(0, 16);
   const now = Date.now();
   const arr = (hits.get(k) ?? []).filter((t) => now - t < 60_000);
   arr.push(now);
   hits.set(k, arr);
+  if (hits.size > 5000) for (const [kk, v] of hits) if (!v.length || now - v[v.length - 1] > 60_000) hits.delete(kk); // keep the map small
   return arr.length > 30;
 }
 
@@ -217,7 +221,7 @@ const BACK_ACTIONS = new Set(['return_from_work']);
 
 async function pageData(l: any, lang: L) {
   const party = l.party as PartyRef;
-  const movs = await col('sc_movements').find({ recorder_business_id: l.recorder_business_id, cancelled_at: null, $or: [{ 'to.party.k': party.k, 'to.party.id': party.id }, { 'from.party.k': party.k, 'from.party.id': party.id }], business_date: { $gte: new Date(Date.now() - 90 * 86400e3).toISOString().slice(0, 10) } } as any).sort({ business_date: -1, recorded_at: -1 }).limit(60).toArray();
+  const movs = await col('sc_movements').find({ recorder_business_id: l.recorder_business_id, cancelled_at: null, visible_at: { $lte: Date.now() }, $or: [{ 'to.party.k': party.k, 'to.party.id': party.id }, { 'from.party.k': party.k, 'from.party.id': party.id }], business_date: { $gte: new Date(Date.now() - 90 * 86400e3).toISOString().slice(0, 10) } } as any).sort({ business_date: -1, recorded_at: -1 }).limit(60).toArray();
   const items: { movementId: string; lineId: string; kind: 'received' | 'returned'; qty: number; dim: Dimension; unit: string; label: string; date: string; confirmed: string | null }[] = [];
   for (const m of movs as any[]) {
     const toThem = m.to.party.k === party.k && m.to.party.id === party.id;
@@ -231,7 +235,10 @@ async function pageData(l: any, lang: L) {
   }
   const jobs = (await jobSummaries(recorderCtx(l, lang), { performer: party })).filter((j) => j.pending > 0 && !j.cancelled);
   const withYou = [];
+  const hidden = new Set(((await col('sc_movements').find({ _id: { $in: jobs.flatMap((j) => j.movementIds) }, visible_at: { $gt: Date.now() } } as any, { projection: { _id: 1 } }).toArray()) as any[]).map((m) => m._id));
   for (const j of jobs) {
+    // A job whose sending record is still in the recorder's undo window isn't shown yet.
+    if (j.movementIds.length && j.movementIds.every((id) => hidden.has(id))) continue;
     const jd: any = await col('sc_jobs').findOne({ _id: j.id } as any, { projection: { inputs: 1, ready_at: 1 } });
     withYou.push({ jobId: j.id, qty: j.pending, dim: j.dim, approx: j.outputs > 0, label: await genericLabel(jd?.inputs?.[0]?.spec_id), ready: !!jd?.ready_at });
   }
@@ -303,7 +310,8 @@ publicRouter.post('/api/l/:token/:action(seen|confirm|differs|propose|ready|stop
     const action = req.params.action;
     const now = Date.now();
     if (action === 'seen') {
-      await col('sc_statement_links').updateOne({ _id: l._id, seen_at: null } as any, { $set: { seen_at: now } });
+      // The recorder opening their own link isn't "seen" by the other side.
+      if (!(await isRecorderDevice(req, l.recorder_business_id))) await col('sc_statement_links').updateOne({ _id: l._id, seen_at: null } as any, { $set: { seen_at: now } });
       return res.status(204).end();
     }
     if (l.stopped_at) return back('stopped');
@@ -317,7 +325,8 @@ publicRouter.post('/api/l/:token/:action(seen|confirm|differs|propose|ready|stop
       return back('stopped');
     }
     if (action === 'confirm' || action === 'differs') {
-      const m: any = await col('sc_movements').findOne({ _id: String(body.m), recorder_business_id: l.recorder_business_id, cancelled_at: null } as any);
+      // Records still inside the recorder's undo window aren't shown, so they can't be answered either.
+      const m: any = await col('sc_movements').findOne({ _id: String(body.m), recorder_business_id: l.recorder_business_id, cancelled_at: null, visible_at: { $lte: now } } as any);
       const line = m?.lines?.find((x: any) => x.line_id === String(body.l));
       const toThem = m && m.to.party.k === l.party.k && m.to.party.id === l.party.id;
       const fromThem = m && m.from.party.k === l.party.k && m.from.party.id === l.party.id;

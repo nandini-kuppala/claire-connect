@@ -96,10 +96,10 @@ check('Send material records a send to the order\'s seller (not who the body say
 s, g = goods(jw); jid = g['progress']['jobs'][0]['id'] if g['progress']['jobs'] else None
 check('the order shows its job', jid is not None, g['progress'])
 garment = call('POST','/api/sc/specs/resolve',{'material_type_id':'mt_garment','attrs':{'style':'RKF-P22','colour':'navy','size':'M'}},R)[1]['spec']['id']
-call('POST',f'/api/sc/jobs/{jid}/return',{'lines':[{'spec_id':garment,'qty':60,'unit':'pcs'}],'client_id':cid()},R)
+_s, _r = call('POST',f'/api/sc/jobs/{jid}/return',{'lines':[{'spec_id':garment,'qty':60,'unit':'pcs'}],'client_id':cid()},R); call('POST',f"/api/sc/movements/{_r['movement']['id']}/share-now",{},R)  # delivery counts once past the undo window
 s, g = goods(jw); st, _ = ostatus(jw)
 check('60 of 100 back: progress 60, not delivered', g['progress']['done']==60 and st!='delivered', (g['progress']['done'], st))
-call('POST',f'/api/sc/jobs/{jid}/return',{'lines':[{'spec_id':garment,'qty':40,'unit':'pcs'}],'last':True,'client_id':cid()},R)
+_s, _r = call('POST',f'/api/sc/jobs/{jid}/return',{'lines':[{'spec_id':garment,'qty':40,'unit':'pcs'}],'last':True,'client_id':cid()},R); call('POST',f"/api/sc/movements/{_r['movement']['id']}/share-now",{},R)  # delivery counts once past the undo window
 time.sleep(1.5); st, dat = ostatus(jw)
 check('all 100 back → the job-work order is delivered', st=='delivered' and dat, (st, dat))
 ri = [x for x in call('GET','/api/sc/bills/b/b_lakshmi',tok=R)[1]['items'] if x['source']['id']==jid]

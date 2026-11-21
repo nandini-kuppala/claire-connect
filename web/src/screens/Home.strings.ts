@@ -69,7 +69,7 @@ export const HomeStrings = defineStrings('home', {
     qa_browse_sub: 'கையிருப்பில் உள்ளவை',
     qa_speak: 'உங்கள் மொழியில் பேசுங்கள்',
     qa_speak_sub: 'தமிழ், இந்தி, ஆங்கிலம்…',
-    qa_template: 'மாதிரியைப் பயன்படுத்துங்கள்',
+    qa_template: 'மாதிரி படிவம்',
     qa_template_sub: 'டி-ஷர்ட், போலோ, துணி…',
     try_title: 'இப்படிக் கேட்டுப் பாருங்கள்',
     recent_title: 'சமீபத்திய தேடல்கள்',

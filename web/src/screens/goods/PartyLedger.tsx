@@ -5,7 +5,7 @@ import clsx from 'clsx';
 import { api, errorText } from '../../lib/api';
 import { Button } from '../../components/Button';
 import { Sheet } from '../../components/Sheet';
-import { ArrowLeft, Clock, Phone, Repeat } from '../../icons';
+import { AlertTriangle, ArrowLeft, Clock, Phone, Repeat } from '../../icons';
 import { useSession } from '../../store/session';
 import { RecS } from './Record.strings';
 import { TwoS } from './Two.strings';
@@ -17,11 +17,16 @@ import { SetupS } from './Setup.strings';
 import { Status, type Late } from './Status';
 import { qty as fmtQty, shortDate } from './format';
 
-interface Job { id: string; process_key: string; status: string; since: string; expected_at: string; late: Late; dim: string; sent: number; issued: number; issuedBasis: string; outputs: number; pending: number; pendingAsOutput: number | null; lossPctSoFar: number | null; lossNormPct: number; inputLabel: string; outputLabel: string | null; lots: string[] }
+interface Job { id: string; process_key: string; status: string; since: string; expected_at: string; late: Late; dim: string; sent: number; issued: number; issuedBasis: string; outputs: number; pending: number; sent_on?: number; pendingAsOutput: number | null; lossPctSoFar: number | null; lossNormPct: number; inputLabel: string; outputLabel: string | null; lots: string[] }
 interface Line { line_id: string; label: string; lot: string | null; grade: string; dim: string; rolls: number | null; sent: number; received: number; their: number | null; settled: { outcome: string; difference: number; pct: number } | null }
 interface Hist { id: string; action: string; business_date: string; dc_no: string | null; cancelled: boolean; mine?: boolean; undoable_until: number | null; badge?: { kind: string; why?: string }; lines: Line[] }
 interface Ledger { party: { k: string; id: string }; name: { name: string; kind: string; onClaire: boolean; phone?: string | null; sub?: string | null }; open: Job[]; history: Hist[]; role: 'owner' | 'staff' }
 interface Terms { weighing_loss_bearer: string; bill_basis: string; tolerance: { weighed_pct: number; counted_abs: number } }
+
+function SheetError({ text }: { text: string | null }) {
+  if (!text) return null;
+  return <p role="alert" className="flex items-start gap-2 rounded-[14px] bg-danger-tint px-3 py-2 text-[14px] text-danger"><AlertTriangle size={16} className="mt-0.5 shrink-0" aria-hidden />{text}</p>;
+}
 
 function Badge({ b, name }: { b?: { kind: string; why?: string }; name: string }) {
   const t2 = TwoS.use();
@@ -48,6 +53,9 @@ export default function PartyLedger() {
   const [d, setD] = useState<Ledger | null>(null);
   const [terms, setTerms] = useState<Terms | null>(null);
   const [edit, setEdit] = useState<Terms | null>(null);
+  // The tolerance stays as typed ("1.", "1.5") until Save; a number in state would drop the dot.
+  const [tolText, setTolText] = useState('');
+  const [sheetErr, setSheetErr] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const wk = WorkS.use();
   const ls = LinkS.use();
@@ -78,14 +86,26 @@ export default function PartyLedger() {
     }
   };
 
+  const openTerms = (t: Terms) => {
+    setEdit(t);
+    setTolText(String(t.tolerance.weighed_pct));
+    setSheetErr(null);
+  };
   const saveTerms = async () => {
     if (!edit) return;
+    const typed = tolText.trim();
+    const pct = Number(typed);
+    if (!typed || typed === '.' || !Number.isFinite(pct) || pct < 0 || pct > 10) {
+      setSheetErr(s('tolerance_invalid'));
+      return;
+    }
+    setSheetErr(null);
     try {
-      await api.put(`/api/sc/parties/${k}/${id}/terms`, { ...edit, transit_risk: 'buyer', billable_reject_causes: [] });
+      await api.put(`/api/sc/parties/${k}/${id}/terms`, { ...edit, tolerance: { ...edit.tolerance, weighed_pct: pct }, transit_risk: 'buyer', billable_reject_causes: [] });
       setEdit(null);
       await load();
     } catch (e) {
-      setError(errorText(e));
+      setSheetErr(errorText(e));
     }
   };
 
@@ -144,6 +164,12 @@ export default function PartyLedger() {
                     <dd className="text-right tabular-nums text-ink">{fmtQty(j.issued, j.dim)}{j.issuedBasis === 'sent' && <span className="block text-[12px] text-meta">{s('based_on_sent')}</span>}</dd>
                     <dt className="text-meta">{s('back_so_far')}</dt>
                     <dd className="text-right tabular-nums text-ink">{fmtQty(j.outputs, j.dim)}</dd>
+                    {(j.sent_on ?? 0) > 0 && (
+                      <>
+                        <dt className="text-meta">{s('a_forward')}</dt>
+                        <dd className="text-right tabular-nums text-ink">{fmtQty(j.sent_on ?? 0, j.dim)}</dd>
+                      </>
+                    )}
                     {j.status !== 'completed' && (
                       <>
                         <dt className="font-semibold text-ink">{s('still_there_label')}</dt>
@@ -162,9 +188,10 @@ export default function PartyLedger() {
                       <span className="inline-flex items-center gap-1.5 text-[13px] text-meta"><Clock size={15} aria-hidden />{s('expected_on', { date: shortDate(j.expected_at, lang) })}</span>
                       <span className="flex flex-wrap gap-1.5">
                         {d.party.k === 'b' && owner && (
-                          <Button size="sm" variant="ghost" onClick={async () => { setTell(j.id); setTellTo(null); setTellProc(null); if (!procs.length) setProcs((await api.get<{ processes: { key: string; labels: Record<string, string> }[] }>('/api/sc/templates')).processes); }}>{wk('tell_send_on')}</Button>
+                          <Button size="sm" variant="ghost" onClick={async () => { setTell(j.id); setTellTo(null); setTellProc(null); setSheetErr(null); if (!procs.length) { try { setProcs((await api.get<{ processes: { key: string; labels: Record<string, string> }[] }>('/api/sc/templates')).processes); } catch (e) { setSheetErr(errorText(e)); } } }}>{wk('tell_send_on')}</Button>
                         )}
-                        <Button size="sm" variant="tint" onClick={() => nav(`/goods/job/${j.id}/return`)}>{s('back_btn')}</Button>
+                        {/* Nothing still there and nothing sent on (e.g. with a sub-unit): nothing more can come back. */}
+                        {(j.pending > 0 || (j.sent_on ?? 0) > 0) && <Button size="sm" variant="tint" onClick={() => nav(`/goods/job/${j.id}/return`)}>{s('back_btn')}</Button>}
                       </span>
                     </div>
                   )}
@@ -185,7 +212,7 @@ export default function PartyLedger() {
                 </div>
                 {h.lines.map((l) => (
                   <p key={l.line_id} className="mt-1 text-[14px] text-ink-2">
-                    {l.label}{l.lot ? ` · ${l.lot}` : ''} · <span className="tabular-nums">{fmtQty(h.action === 'send_for_work' ? l.sent : l.received, l.dim)}</span>
+                    {l.label}{l.lot ? ` · ${l.lot}` : ''} · <span className="tabular-nums">{fmtQty(h.action === 'send_for_work' || !(l.received > 0) ? l.sent : l.received, l.dim)}</span>
                     {l.their !== null && <span className="block text-[12.5px] text-meta">{d.name.name}: {fmtQty(l.their, l.dim)} · {s('you_typed')}{l.settled?.outcome === 'within' ? ` · ${s('weighing_diff', { qty: fmtQty(Math.abs(l.settled.difference), l.dim) })}` : ''}</span>}
                   </p>
                 ))}
@@ -205,7 +232,7 @@ export default function PartyLedger() {
             <>
               <div className="mx-4 mt-6 flex items-center justify-between gap-3">
                 <h2 className="font-head text-[17px] font-semibold text-ink">{s('terms')}</h2>
-                {owner && <Button size="sm" variant="ghost" onClick={() => setEdit(terms)}>{s('edit_terms')}</Button>}
+                {owner && <Button size="sm" variant="ghost" onClick={() => openTerms(terms)}>{s('edit_terms')}</Button>}
               </div>
               <dl className="mx-4 mt-2 grid grid-cols-[1fr_auto] gap-x-4 gap-y-2 rounded-[18px] border border-line bg-surface px-4 py-3 text-[14px]">
                 <dt className="text-meta">{s('weighing_bearer')}</dt>
@@ -222,9 +249,10 @@ export default function PartyLedger() {
       )}
 
       <Sheet open={!!tell} onClose={() => setTell(null)} title={wk('tell_title')}
-        footer={<Button block size="lg" disabled={!tellTo || !tellProc} onClick={async () => { try { await api.post(`/api/sc/jobs/${tell}/instruct`, { to: tellTo!.ref, process_key: tellProc }); setTell(null); } catch (e) { setError(errorText(e)); } }}>{s('save')}</Button>}>
+        footer={<Button block size="lg" disabled={!tellTo || !tellProc} onClick={async () => { setSheetErr(null); try { await api.post(`/api/sc/jobs/${tell}/instruct`, { to: tellTo!.ref, process_key: tellProc }); setTell(null); } catch (e) { setSheetErr(errorText(e)); } }}>{s('save')}</Button>}>
         <div className="space-y-3 pb-2">
           <p className="text-[14px] text-ink-2">{wk('tell_hint')}</p>
+          <SheetError text={sheetErr} />
           <button className="flex min-h-12 w-full items-center rounded-[16px] border border-line-strong bg-surface px-3.5 text-left text-[15px]" onClick={() => setTellPick(true)}>{tellTo?.name ?? <span className="text-meta">{wk('pick_unit')}</span>}</button>
           <div className="flex flex-wrap gap-2">
             {procs.map((p) => (
@@ -250,9 +278,10 @@ export default function PartyLedger() {
             </div>
             <label className="block">
               <span className="mb-1.5 block text-[13px] font-semibold text-ink-2">{s('tolerance')} (%)</span>
-              <input className="min-h-12 w-32 rounded-[16px] border border-line-strong bg-surface px-3.5 text-[16px] tabular-nums outline-none focus:border-primary" inputMode="decimal" value={edit.tolerance.weighed_pct}
-                onChange={(e) => setEdit({ ...edit, tolerance: { ...edit.tolerance, weighed_pct: Math.min(10, Number(e.target.value.replace(/[^\d.]/g, '')) || 0) } })} />
+              <input className={clsx('min-h-12 w-32 rounded-[16px] border bg-surface px-3.5 text-[16px] tabular-nums outline-none focus:border-primary', sheetErr ? 'border-danger' : 'border-line-strong')} inputMode="decimal" value={tolText}
+                aria-invalid={!!sheetErr} onChange={(e) => { setSheetErr(null); setTolText(e.target.value.replace(/[^\d.]/g, '')); }} />
             </label>
+            <SheetError text={sheetErr} />
           </div>
         )}
       </Sheet>

@@ -14,12 +14,13 @@ export interface HintBubbleProps {
   ctx: CardCtx;
 }
 
-/** `offer:90` / `counter:90` / `quote:90` → the draft Claire suggests sending. */
-function parseDraft(chipId: string | undefined): { kind: 'offer' | 'counter' | 'quote'; price: number } | null {
-  const m = /^(offer|counter|quote):(\d+(?:\.\d+)?)$/.exec(chipId ?? '');
+/** `offer:90` / `counter:90` / `quote:90`, optionally `:<qty>` (`offer:19:1000`) → the draft Claire suggests sending. */
+function parseDraft(chipId: string | undefined): { kind: 'offer' | 'counter' | 'quote'; price: number; qty?: number } | null {
+  const m = /^(offer|counter|quote):(\d+(?:\.\d+)?)(?::(\d+))?$/.exec(chipId ?? '');
   if (!m) return null;
   const price = Number(m[2]);
-  return price > 0 ? { kind: m[1] as 'offer' | 'counter' | 'quote', price } : null;
+  const qty = m[3] ? Number(m[3]) : undefined;
+  return price > 0 ? { kind: m[1] as 'offer' | 'counter' | 'quote', price, ...(qty && qty > 0 ? { qty } : {}) } : null;
 }
 
 /** Claire's private negotiation tip, visible to one side only, with an optional ready-to-send offer. */
@@ -36,7 +37,7 @@ export function HintBubble({ message, payload, ctx }: HintBubbleProps) {
   const stale = typeof ctx.latestCardAt === 'number' && message.sentAt < ctx.latestCardAt;
   const showAction = Boolean(action) && !used && !actedLater && !stale;
 
-  const qty = deal?.qty ?? deal?.offers.at(-1)?.qty;
+  const qty = draft?.qty ?? deal?.qty ?? deal?.offers.at(-1)?.qty;
   const unit = deal?.unit ?? 'piece';
   const ref = theirPrice(deal);
   const savings = draft && draft.kind !== 'quote' && qty && ref && ref > draft.price ? Math.round((ref - draft.price) * qty) : 0;

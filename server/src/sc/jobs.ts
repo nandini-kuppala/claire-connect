@@ -11,7 +11,7 @@ import { me, qtyBase, specInfo } from './ledgerOps.js';
 import { lineLabel, partyNames } from './views.js';
 import { postOutput, pseudo, real, reverse, type Goods } from '../../../shared/sc/postings.js';
 import { approxPending, planClosure, type ClosureLine, type ClosureOutput, type ClosurePlan } from '../../../shared/sc/conservation.js';
-import { lateness, todayIST } from '../../../shared/sc/dates.js';
+import { workingDaysBetween, lateness, todayIST } from '../../../shared/sc/dates.js';
 import { winningAssertion } from '../../../shared/sc/evidence.js';
 import { normaliseSpec, specLabel, type MaterialTypeDef } from '../../../shared/sc/specs.js';
 import type { ConservationKind, Dimension, Grade, PartyRef, Posting, RealKey } from '../../../shared/sc/types.js';
@@ -75,7 +75,7 @@ async function jobMovementIds(j: any): Promise<string[]> {
 
 async function openDisputes(j: any) {
   const ids = await jobMovementIds(j);
-  return col('sc_discrepancies').find({ state: { $in: OPEN_DISPUTE }, $or: [{ 'refs.job_id': j._id }, { 'refs.movement_id': { $in: ids } }] } as any).toArray();
+  return col('sc_discrepancies').find({ state: { $in: OPEN_DISPUTE }, $or: [{ 'refs.job_id': j._id }, { 'refs.job_ids': j._id }, { 'refs.movement_id': { $in: ids } }] } as any).toArray();
 }
 
 interface Prepared {
@@ -158,6 +158,9 @@ export async function closeJob(ctx: Ctx, jobId: string, opts: CloseOpts) {
   if (!j) throw new HttpError(404, 'Not found');
   if (j.status === 'closed') throw new HttpError(409, 'This job is already closed.');
   if (j.status === 'cancelled') throw new HttpError(409, 'This record was undone.');
+  // Work still out with a sub-contractor belongs to this job: close the sub-contract first (its return rolls up here).
+  const openChild = await col('sc_jobs').findOne({ parent_job_id: j._id, status: { $in: ['issued', 'in_progress'] } } as any, { projection: { _id: 1 } });
+  if (openChild && !opts.auto) throw Object.assign(new HttpError(409, 'Part of this job is still with a sub-contractor.'), { body: { code: 'subcontract_open' } });
   const disputes = await openDisputes(j);
   if (disputes.length && !opts.carry) throw Object.assign(new HttpError(409, 'A difference on this job is still open.'), { body: { code: 'disputes', disputes: disputes.map((d: any) => ({ id: d._id, label: d.line_label, difference: d.difference, dim: d.dim })) } });
   const p = await prepareClose(j, opts.leftovers);
@@ -215,15 +218,19 @@ export async function withLateFigure<T>(ctx: Ctx, jobIds: (string | null | undef
   const closed = await col('sc_jobs').find({ _id: { $in: jobIds.filter(Boolean) }, status: 'closed' } as any, { projection: { _id: 1 } }).toArray();
   const reopened: [string, Omit<CloseOpts, 'auto'>][] = [];
   for (const c of closed) reopened.push([c._id as unknown as string, await reopenJob(ctx, c._id as unknown as string, reason, true)]);
-  const out = await apply();
-  for (const [id, opts] of reopened) {
-    try {
-      await closeJob(ctx, id, { ...opts, accept: true, carry: true, auto: reason });
-    } catch (e) {
-      await col('sc_jobs').updateOne({ _id: id } as any, { $set: { reclose_failed: { at: Date.now(), reason: (e as Error).message } } });
+  try {
+    return await apply();
+  } finally {
+    // Close again with the owner's own choices (never accepting a shortage on their behalf). If the figure was refused,
+    // this restores the earlier closure; if closing now needs a yes, the job stays open with the reason recorded.
+    for (const [id, opts] of reopened) {
+      try {
+        await closeJob(ctx, id, { ...opts, carry: true, auto: reason });
+      } catch (e) {
+        await col('sc_jobs').updateOne({ _id: id } as any, { $set: { reclose_failed: { at: Date.now(), reason: (e as Error).message } } });
+      }
     }
   }
-  return out;
 }
 
 // ── Routes: close, reopen, cancel ───────────────────────────────────────────────────────────────
@@ -396,7 +403,7 @@ router.get(
         id: j._id, process: proc?.labels ?? null, process_key: j.process_key, kind, status: j.status, in_house: !!j.in_house, cancelled: !!j.cancelled_at, cancel_reason: j.cancel_reason ?? null,
         performer: j.performer_party, performerName: j.in_house ? null : names.get(pk(j.performer_party))?.name ?? '—',
         since: j.business_date, expected_at: j.expected_at, closed_at: j.closed_at ?? null, completed_at: j.completed_at ?? null,
-        late: j.status === 'closed' || j.in_house || j.cancelled_at ? null : lateness(j.expected_at, today, { reason: j.ready_at ? 'ready_not_collected' : 'processing' }),
+        late: j.status === 'closed' || j.in_house || j.cancelled_at ? null : lateness(j.expected_at, today, { pausedDays: (j.pauses ?? []).reduce((n: number, p: any) => n + workingDaysBetween(p.from, p.to ?? today), 0), reason: (j.pauses ?? []).some((p: any) => !p.to) ? 'held_for_dues' : j.ready_at ? 'ready_not_collected' : 'processing' }),
         ready: !!j.ready_at, held: (j.pauses ?? []).find((x: any) => !x.to)?.reason ?? null,
         rework_of: j.rework_of ?? null, loss_norm_pct: j.loss_norm_pct ?? 0,
       },

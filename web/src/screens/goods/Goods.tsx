@@ -1,6 +1,6 @@
 // Goods tab (03 S1 / S1c / S10). Out with others (late first), Coming in, In my unit; Record sheet; Undo toast.
 // Lazy-loaded route, so it adds nothing to the first load.
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import clsx from 'clsx';
 import { api, errorText } from '../../lib/api';
@@ -89,25 +89,37 @@ export default function Goods() {
     }
   };
 
+  // One timer for the toast, kept in a ref: clearing the URL below changes `params`, and an effect cleanup tied to
+  // `params` would cancel its own timeout, leaving the toast up for good.
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hideToastIn = useCallback((ms: number) => {
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => { setToast(null); setToastText(null); toastTimer.current = null; }, ms);
+  }, []);
+  useEffect(() => () => { if (toastTimer.current) clearTimeout(toastTimer.current); }, []);
+
   // A just-saved record arrives as ?saved=<movementId>&until=<ms>: offer Undo until the window closes (D4).
   useEffect(() => {
     const id = params.get('saved');
     const until = Number(params.get('until'));
     if (params.get('queued')) {
+      setToast(null);
       setToastText(off('kept'));
+      hideToastIn(4000);
       const keep = params.get('tab');
       setParams(keep ? { tab: keep } : {}, { replace: true });
-      const t = setTimeout(() => setToastText(null), 4000);
-      return () => clearTimeout(t);
+      return;
     }
-    if (id && until > Date.now()) {
-      setToast({ id, until });
-      setToastText(r('saved'));
-      const t = setTimeout(() => setToast(null), Math.min(until - Date.now(), 12_000));
-      setParams({}, { replace: true });
-      return () => clearTimeout(t);
+    if (id) {
+      if (until > Date.now()) {
+        setToast({ id, until });
+        setToastText(r('saved'));
+        hideToastIn(Math.min(until - Date.now(), 12_000));
+      }
+      const keep = params.get('tab');
+      setParams(keep ? { tab: keep } : {}, { replace: true });
     }
-  }, [params, setParams, r, off]);
+  }, [params, setParams, r, off, hideToastIn]);
 
   const load = useCallback(async () => {
     setError(null);
@@ -118,9 +130,9 @@ export default function Goods() {
       const h = await get<Home>('/api/sc/home');
       setHome(h);
       if (tab === 'in' && sub === 'mine') {
-        const o = await api.get<{ groups: { jobs: unknown[] }[] }>('/api/sc/goods/others');
-        const n = o.groups.reduce((a, g) => a + g.jobs.length, 0);
-        setOthersCount(n);
+        // Only for the Mine / Others' switch: offline with no copy, the rest of the tab still loads.
+        const o = await get<{ groups: { jobs: unknown[] }[] }>('/api/sc/goods/others').catch(() => null);
+        if (o) setOthersCount(o.groups.reduce((a, g) => a + g.jobs.length, 0));
       }
       if (tab === 'out') {
         const rows = (await get<{ rows: OutRow[] }>('/api/sc/goods/out')).rows;
@@ -133,8 +145,8 @@ export default function Goods() {
           /* no storage */
         }
         if (!rows.length && !chosen && !params.get('tab')) {
-          const o = await api.get<{ groups: { jobs: unknown[] }[] }>('/api/sc/goods/others');
-          if (o.groups.length) {
+          const o = await get<{ groups: { jobs: unknown[] }[] }>('/api/sc/goods/others').catch(() => null);
+          if (o?.groups.length) {
             setSub('others');
             setTabState('in');
           }
@@ -165,11 +177,38 @@ export default function Goods() {
       await api.post(`/api/sc/movements/${toast.id}/undo`);
       setToast(null);
       setToastText(r('undone'));
-      setTimeout(() => setToastText(null), 2500);
+      hideToastIn(2500);
       await load();
     } catch (e) {
       setToast(null);
       setToastText(errorText(e));
+      hideToastIn(5000);
+    }
+  };
+
+  const shareNow = async () => {
+    if (!toast) return;
+    try {
+      await api.post(`/api/sc/movements/${toast.id}/share-now`);
+      setToast(null);
+      setToastText(r('shared'));
+      hideToastIn(2500);
+    } catch (e) {
+      // Keep Undo on offer while its window is open; just say why sharing failed.
+      setToastText(errorText(e));
+      hideToastIn(Math.max(2500, Math.min(toast.until - Date.now(), 8000)));
+    }
+  };
+
+  // The disputes list is fetched on demand, so every way into the sheet loads it first.
+  const openDisputes = async () => {
+    try {
+      setDisputes((await api.get<{ disputes: DisputeRow[] }>('/api/sc/disputes')).disputes);
+      setSheet('disputes');
+    } catch (e) {
+      setToast(null);
+      setToastText(errorText(e));
+      hideToastIn(5000);
     }
   };
 
@@ -207,7 +246,7 @@ export default function Goods() {
             {chips.late > 0 && <button onClick={() => setTab('out')} className="min-h-11 rounded-full bg-danger-tint px-3 text-[14px] font-semibold text-danger">{s('chip_late', { n: chips.late })}</button>}
             {chips.toConfirm > 0 && <button onClick={() => setTab('coming')} className="min-h-11 rounded-full bg-accent-tint px-3 text-[14px] font-semibold text-accent-ink">{s('chip_confirm', { n: chips.toConfirm })}</button>}
             {chips.disputes > 0 && (
-              <button onClick={async () => { setDisputes((await api.get<{ disputes: DisputeRow[] }>('/api/sc/disputes')).disputes); setSheet('disputes'); }} className="min-h-11 rounded-full bg-danger-tint px-3 text-[14px] font-semibold text-danger">
+              <button onClick={() => void openDisputes()} className="min-h-11 rounded-full bg-danger-tint px-3 text-[14px] font-semibold text-danger">
                 {s('chip_dispute', { n: chips.disputes })}
               </button>
             )}
@@ -385,7 +424,7 @@ export default function Goods() {
                 <p className="text-[13px] text-meta">{[m.place, m.lot ? `Lot ${m.lot}` : null].filter(Boolean).join(' · ')}</p>
                 {/* Goods that have left (on the way) or are in question are still mine on the books, but not "here": say so. */}
                 {m.state === 'in_transit' && <p className="mt-1 inline-flex items-center gap-1.5 rounded-full bg-accent-tint px-2.5 py-0.5 text-[13px] font-semibold text-accent-ink"><Clock size={14} aria-hidden />{s('st_in_transit')}</p>}
-                {m.state === 'disputed' && <button onClick={() => setSheet('disputes')} className="mt-1 inline-flex min-h-8 items-center gap-1.5 rounded-full bg-danger-tint px-2.5 py-0.5 text-[13px] font-semibold text-danger"><AlertTriangle size={14} aria-hidden />{s('st_disputed')}</button>}
+                {m.state === 'disputed' && <button onClick={() => void openDisputes()} className="mt-1 inline-flex min-h-11 items-center gap-1.5 rounded-full bg-danger-tint px-2.5 py-0.5 text-[13px] font-semibold text-danger"><AlertTriangle size={14} aria-hidden />{s('st_disputed')}</button>}
                 {m.state && /^held/.test(m.state) && <p className="mt-1 inline-flex items-center gap-1.5 rounded-full bg-sunken px-2.5 py-0.5 text-[13px] font-semibold text-ink-2"><Pause size={14} aria-hidden />{s('st_held')}</p>}
               </li>
             ))}
@@ -402,10 +441,10 @@ export default function Goods() {
           <span className="min-w-0 flex-1">{toastText}</span>
           {toast && (
             <>
-              <button className="inline-flex min-h-9 items-center rounded-full px-2 font-semibold text-primary-soft" onClick={async () => { await api.post(`/api/sc/movements/${toast.id}/share-now`); setToast(null); setToastText(r('shared')); setTimeout(() => setToastText(null), 2500); }}>
+              <button className="inline-flex min-h-11 items-center rounded-full px-2 font-semibold text-primary-soft" onClick={() => void shareNow()}>
                 {r('share_now')}
               </button>
-              <button className="inline-flex min-h-9 items-center gap-1.5 rounded-full px-2 font-semibold text-primary-soft" onClick={() => void undo()}>
+              <button className="inline-flex min-h-11 items-center gap-1.5 rounded-full px-2 font-semibold text-primary-soft" onClick={() => void undo()}>
                 <Repeat size={16} aria-hidden />
                 {r('undo')}
               </button>

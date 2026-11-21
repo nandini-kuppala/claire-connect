@@ -59,7 +59,9 @@ export default function WorkScreen() {
     if (f) setSpec(await api.post<ResolvedSpec>('/api/sc/specs/resolve', { material_type_id: f.material_type_id, attrs: f.attrs }));
   };
 
-  const open = async (k: 'done' | 'back' | 'forward') => {
+  // `to`: the unit to forward to when it is already known (an owner's "send on to X"), so it stays chosen and the
+  // instruction id goes with the forward.
+  const open = async (k: 'done' | 'back' | 'forward', to?: Party) => {
     setMsg(null);
     setQ('');
     if (k === 'done') { setSpec(null); void resolveDefault(d?.lastOutputSpecId ?? null); }
@@ -67,7 +69,7 @@ export default function WorkScreen() {
       const rl = await api.get<{ lines: ReadyLine[] }>(`/api/sc/jobs/${id}/ready-lines`);
       setLines(rl.lines.map((l) => ({ ...l, value: String(toUnit(l.qty, l.dim)) })));
     }
-    if (k === 'forward') { setParty(null); setSpec(null); void resolveDefault(d?.inputSpecId ?? null); }
+    if (k === 'forward') { setParty(to ?? null); setSpec(null); void resolveDefault(d?.inputSpecId ?? null); }
     setSheet(k);
   };
 
@@ -118,7 +120,7 @@ export default function WorkScreen() {
       {ins && (
         <div className="mx-4 mt-3 rounded-[16px] bg-primary-tint px-4 py-3 text-[14.5px] text-primary">
           {w('instructed', { name: d.clientName, to: ins.to_name ?? '' })}
-          <Button className="mt-2" block icon={ArrowRight} onClick={() => { setParty({ ref: ins.to as Party['ref'], name: ins.to_name ?? '', kind: ins.to.k === 'b' ? 'business' : 'contact', sub: null, onClaire: ins.to.k === 'b' }); void open('forward'); }}>{w('send_on', { to: ins.to_name ?? '' })}</Button>
+          <Button className="mt-2" block icon={ArrowRight} onClick={() => void open('forward', { ref: ins.to as Party['ref'], name: ins.to_name ?? '', kind: ins.to.k === 'b' ? 'business' : 'contact', sub: null, onClaire: ins.to.k === 'b' })}>{w('send_on', { to: ins.to_name ?? '' })}</Button>
         </div>
       )}
 

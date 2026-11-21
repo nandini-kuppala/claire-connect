@@ -5,7 +5,7 @@ import { api, errorText } from '../../lib/api';
 import { postOrQueue } from '../../lib/offline';
 import { Button } from '../../components/Button';
 import { JobS } from './Job.strings';
-import { ArrowLeft } from '../../icons';
+import { ArrowLeft, Clock } from '../../icons';
 import { useSession } from '../../store/session';
 import { TwoS } from './Two.strings';
 import { RecS } from './Record.strings';
@@ -47,7 +47,8 @@ export default function MovementScreen() {
   const iAmReceiver = m.to.k === 'b' && m.to.id === myBiz;
   const iAmSender = m.from.k === 'b' && m.from.id === myBiz;
   const isReturn = m.action === 'return_from_work';
-  const mineToCheck = m.recorder !== myBiz && ((iAmReceiver && !isReturn) || (iAmSender && isReturn));
+  // An undone record has nothing to confirm.
+  const mineToCheck = !m.cancelled && m.recorder !== myBiz && ((iAmReceiver && !isReturn) || (iAmSender && isReturn));
   const pending = m.lines.filter((l) => !(isReturn ? l.sent : l.received).some((a) => a.by === myBiz));
 
   const submit = async () => {
@@ -81,6 +82,12 @@ export default function MovementScreen() {
       </header>
 
       <div className="space-y-3 px-4 pt-4">
+        {m.cancelled && (
+          <div role="status" className="rounded-[14px] bg-sunken px-3 py-2.5">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-line-strong bg-surface px-2.5 py-1 text-[12.5px] font-semibold text-ink-2"><Clock size={14} aria-hidden />{r('cancelled')}</span>
+            <p className="mt-1.5 text-[14px] text-ink-2">{s('cancelled_note')}</p>
+          </div>
+        )}
         {mineToCheck && pending.length > 0 && <p className="text-[14.5px] leading-relaxed text-ink-2">{s('check_hint')}</p>}
         {m.lines.map((l) => {
           const sent = best(l.sent);

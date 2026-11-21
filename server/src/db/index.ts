@@ -3,7 +3,9 @@ import { MongoClient, type ClientSession, type Db, type Document, type Filter, t
 import 'dotenv/config';
 
 const uri = (process.env.MONGODB_URI || process.env.mongodb || '').trim();
-const dbName = (process.env.MONGODB_DB || 'nexconn').trim();
+// No silent default: a local run without MONGODB_DB used to land on the production database ("nexconn").
+// Production sets MONGODB_DB=nexconn explicitly (render.yaml); local work uses nexconn_sc_dev.
+const dbName = (process.env.MONGODB_DB || '').trim();
 
 let client: MongoClient | null = null;
 let database: Db | null = null;
@@ -11,6 +13,7 @@ let database: Db | null = null;
 export async function connectDb() {
   if (database) return database;
   if (!uri) throw new Error('MongoDB connection string missing: set MONGODB_URI (or "mongodb") in server/.env');
+  if (!dbName) throw new Error('MONGODB_DB is not set. Use MONGODB_DB=nexconn_sc_dev for local work; production sets it in render.yaml.');
   client = new MongoClient(uri, { serverSelectionTimeoutMS: 10000, appName: 'claire-connect' });
   await client.connect();
   database = client.db(dbName);

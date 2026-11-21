@@ -290,7 +290,9 @@ function recommend(cards: ResultCard[], lang: string, unit: string) {
     (c.onTime ? 0 : 0.2) -
     (c.kind === 'combo' ? 0.04 * (c.lines.length - 1) : 0) -
     (c.kind === 'mto' ? 0.03 : 0);
-  const best = [...cards].sort((a, b) => score(b) - score(a))[0];
+  // Never recommend above the buyer's budget while an in-budget option exists.
+  const inBudget = cards.filter((c) => !c.overBudget);
+  const best = [...(inBudget.length ? inBudget : cards)].sort((a, b) => score(b) - score(a))[0];
   // Namespace "reasons": inline en / ta / hi first, then the overlay JSON, then English, key by key.
   const inline = (REASON as Record<string, ReasonTable | undefined>)[lang];
   const R = Object.fromEntries(

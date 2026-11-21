@@ -55,6 +55,8 @@ export interface Dest { party: PartyRef; state: HoldingState; place: string | nu
 export function destOf(m: any, line: any): Dest {
   // Work-bound movements land allocated to the (child) job; a sub-contract forward keeps the intermediary as `via`.
   if (m.action === 'send_for_work' || m.action === 'forward') return { party: m.to.party, state: { s: 'allocated', ref: line.job_id }, place: null, via: m.via ?? null, ownerAfter: null, external: false };
+  // A sub-contractor's unprocessed goods go back into the parent job's allocation at the intermediary (model §3.5).
+  if (m.action === 'return_from_work' && line.line_kind === 'unprocessed_return' && line.parent_job_id) return { party: m.to.party, state: { s: 'allocated', ref: line.parent_job_id }, place: null, via: null, ownerAfter: null, external: false };
   // Trade (slice 4.5): a sale passes title on receipt; goods leaving to someone we don't track close through EXTERNAL.
   const ownerAfter = line.owner_after && !sameParty(line.owner_after, line.owner_before) ? (line.owner_after as PartyRef) : null;
   return { party: m.to.party, state: { s: 'available' }, place: m.to.place_id ?? null, via: null, ownerAfter: line.dest_external ? null : ownerAfter, external: !!line.dest_external };
@@ -102,7 +104,7 @@ export function discrepancyDoc(id: string, m: any, line: any, c: SettleCtx, sent
     parties: parties.length ? (parties.includes(contactOwner) ? parties : [...parties, contactOwner]) : [contactOwner],
     sent_by: m.from.party.k === 'b' ? m.from.party.id : null, received_by: m.to.party.k === 'b' ? m.to.party.id : null,
     line_label: line.label_en, dim: line.dim, class: line.class, figures: { sent, received }, difference: outcome.difference, pct: outcome.pct, allowed: outcome.allowed,
-    posting: { goods: goodsOf(line), owner: c.owner, transit_custodian: c.transitCustodian, sender: c.sender, receiver: c.receiver, bearer: c.bearer, dest: destOf(m, line), counted: line.class === 'counted' },
+    posting: { goods: goodsOf(line), owner: c.owner, transit_custodian: c.transitCustodian, sender: c.sender, receiver: c.receiver, bearer: c.bearer, dest: destOf(m, line), counted: line.class === 'counted', ...(line.from_state ? { sender_state: line.from_state, sender_via: line.from_via ?? null } : {}) },
     state: 'open', proposals: [] as unknown[], resolution: null, opened_at: Date.now(),
   };
 }
@@ -115,10 +117,20 @@ export async function applyReceipt(ctx: Ctx, movementId: string, lineId: string,
   return onClosedJob(ctx, movementId, lineId, 'late_receipt', () => applyReceiptNow(ctx, movementId, lineId, base, evidence, businessDate, final));
 }
 
+/** A difference that was settled is final for that line: a later figure would re-open it against the old figures. */
+function refuseIfSettled(line: any) {
+  if (line?.settled?.outcome === 'resolved') throw new HttpError(409, 'This difference was already settled. Record a correction instead.');
+}
+
 /** 04 §5.6.3: a figure on a line of a closed job reopens it, applies, and closes it again (jobs.ts). */
 async function onClosedJob<T>(ctx: Ctx, movementId: string, lineId: string, reason: string, apply: () => Promise<T>): Promise<T> {
   const m = await col('sc_movements').findOne({ _id: movementId } as any, { projection: { lines: 1 } });
-  const jobId = (m?.lines as any[] | undefined)?.find((l) => l.line_id === lineId)?.job_id ?? null;
+  const ln = (m?.lines as any[] | undefined)?.find((l) => l.line_id === lineId);
+  // Refuse before touching a closed job, so a refused figure never leaves it reopened.
+  refuseIfSettled(ln);
+  const open = await col('sc_discrepancies').findOne({ 'refs.movement_id': movementId, 'refs.line_id': lineId, state: { $in: ['open', 'proposed', 'countered', 'escalated'] } } as any, { projection: { _id: 1 } });
+  if (open) throw new HttpError(409, 'This line has an open difference. Settle it on the dispute screen.');
+  const jobId = ln?.job_id ?? null;
   const { withLateFigure } = await import('./jobs.js');
   return withLateFigure(ctx, [jobId], reason, apply);
 }
@@ -128,6 +140,7 @@ async function applyReceiptNow(ctx: Ctx, movementId: string, lineId: string, bas
   if (!m) throw new HttpError(404, 'Not found');
   const line = (m.lines as any[]).find((l) => l.line_id === lineId);
   if (!line) throw new HttpError(404, 'Not found');
+  refuseIfSettled(line);
   const open = await col('sc_discrepancies').findOne({ 'refs.movement_id': movementId, 'refs.line_id': lineId, state: { $in: ['open', 'proposed', 'countered', 'escalated'] } } as any);
   if (open) throw new HttpError(409, 'This line has an open difference. Settle it on the dispute screen.');
   const c = settleCtxFor(m, line);
@@ -170,6 +183,8 @@ async function applySenderFigureNow(ctx: Ctx, movementId: string, lineId: string
   if (!m) throw new HttpError(404, 'Not found');
   const line = (m.lines as any[]).find((l) => l.line_id === lineId);
   if (!line) throw new HttpError(404, 'Not found');
+  if (m.action !== 'return_from_work' || m.recorder_business_id === ctx.businessId) throw new HttpError(409, 'Give your figure only on a return the other side recorded.');
+  refuseIfSettled(line);
   const open = await col('sc_discrepancies').findOne({ 'refs.movement_id': movementId, 'refs.line_id': lineId, state: { $in: ['open', 'proposed', 'countered', 'escalated'] } } as any);
   if (open) throw new HttpError(409, 'This line has an open difference. Settle it on the dispute screen.');
   const c = settleCtxFor(m, line);
@@ -208,4 +223,23 @@ async function applySenderFigureNow(ctx: Ctx, movementId: string, lineId: string
 }
 
 /** Holdings real-key helper re-exported for routes. */
+/**
+ * Work the performer has done on a job but not yet sent back, for one item and grade: outputs recorded (Work done,
+ * sub-contract roll-ups, earlier returns) minus what earlier returns carried. A return only implies new output for the
+ * part above this, so nothing is counted twice (model §3.5). Unprocessed returns are not output and don't count.
+ */
+export async function unreturnedOutput(job: any, specId: string, grade: string, excludeMovementId?: string): Promise<number> {
+  const done = ((job.outputs ?? []) as any[]).filter((o) => o.spec_id === specId && (o.grade ?? 'A') === grade).reduce((a, o) => a + o.qty, 0);
+  let returned = 0;
+  for (const rid of (job.returns ?? []) as string[]) {
+    if (rid === excludeMovementId) continue;
+    const m: any = await col('sc_movements').findOne({ _id: rid, cancelled_at: null } as any, { projection: { lines: 1 } });
+    for (const l of (m?.lines ?? []) as any[]) {
+      if (l.job_id !== job._id || l.line_kind === 'unprocessed_return' || l.spec_id !== specId || (l.grade ?? 'A') !== grade) continue;
+      returned += winningAssertion(l.sent)?.base_qty ?? 0;
+    }
+  }
+  return Math.max(0, done - returned);
+}
+
 export { real };

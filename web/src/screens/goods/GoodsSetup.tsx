@@ -5,7 +5,7 @@ import clsx from 'clsx';
 import { api, ApiError, errorText } from '../../lib/api';
 import { Button } from '../../components/Button';
 import { Sheet } from '../../components/Sheet';
-import { ArrowLeft, Check, Plus } from '../../icons';
+import { AlertTriangle, ArrowLeft, Check, Plus } from '../../icons';
 import { SetupS } from './Setup.strings';
 import { SpecPicker } from './SpecPicker';
 import { WorkS } from './Work.strings';
@@ -44,6 +44,11 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
   );
 }
 
+function ErrLine({ text }: { text?: string | null }) {
+  if (!text) return null;
+  return <p role="alert" className="mt-2 flex items-start gap-2 rounded-[14px] bg-danger-tint px-3 py-2 text-[14px] text-danger"><AlertTriangle size={16} className="mt-0.5 shrink-0" aria-hidden />{text}</p>;
+}
+
 const inputCls = 'min-h-12 w-full rounded-[16px] border border-line-strong bg-surface px-3.5 text-[16px] outline-none focus:border-primary';
 
 export default function GoodsSetup() {
@@ -57,6 +62,7 @@ export default function GoodsSetup() {
   const [staff, setStaff] = useState<{ id: string; name: string; phone: string; has_pin: boolean }[]>([]);
   const [newStaff, setNewStaff] = useState<{ name: string; phone: string } | null>(null);
   const [pinDraft, setPinDraft] = useState('');
+  const [pinCurrent, setPinCurrent] = useState(''); // needed to change or remove an existing PIN
   const [note, setNote] = useState<string | null>(null);
   const [links, setLinks] = useState<{ id: string; name: string; seen_at: number | null; stopped_at: number | null; stopped_by: string | null }[]>([]);
   const lang = useSession((st) => st.user?.language || 'en');
@@ -78,6 +84,11 @@ export default function GoodsSetup() {
   const [form, setForm] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Errors per section (capabilities, offerings, staff, PIN), shown under the button that failed.
+  const [secErr, setSecErr] = useState<Partial<Record<'caps' | 'offers' | 'staff' | 'pin', string>>>({});
+  const [removeSure, setRemoveSure] = useState<string | null>(null);
+  const failed = (k: 'caps' | 'offers' | 'staff' | 'pin', e: unknown) => setSecErr((x) => ({ ...x, [k]: errorText(e) }));
+  const cleared = (k: 'caps' | 'offers' | 'staff' | 'pin') => setSecErr((x) => ({ ...x, [k]: undefined }));
 
   const load = useCallback(async () => {
     const [h, c, p, k, sp] = await Promise.all([
@@ -195,14 +206,18 @@ export default function GoodsSetup() {
           {owner ? (
             <Button className="mt-3" variant={capSaved || (caps.confirmed && !capSaved && JSON.stringify(capSel) === JSON.stringify(caps.capabilities)) ? 'secondary' : 'primary'} icon={capSaved ? Check : undefined}
               onClick={async () => {
-                await api.post('/api/sc/capabilities', { capabilities: capSel });
-                setCapSaved(true);
+                cleared('caps');
+                try {
+                  await api.post('/api/sc/capabilities', { capabilities: capSel });
+                  setCapSaved(true);
+                } catch (e) { failed('caps', e); }
               }}>
               {capSaved ? s('confirmed') : s('confirm')}
             </Button>
           ) : (
             <p className="mt-2 text-[13px] text-meta">{s('owner_only')}</p>
           )}
+          <ErrLine text={secErr.caps} />
         </Section>
       )}
 
@@ -229,10 +244,14 @@ export default function GoodsSetup() {
         {owner && (
           <Button className="mt-3" variant={offersSaved ? 'secondary' : 'primary'} icon={offersSaved ? Check : undefined}
             onClick={async () => {
+              cleared('offers');
+              try {
               await api.put('/api/sc/offerings', { offerings: Object.entries(offers).filter(([, v]) => v.on).map(([k, v]) => ({ process_key: k, ...(Number(v.capacity_per_day) > 0 ? { capacity_per_day: Number(v.capacity_per_day) } : {}), ...(Number(v.turnaround_days) > 0 ? { turnaround_days: Number(v.turnaround_days) } : {}) })) });
               setOffersSaved(true);
+              } catch (e) { failed('offers', e); }
             }}>{offersSaved ? s('confirmed') : wk('save')}</Button>
         )}
+        <ErrLine text={secErr.offers} />
       </Section>
 
       <Section title={s('materials')} hint={s('materials_hint')} action={<Button size="sm" variant="tint" icon={Plus} onClick={() => setSheet('material')}>{s('add_material')}</Button>}>
@@ -276,7 +295,13 @@ export default function GoodsSetup() {
                     <span className="block text-[15px] font-semibold text-ink">{x.name}</span>
                     <span className="block text-[13px] text-meta">{[x.phone, x.has_pin ? st('has_pin') : null].filter(Boolean).join(' · ')}</span>
                   </span>
-                  <Button size="sm" variant="ghost" onClick={async () => { await api.del(`/api/sc/staff/${x.id}`); void load(); }}>{st('remove')}</Button>
+                  {/* Two taps, like "Wrong entry": the first asks, the second removes. */}
+                  <Button size="sm" variant="ghost" className={clsx(removeSure === x.id && 'bg-danger-tint text-danger')} onClick={async () => {
+                    if (removeSure !== x.id) { setRemoveSure(x.id); return; }
+                    setRemoveSure(null);
+                    cleared('staff');
+                    try { await api.del(`/api/sc/staff/${x.id}`); await load(); } catch (e) { failed('staff', e); }
+                  }}>{removeSure === x.id ? st('remove_sure') : st('remove')}</Button>
                 </li>
               ))}
             </ul>
@@ -297,15 +322,28 @@ export default function GoodsSetup() {
             </div>
           )}
           {note && <p role="status" className="mt-2 text-[14px] text-ink-2">{note}</p>}
+          <ErrLine text={secErr.staff} />
         </Section>
       )}
 
       <Section title={st('pin')} hint={st('pin_hint')}>
         <div className="flex flex-wrap items-center gap-2">
+          {me?.has_pin ? <input className="h-12 w-28 rounded-[14px] border border-line-strong bg-surface px-3 text-center font-head text-[20px] tracking-[0.4em] tabular-nums" inputMode="numeric" maxLength={4} aria-label={st('pin_current')} placeholder={st('pin_current')} value={pinCurrent} onChange={(e) => setPinCurrent(e.target.value.replace(/\D/g, '').slice(0, 4))} /> : null}
           <input className="h-12 w-28 rounded-[14px] border border-line-strong bg-surface px-3 text-center font-head text-[20px] tracking-[0.4em] tabular-nums" inputMode="numeric" maxLength={4} aria-label={st('pin')} value={pinDraft} onChange={(e) => setPinDraft(e.target.value.replace(/\D/g, '').slice(0, 4))} />
-          <Button disabled={pinDraft.length !== 4} onClick={async () => { await api.post('/api/sc/me/pin', { pin: pinDraft }); try { sessionStorage.setItem('cc_pin_ok', me?.id ?? ''); } catch { /* fine */ } setPinDraft(''); setNote(st('pin_saved')); void refreshMe(); }}>{st('pin_set')}</Button>
-          {me?.has_pin ? <Button variant="ghost" onClick={async () => { await api.post('/api/sc/me/pin', { pin: null }); setNote(st('pin_removed')); void refreshMe(); }}>{st('pin_clear')}</Button> : null}
+          <Button disabled={pinDraft.length !== 4} onClick={async () => {
+            cleared('pin');
+            try { await api.post('/api/sc/me/pin', { pin: pinDraft, ...(pinCurrent ? { current: pinCurrent } : {}) }); } catch (e) { failed('pin', e); return; }
+            try { sessionStorage.setItem('cc_pin_ok', me?.id ?? ''); } catch { /* fine */ }
+            setPinDraft(''); setPinCurrent(''); setNote(st('pin_saved')); void refreshMe();
+          }}>{st('pin_set')}</Button>
+          {me?.has_pin ? <Button variant="ghost" onClick={async () => {
+            cleared('pin');
+            try { await api.post('/api/sc/me/pin', { pin: null, ...(pinCurrent ? { current: pinCurrent } : {}) }); } catch (e) { failed('pin', e); return; }
+            setPinCurrent('');
+            setNote(st('pin_removed')); void refreshMe();
+          }}>{st('pin_clear')}</Button> : null}
         </div>
+        <ErrLine text={secErr.pin} />
       </Section>
 
       {links.length > 0 && (

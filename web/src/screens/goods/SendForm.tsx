@@ -101,7 +101,13 @@ export default function SendForm() {
   const setLine = (i: number, patch: Partial<Line>) => setLines((ls) => ls.map((l, j) => (j === i ? { ...l, ...patch } : l)));
   const ready = !!party && !!proc && lines.every((l) => l.spec && Number(l.qty) > 0 && l.unit);
   const mixed = useMemo(() => lotMixSizes(lines), [lines]);
-  const rateUnit = useMemo(() => lines[0]?.spec?.units?.[0] ?? 'kg', [lines]);
+  // The server bills by the work's rate basis, not by the unit of the first line.
+  const rateLabel = !proc ? null
+    : proc.rate_basis === 'per_input_mass' ? s('rate_b_per_input_mass')
+    : proc.rate_basis === 'per_output_piece' ? s('rate_b_per_output_piece')
+    : proc.rate_basis === 'per_good_output_piece' ? s('rate_b_per_good_output_piece')
+    : proc.rate_basis === 'lump_sum' ? s('rate_b_lump_sum')
+    : null;
 
   const submit = async (override?: { reason: string }) => {
     if (!party || !proc) return;
@@ -259,7 +265,7 @@ export default function SendForm() {
             <div className="flex items-center gap-2">
               <span className="text-[16px] font-semibold text-ink-2">₹</span>
               <input className={inputCls + ' w-32 tabular-nums'} inputMode="decimal" value={rate} onChange={(e) => setRate(e.target.value.replace(/[^\d.]/g, ''))} />
-              <span className="text-[14px] text-meta">{s('per', { unit: rateUnit })}</span>
+              {rateLabel && <span className="text-[14px] text-meta">{rateLabel}</span>}
             </div>
           </label>
         )}

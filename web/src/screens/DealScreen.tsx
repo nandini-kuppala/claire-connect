@@ -70,6 +70,7 @@ interface OfferRow {
   title?: string;
   listing_id?: string | null;
   category?: string | null;
+  parent_id?: string | null;
   created_at?: number;
 }
 
@@ -96,6 +97,8 @@ interface Detail {
     category?: string | null;
     attrs?: { color?: string } | null;
   } | null;
+  /** The seller's product this deal is about: its price is the "listed" price. */
+  listing?: { id: string; title?: string; price: number; unit?: string } | null;
   offers: OfferRow[];
   orders: OrderRow[];
   agent: { id: string; name: string; languages?: string[]; languageNames?: string[] } | null;
@@ -212,11 +215,8 @@ export default function DealScreen() {
   const pendingTheirs = useMemo(() => [...offers].reverse().find((o) => !o.mine && o.status === 'pending'), [offers]);
   const latest = offers.at(-1);
   const myLastPrice = useMemo(() => [...offers].reverse().find((o) => o.mine)?.unit_price, [offers]);
-  // "Listed" = the first price the seller put on the table in this chat.
-  const listedPrice = useMemo(() => {
-    const first = side === 'buyer' ? offers.find((o) => !o.mine) : side === 'seller' ? offers.find((o) => o.mine) : undefined;
-    return first?.unit_price;
-  }, [offers, side]);
+  // "Listed" = the seller's listing price for this product (never an offer made in the chat).
+  const listedPrice = detail?.listing?.price || undefined;
 
   // Live offer statuses, my ratings and deal facts for the cards (card payloads keep the status they were posted with).
   const cardExtras = useMemo(() => {
@@ -227,7 +227,7 @@ export default function DealScreen() {
       unit: detail.requirement?.unit ?? detail.offers.at(-1)?.unit,
       listedPrice,
       side: detail.me.side,
-      offers: detail.offers.map((o) => ({ id: o.id, unitPrice: o.unit_price, qty: o.qty, status: o.status, mine: Boolean(o.mine), createdAt: o.created_at })),
+      offers: detail.offers.map((o) => ({ id: o.id, unitPrice: o.unit_price, qty: o.qty, status: o.status, mine: Boolean(o.mine), createdAt: o.created_at, parentId: o.parent_id ?? null })),
     };
     return { offerStatus: Object.fromEntries(detail.offers.map((o) => [o.id, o.status])), ratedOrders: detail.ratedOrders ?? [], deal };
   }, [detail, listedPrice]);
@@ -463,6 +463,7 @@ export default function DealScreen() {
           cardExtras={cardExtras}
           scrollSignal={scrollSignal}
           quickReplies={quickReplies}
+          onRefresh={load}
         />
       ) : (
         <>

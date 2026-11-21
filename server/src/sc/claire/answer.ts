@@ -5,7 +5,7 @@ import type { Ctx } from '../flag.js';
 import { jobSummaries, partyNames, toConfirmFor, type JobSummary } from '../views.js';
 import { positions } from '../repo.js';
 import { formatQty } from '../../../../shared/sc/units.js';
-import { todayIST } from '../../../../shared/sc/dates.js';
+import { todayIST, workingDaysBetween } from '../../../../shared/sc/dates.js';
 import type { CardPayload } from '../../../../shared/cards.js';
 import type { Dimension, PartyRef } from '../../../../shared/sc/types.js';
 import { candidates, labelFits, matchParty } from './resolve.js';
@@ -186,7 +186,8 @@ async function analytics(ctx: Ctx, metric: 'loss_pct' | 'turnaround_days' | 'rej
   for (const j of pick as any[]) {
     let v: number | null = null;
     if (metric === 'loss_pct') v = j.conservation_kind === 'mass_losing' ? j.closure?.loss_pct ?? null : null;
-    if (metric === 'turnaround_days') v = j.closure?.business_date ? Math.max(0, Math.round((Date.parse(j.closure.business_date) - Date.parse(j.business_date)) / 86400e3)) : null;
+    // Same rule as the Performance report: working days, minus days the job was held (not the worker's delay).
+    if (metric === 'turnaround_days') v = j.closure?.business_date ? Math.max(0, workingDaysBetween(j.business_date, j.closure.business_date) - (j.pauses ?? []).reduce((n: number, p: any) => n + workingDaysBetween(p.from, p.to ?? j.closure.business_date), 0)) : null;
     if (metric === 'reject_pct') {
       const outs = (j.outputs as any[]).filter((o) => o.source !== 'child');
       const tot = outs.reduce((a, o) => a + o.qty, 0);
@@ -200,7 +201,10 @@ async function analytics(ctx: Ctx, metric: 'loss_pct' | 'turnaround_days' | 'rej
   const names = await partyNames(ctx, [...by.values()].map((x) => x.ref));
   const unit = metric === 'turnaround_days' ? '' : ' %';
   const rows = [...by.entries()].map(([k, x]) => {
-    const avg = Math.round((x.vals.reduce((a, b) => a + b, 0) / x.vals.length) * 10) / 10;
+    // Median, like the Performance report, so Claire and the report give the same figure.
+    const sv = [...x.vals].sort((a, b) => a - b);
+    const mid = sv.length % 2 ? sv[(sv.length - 1) / 2] : (sv[sv.length / 2 - 1] + sv[sv.length / 2]) / 2;
+    const avg = Math.round(mid * 10) / 10;
     const enough = x.vals.length >= 3;
     return { label: names.get(k)?.name ?? '—', value: enough ? `${avg}${unit}` : '—', sub: [procs.get(x.proc) ?? x.proc, enough ? tr(lang, 'jobs_n', { n: x.vals.length }) : tr(lang, 'not_enough', { n: x.vals.length }), metric === 'loss_pct' && enough ? tr(lang, 'usual', { pct: x.norm }) : null].filter(Boolean).join(' · '), tone: null as null };
   }).sort((a, b) => (a.value === '—' ? 1 : 0) - (b.value === '—' ? 1 : 0));

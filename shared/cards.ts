@@ -52,6 +52,8 @@ export interface MatchCard {
   rating?: number;
   onTimePct?: number;
   stock?: number;
+  /** Average price is above the buyer's budget (shown as an "above budget" flag). */
+  overBudget?: boolean;
 }
 
 export type CardPayload =

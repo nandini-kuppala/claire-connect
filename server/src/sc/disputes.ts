@@ -48,7 +48,8 @@ export function resolutionPostings(d: any, outcome: Outcome): { postings: Postin
     if (rest) {
       // Receiver's figure stands: weighed → weighing loss on the terms' bearer; counted → short-shipped, still the
       // sender's (back to the sender's holding).
-      out.push(pc.counted ? P(real(g, owner, pc.sender, { s: 'available' }), rest) : P(pseudo(g, 'LOSS', 'weighing_difference', owner, pc.bearer), rest));
+      // Short-shipped pieces go back where they left from (a job's allocation for a forward or an unprocessed return).
+      out.push(pc.counted ? P(real(g, owner, pc.sender, pc.sender_state ?? { s: 'available' }, pc.sender_via ? { via: pc.sender_via } : {}), rest) : P(pseudo(g, 'LOSS', 'weighing_difference', owner, pc.bearer), rest));
     }
   } else if (diff < 0) {
     // Over-receipt: the excess sits held(found_pending) at the receiver.
@@ -64,7 +65,7 @@ export function resolutionPostings(d: any, outcome: Outcome): { postings: Postin
 async function resolve(req: ScRequest, d: any, outcome: Outcome, note?: string) {
   // A claim carried past closing settles later: the job reopens around the resolution and closes again (04 §5.6.3).
   const { withLateFigure } = await import('./jobs.js');
-  return withLateFigure(req.ctx, [d.refs?.job_id], 'dispute_settled', () => resolveNow(req, d, outcome, note));
+  return withLateFigure(req.ctx, d.refs?.job_ids?.length ? d.refs.job_ids : [d.refs?.job_id], 'dispute_settled', () => resolveNow(req, d, outcome, note));
 }
 
 async function resolveNow(req: ScRequest, d: any, outcome: Outcome, note?: string) {

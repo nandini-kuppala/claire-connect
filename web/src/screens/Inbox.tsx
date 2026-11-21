@@ -69,11 +69,18 @@ function qtyText(s: S, n: number | null, unit: string | null) {
   return unit === 'kg' ? s('kg', { n: v }) : unit === 'dozen' ? s('dozen', { n: v }) : s('pcs', { n: v });
 }
 
-/** One status per chat, most important first: order stage → offer state → support. */
+/** An offer waiting for my answer that is newer than the chat's last order (a new negotiation after an old order). */
+function newOfferIn(c: Conversation): boolean {
+  const f = c.latestOffer;
+  return !!f && f.status === 'pending' && !f.fromMe && (!c.latestOrder || f.at > c.latestOrder.at);
+}
+
+/** One status per chat, whichever is newer: order stage or offer state; then support. */
 function statusOf(c: Conversation, s: S): { label: string; tone: Tone } | null {
   if (c.kind === 'support' || c.agentUserId) return { label: s('st_support'), tone: 'accent' };
   const buyer = c.side === 'buyer';
-  const o = c.latestOrder;
+  // Same rule as the deal header strip: a pending offer made after the last order is what matters now.
+  const o = c.latestOffer?.status === 'pending' && c.latestOrder && c.latestOffer.at > c.latestOrder.at ? null : c.latestOrder;
   if (o) {
     switch (o.status) {
       case 'confirmed': return buyer ? { label: s('st_pay_advance'), tone: 'warning' } : { label: s('st_placed'), tone: 'success' };
@@ -176,7 +183,7 @@ export default function Inbox() {
         const sum = summaries[`group:${c.channelId}`];
         const at = Math.max(sum?.latest?.sentAt ?? 0, c.lastAt ?? 0);
         const unread = sum?.unread ?? c.unread ?? 0;
-        return { c, sum, at, unread, status: statusOf(c, s) };
+        return { c, sum, at, unread, status: statusOf(c, s), newOffer: newOfferIn(c) };
       }),
     [convs, summaries, s],
   );
@@ -193,10 +200,10 @@ export default function Inbox() {
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase();
     return enriched
-      .filter(({ c, sum, unread, status }) => {
+      .filter(({ c, sum, unread, status, newOffer }) => {
         if (side === 'buying' && c.side !== 'buyer') return false;
         if (side === 'selling' && c.side !== 'seller') return false;
-        if (only === 'unread' && !unread) return false;
+        if (only === 'unread' && !unread && !newOffer) return false;
         if (only === 'offers' && !(c.pendingOffer || c.latestOffer?.status === 'pending')) return false;
         if (only === 'orders' && !c.latestOrder) return false;
         if (only === 'support' && !(c.kind === 'support' || c.agentUserId)) return false;
@@ -380,9 +387,9 @@ export default function Inbox() {
 
         {rows.length > 0 && (
           <ul className="divide-y divide-line overflow-hidden rounded-[22px] border border-line bg-surface" aria-label={t('nav_chats')}>
-            {rows.map(({ c, sum, at, unread, status }) => (
+            {rows.map(({ c, sum, at, unread, status, newOffer }) => (
               <li key={c.id}>
-                <ConversationRow c={c} s={s} time={listTime(at, t('yesterday'))} unread={unread} status={status} previewLine={preview(sum?.latest, c.lastText)} />
+                <ConversationRow c={c} s={s} time={listTime(at, t('yesterday'))} unread={unread} newOffer={newOffer} status={status} previewLine={preview(sum?.latest, c.lastText)} />
               </li>
             ))}
           </ul>
@@ -494,6 +501,7 @@ function ConversationRow({
   s,
   time,
   unread,
+  newOffer,
   status,
   previewLine,
 }: {
@@ -501,6 +509,8 @@ function ConversationRow({
   s: S;
   time: string;
   unread: number;
+  /** An offer is waiting for my answer: marked even when the chat itself has no unread count. */
+  newOffer?: boolean;
   status: { label: string; tone: Tone } | null;
   previewLine: string;
 }) {
@@ -543,6 +553,9 @@ function ConversationRow({
           </span>
           <span className="flex shrink-0 items-center gap-1.5 self-center">
             <UnreadBadge n={unread} />
+            {newOffer && !unread && (
+              <span className="flex h-6 shrink-0 items-center rounded-full bg-clay px-2 text-[12px] font-bold text-white">{s('new_offer')}</span>
+            )}
             <ChevronRight size={18} aria-hidden className="text-faint" />
           </span>
         </span>

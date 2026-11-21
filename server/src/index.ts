@@ -55,7 +55,8 @@ async function ensureBots() {
 async function main() {
   const app = express();
   app.disable('x-powered-by');
-  app.set('trust proxy', true);
+  // Trust only the proxy in front of us (Render: one hop), so req.ip can't be set by a client's own X-Forwarded-For.
+  app.set('trust proxy', Number(process.env.TRUST_PROXY_HOPS ?? 1));
   app.use(
     cors({
       origin: (origin, cb) => cb(null, !origin || origin === cfg.webUrl || LOCAL_ORIGIN.test(origin)),

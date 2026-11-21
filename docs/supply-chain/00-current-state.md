@@ -91,6 +91,11 @@ Helpers: `server/src/db/index.ts` (`col, insert, update, find, findOne, byId, co
 
 ## 9. Doc drift found (fix in Phase 7)
 
+> **Status 22 Nov 2026:**
+> - Item 1 (token drift) is fixed: `DESIGN_SYSTEM.md` and `BUILD_CONTRACT.md` now match `index.css`.
+> - Item 2 is noted at the top of `03-technical-design.md`.
+> - The unsafe database default is fixed: `MONGODB_DB` is now required.
+
 1. `BUILD_CONTRACT.md` "Design tokens" lists blue `#0047FF`, `DESIGN_SYSTEM.md` lists "Tiruppur cotton" (`#F4EFE6` page, loom green `#1E5A4C`), and `index.css` actually ships white + teal-green `#1f8c73` + navy ink. **`index.css` is what users see**; the docs need one consistent token table.
 2. `03-technical-design.md` describes Postgres + Anthropic; build is MongoDB + OpenRouter (noted at top of file already).
 3. `00-README.md` decision #7 "Asset-light: **no inventory**" — the new brief deliberately reverses this for *tracking* (not holding) inventory. The business model stays asset-light; we record stock, we don't own it.

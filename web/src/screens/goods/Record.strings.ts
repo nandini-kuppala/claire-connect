@@ -26,7 +26,7 @@ export const RecS = defineStrings('goods_record', {
     a_send_for_work: 'Sent for work', a_return_from_work: 'Got back', cancelled: 'Undone', completed: 'Back in full', in_progress: 'Part back', issued: 'Sent',
     weighing_bearer: 'Weighing difference borne by', b_owner: 'The owner of the goods', b_performer: 'The job worker', b_sender: 'The sender', b_receiver: 'The receiver',
     tolerance: 'Allowed weighing difference', counted_exact: 'Counted goods must match exactly', edit_terms: 'Edit terms', call: 'Call', whatsapp: 'WhatsApp',
-    mine_title: 'Your goods here', none_here: 'Nothing recorded at your places yet.', error: 'Could not save. Please check and try again.',
+    mine_title: 'Your goods here', none_here: 'Nothing recorded at your places yet.', error: 'Could not save. Please check and try again.', rate_b_per_input_mass: 'per kg sent', rate_b_per_output_piece: 'per piece that comes back', rate_b_per_good_output_piece: 'per good piece that comes back', rate_b_lump_sum: 'for the whole job', tolerance_invalid: 'Type a number from 0 to 10, like 1.5.',
   },
   ta: {
     record: 'பதிவு செய்', what_happened: 'என்ன நடந்தது?', went_out: 'சரக்கு வெளியே போனது', came_in: 'சரக்கு உள்ளே வந்தது',
@@ -52,7 +52,7 @@ export const RecS = defineStrings('goods_record', {
     a_send_for_work: 'வேலைக்கு அனுப்பியது', a_return_from_work: 'திரும்ப வந்தது', cancelled: 'ரத்து செய்தது', completed: 'முழுதும் வந்தது', in_progress: 'பகுதி வந்தது', issued: 'அனுப்பியது',
     weighing_bearer: 'எடை வித்தியாசம் யார் பொறுப்பு', b_owner: 'சரக்கின் உரிமையாளர்', b_performer: 'ஜாப் வொர்க் செய்பவர்', b_sender: 'அனுப்புபவர்', b_receiver: 'பெறுபவர்',
     tolerance: 'அனுமதிக்கப்பட்ட எடை வித்தியாசம்', counted_exact: 'எண்ணும் சரக்கு சரியாகப் பொருந்த வேண்டும்', edit_terms: 'நிபந்தனைகளை மாற்று', call: 'அழை', whatsapp: 'WhatsApp',
-    mine_title: 'இங்கே உங்கள் சரக்கு', none_here: 'உங்கள் இடங்களில் இன்னும் எதுவும் பதிவு இல்லை.', error: 'சேமிக்க முடியவில்லை. சரிபார்த்து மீண்டும் முயலுங்கள்.',
+    mine_title: 'இங்கே உங்கள் சரக்கு', none_here: 'உங்கள் இடங்களில் இன்னும் எதுவும் பதிவு இல்லை.', error: 'சேமிக்க முடியவில்லை. சரிபார்த்து மீண்டும் முயலுங்கள்.', rate_b_per_input_mass: 'அனுப்பும் ஒரு கிலோவுக்கு', rate_b_per_output_piece: 'திரும்ப வரும் ஒரு பீஸுக்கு', rate_b_per_good_output_piece: 'திரும்ப வரும் ஒரு நல்ல பீஸுக்கு', rate_b_lump_sum: 'முழு வேலைக்கும்', tolerance_invalid: '0 முதல் 10 வரை ஒரு எண் தட்டச்சு செய்யுங்கள், எ.கா. 1.5.',
   },
   hi: {
     record: 'दर्ज करें', what_happened: 'क्या हुआ?', went_out: 'माल बाहर गया', came_in: 'माल अंदर आया',
@@ -78,6 +78,6 @@ export const RecS = defineStrings('goods_record', {
     a_send_for_work: 'काम के लिए भेजा', a_return_from_work: 'वापस आया', cancelled: 'वापस लिया', completed: 'पूरा वापस', in_progress: 'कुछ वापस', issued: 'भेजा',
     weighing_bearer: 'वज़न का फ़र्क कौन उठाए', b_owner: 'माल का मालिक', b_performer: 'जॉब वर्कर', b_sender: 'भेजने वाला', b_receiver: 'पाने वाला',
     tolerance: 'वज़न का मान्य फ़र्क', counted_exact: 'गिनती वाला माल बिल्कुल मेल खाना चाहिए', edit_terms: 'शर्तें बदलें', call: 'कॉल', whatsapp: 'WhatsApp',
-    mine_title: 'यहाँ आपका माल', none_here: 'आपकी जगहों पर अभी कुछ दर्ज नहीं।', error: 'सेव नहीं हुआ। जाँचकर फिर कोशिश करें।',
+    mine_title: 'यहाँ आपका माल', none_here: 'आपकी जगहों पर अभी कुछ दर्ज नहीं।', error: 'सेव नहीं हुआ। जाँचकर फिर कोशिश करें।', rate_b_per_input_mass: 'भेजे गए हर किलो पर', rate_b_per_output_piece: 'वापस आए हर पीस पर', rate_b_per_good_output_piece: 'वापस आए हर अच्छे पीस पर', rate_b_lump_sum: 'पूरे काम के लिए', tolerance_invalid: '0 से 10 तक कोई संख्या लिखें, जैसे 1.5।',
   },
 });

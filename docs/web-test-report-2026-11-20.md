@@ -16,6 +16,8 @@ Tested the existing web app (no code changes) on a local server against an **iso
 
 ## 3. Findings (severity: High / Medium / Low)
 
+> **Status 22 Nov 2026:** B1–B9 and B11–B19 are fixed on the `supply-chain` branch (see `docs/supply-chain/PROGRESS.md`, "Bug hunt and logged-bug fixes"). **B10 is still open**: it needs a Nexconn server-side history API, or the group setting that lets late joiners see history.
+
 ### Bugs
 | ID | Sev | What happened | Where / likely cause |
 |---|---|---|---|

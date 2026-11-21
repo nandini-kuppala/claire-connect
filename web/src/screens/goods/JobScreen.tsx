@@ -5,7 +5,7 @@ import clsx from 'clsx';
 import { api, ApiError, errorText } from '../../lib/api';
 import { Button } from '../../components/Button';
 import { Sheet } from '../../components/Sheet';
-import { ArrowDown, ArrowLeft, Check, ChevronRight, Lock, Repeat } from '../../icons';
+import { AlertTriangle, ArrowDown, ArrowLeft, Check, ChevronRight, Lock, Repeat } from '../../icons';
 import { useSession } from '../../store/session';
 import { JobS } from './Job.strings';
 import { TradeS } from './Trade.strings';
@@ -44,6 +44,10 @@ const FILL: Record<string, string> = {
   A: 'bg-success', B: 'bg-success/60', rework: 'bg-accent', reject: 'bg-danger/70', scrap: 'bg-danger/50', output_est: 'bg-success',
   unprocessed: 'bg-ink-2/40', sent_on: 'bg-teal/60', sold: 'bg-marigold/70', lost: 'bg-ink', loss: 'bg-clay', gain: 'bg-clay/50', unaccounted: 'bg-danger', still_there: 'bg-primary-soft',
 };
+function SheetError({ text }: { text: string | null }) {
+  if (!text) return null;
+  return <p role="alert" className="flex items-start gap-2 rounded-[14px] bg-danger-tint px-3 py-2 text-[14px] text-danger"><AlertTriangle size={16} className="mt-0.5 shrink-0" aria-hidden />{text}</p>;
+}
 const inr = (paise: number) => `${Math.round(paise / 100).toLocaleString('en-IN')}`;
 
 export default function JobScreen() {
@@ -66,6 +70,8 @@ export default function JobScreen() {
   const [why, setWhy] = useState('');
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  // Errors from an open sheet show inside it; the page error sits behind the sheet where nobody sees it.
+  const [sheetErr, setSheetErr] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -80,12 +86,28 @@ export default function JobScreen() {
     setAsk(null);
     setCarry(false);
     setLeft({});
-    setPv(await api.get<Preview>(`/api/sc/jobs/${id}/close-preview`));
-    setSheet('close');
+    setSheetErr(null);
+    setError(null);
+    try {
+      setPv(await api.get<Preview>(`/api/sc/jobs/${id}/close-preview`));
+      setSheet('close');
+    } catch (e) {
+      setError(errorText(e));
+    }
+  };
+  const stopOrResume = async (on: boolean) => {
+    setError(null);
+    try {
+      await api.post(`/api/sc/jobs/${id}/cancel`, { on });
+      await load();
+    } catch (e) {
+      setError(errorText(e));
+    }
   };
   const doClose = async (accept = false) => {
     if (!pv) return;
     setBusy(true);
+    setSheetErr(null);
     try {
       const leftovers = Object.entries(left)
         .filter(([, v]) => v.disp !== 'used' && Number(v.qty) > 0)
@@ -103,7 +125,7 @@ export default function JobScreen() {
             : body.highLoss != null ? s('high_loss_q', { pct: body.highLoss, norm: d!.job.loss_norm_pct })
               : s('unexplained_q', { qty: fmtQty(Math.abs(body.unexplained ?? 0), d!.dim) }),
         );
-      } else setError(errorText(e));
+      } else setSheetErr(errorText(e));
     } finally {
       setBusy(false);
     }
@@ -260,7 +282,7 @@ export default function JobScreen() {
 
           {d.canClose && (
             <div className="mx-4 mt-5 flex flex-wrap gap-2">
-              <Button variant="ghost" onClick={async () => { await api.post(`/api/sc/jobs/${id}/cancel`, { on: !j.cancelled }); await load(); }}>{j.cancelled ? s('resume') : s('stop')}</Button>
+              <Button variant="ghost" onClick={() => void stopOrResume(!j.cancelled)}>{j.cancelled ? s('resume') : s('stop')}</Button>
               {d.canSellPart && <Button variant="ghost" onClick={() => { setBuyer(null); setSellQty({}); setSheet('sell'); }}>{tr('sell_part')}</Button>}
             </div>
           )}
@@ -272,7 +294,7 @@ export default function JobScreen() {
         <div className="fixed inset-x-0 bottom-[calc(61px+var(--safe-bottom))] z-20 mx-auto flex w-full max-w-[480px] gap-2 border-t border-line bg-surface px-4 py-2.5 lg:static lg:mx-4 lg:mt-6 lg:w-auto lg:max-w-none lg:border-0 lg:bg-transparent lg:px-0 lg:py-0">
           {d.canClose && d.pending > 0 && <Button className="flex-1 lg:flex-none" size="lg" icon={ArrowDown} onClick={() => nav(`/goods/job/${id}/return`)}>{r('back_btn')}</Button>}
           {d.canClose && <Button className="flex-1 lg:flex-none" size="lg" variant={d.pending > 0 ? 'secondary' : 'primary'} icon={Check} onClick={() => void openClose()}>{s('close')}</Button>}
-          {d.canReopen && <Button className="flex-1 lg:flex-none" size="lg" variant="secondary" icon={Repeat} onClick={() => { setWhy(''); setSheet('reopen'); }}>{s('reopen')}</Button>}
+          {d.canReopen && <Button className="flex-1 lg:flex-none" size="lg" variant="secondary" icon={Repeat} onClick={() => { setWhy(''); setSheetErr(null); setSheet('reopen'); }}>{s('reopen')}</Button>}
         </div>
       )}
 
@@ -286,6 +308,7 @@ export default function JobScreen() {
           <div className="space-y-4 pb-2">
             <p className="text-[14px] text-ink-2">{s('close_hint')}</p>
             {ask && <p className="rounded-[14px] bg-accent-tint px-3 py-2.5 text-[15px] font-semibold text-accent-ink">{ask}</p>}
+            <SheetError text={sheetErr} />
             {pv.lines.some((l) => l.role === 'secondary' && l.consumed > 0) && (
               <div>
                 <h3 className="mb-2 font-head text-[16px] font-semibold text-ink">{s('rest_title')}</h3>
@@ -356,11 +379,14 @@ export default function JobScreen() {
       <PartyPicker open={buyerPick} onClose={() => setBuyerPick(false)} onPick={setBuyer} />
 
       <Sheet open={sheet === 'reopen'} onClose={() => setSheet(null)} title={s('reopen_title')}
-        footer={<Button block size="lg" loading={busy} disabled={why.trim().length < 2} onClick={async () => { setBusy(true); try { await api.post(`/api/sc/jobs/${id}/reopen`, { reason: why.trim() }); setSheet(null); await load(); } catch (e) { setError(errorText(e)); } finally { setBusy(false); } }}>{s('reopen')}</Button>}>
-        <label className="block pb-2">
-          <span className="mb-1.5 block text-[13px] font-semibold text-ink-2">{s('why')}</span>
-          <input className="min-h-12 w-full rounded-[16px] border border-line-strong bg-surface px-3.5 text-[16px] outline-none focus:border-primary" placeholder={s('why_ph')} value={why} onChange={(e) => setWhy(e.target.value)} />
-        </label>
+        footer={<Button block size="lg" loading={busy} disabled={why.trim().length < 2} onClick={async () => { setBusy(true); setSheetErr(null); try { await api.post(`/api/sc/jobs/${id}/reopen`, { reason: why.trim() }); setSheet(null); await load(); } catch (e) { setSheetErr(errorText(e)); } finally { setBusy(false); } }}>{s('reopen')}</Button>}>
+        <div className="space-y-3 pb-2">
+          <label className="block">
+            <span className="mb-1.5 block text-[13px] font-semibold text-ink-2">{s('why')}</span>
+            <input className="min-h-12 w-full rounded-[16px] border border-line-strong bg-surface px-3.5 text-[16px] outline-none focus:border-primary" placeholder={s('why_ph')} value={why} onChange={(e) => setWhy(e.target.value)} />
+          </label>
+          <SheetError text={sheetErr} />
+        </div>
       </Sheet>
     </div>
   );

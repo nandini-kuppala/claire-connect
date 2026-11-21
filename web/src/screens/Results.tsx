@@ -228,6 +228,7 @@ function SupplierCard({ c, d, s, lang, act }: { c: RCard; d: Detail; s: RT; lang
             <span className="font-head text-[26px] leading-none font-bold text-ink tabular-nums">{inr(c.avgPrice)}</span>
             <span className="text-[14px] text-meta">{s('per_unit', { unit: per })}</span>
             {c.bestPrice && <Tag>{s('best_price')}</Tag>}
+            {c.overBudget && <Tag tone="neutral">{s('tag_above_budget')}</Tag>}
           </div>
           <p className="mt-1.5 flex flex-wrap items-center gap-x-1.5 text-[13px] text-ink-2">
             {sup.ratingAvg != null ? (
@@ -338,6 +339,7 @@ function ComboCard({ c, d, s, act }: { c: RCard; d: Detail; s: RT; act: DealActi
       <div className="mt-3 flex flex-wrap items-baseline gap-x-3 gap-y-1">
         <span className="font-head text-[22px] font-bold text-ink tabular-nums">{s('avg_per', { price: inr(c.avgPrice), unit: per })}</span>
         {c.bestPrice && <Tag>{s('best_price')}</Tag>}
+        {c.overBudget && <Tag tone="neutral">{s('tag_above_budget')}</Tag>}
       </div>
       <p className="mt-1 text-[13px] text-meta">
         {s('total_about', { amt: inr(c.total) })} · {readyText(s, c.readyDays)}

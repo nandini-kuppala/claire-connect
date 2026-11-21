@@ -52,6 +52,14 @@ See the Phase 7 report in `PROGRESS.md`.
 ## Load test (21 Nov)
 About 10 requests/s with no errors and correct data at 10–20 concurrent workers against the remote dev database; median 1–2 s, limited by ~74 ms database round trips, not the server. Details and how to speed it up: the load test report in `PROGRESS.md`. Test businesses: phones 9300000001–9300000010 (OTP 123456 on the dev server; not demo accounts). Re-run: `python3 scripts/sc-load-test.py` (dev server running).
 
+## Bug hunt (22 Nov)
+- **Fixed:**
+  - 48 defects across the ledger, money and orders, staff and links, and the Goods screens.
+  - 18 of the 19 logged marketplace bugs (B10 stays open; it needs Nexconn history).
+  - The production-database default (`MONGODB_DB` is now required).
+- See the bug-hunt report in `PROGRESS.md`.
+- **New smokes:** `scripts/sc-smoke-ledger.py`, `scripts/sc-smoke-money2.py`.
+
 ## What is left
 - **Flow view** (S9 in `03-product-ux.md`): the one-screen view of a whole order or run.
 - **Nightly demo reset;** the demo businesses on the login demo list.
@@ -76,7 +84,7 @@ SC_ENABLED=1 MONGODB_DB=nexconn_sc_dev npm run dev   # API :8787, web :5173 (pro
 - Flag a business: `MONGODB_DB=nexconn_sc_dev npm run sc:flag -w server -- <id|phone> on` (refuses non-dev DBs).
 - Checks:
   - `npm run lint` (typecheck + `scripts/sc-lint.mjs`); `npm test` (24 unit tests);
-  - smokes `python3 scripts/sc-smoke-s{1,2,3,4,45,6,7,8a,8b,9}.py` and `python3 scripts/sc-smoke-audit.py`; the scenarios `python3 scripts/sc-demo-scenarios.py` (dev server running);
+  - smokes `python3 scripts/sc-smoke-s{1,2,3,4,45,6,7,8a,8b,9}.py`, `sc-smoke-audit.py`, `sc-smoke-ledger.py`, `sc-smoke-money2.py`; the scenarios `python3 scripts/sc-demo-scenarios.py` (dev server running);
   - `cd server && MONGODB_DB=nexconn_sc_dev SC_ENABLED=1 npx tsx src/sc/claire/smoke.mts`;
   - `MONGODB_DB=nexconn_sc_dev npm run sc:verify -w server` (ledger: every event balances, every holding equals its postings);
   - `npm run sc:budget` (after a build) and `npm run i18n:check -- all`;

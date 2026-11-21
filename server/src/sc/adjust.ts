@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { col } from '../db/index.js';
 import { h, HttpError } from '../util.js';
 import type { Ctx, ScRequest } from './flag.js';
-import { newId, post } from './repo.js';
+import { holdingId, newId, post } from './repo.js';
 import { me, qtyBase, sameParty, specInfo } from './ledgerOps.js';
 import { enqueueCard } from './goodsChat.js';
 import { COUNT_THRESHOLD } from './staff.js';
@@ -109,6 +109,12 @@ router.post(
     }
     const id = newId('aj');
     const result = await post(ctx, { type: `adjust_${b.op}`, ref: { kind: 'adjustment', id }, payload: { op: b.op }, business_date: businessDate, client_id: b.client_id }, postings, async (session) => {
+      // A count sets the book to what was counted: if another count or record moved it meanwhile, the difference
+      // computed above is stale, so refuse rather than apply it twice.
+      if (b.op === 'count') {
+        const hdoc: any = await col('sc_holdings').findOne({ _id: holdingId(key, dim) } as any, { session });
+        if ((hdoc?.qty_base ?? 0) !== q) throw new HttpError(409, 'The stock changed while you were counting. Please count again.');
+      }
       await col('sc_adjustments').insertOne({ _id: id, id, business_id: ctx.businessId, op: b.op, key, dim, qty: q, book: have, to: { grade: b.to_grade ?? null, spec_id: b.to_spec_id ?? null, lot: b.to_lot ?? null }, reason: b.reason ?? null, business_date: businessDate, by: ctx.userId, at: Date.now() } as any, { session });
     });
     if ((result as { duplicate?: boolean } | undefined)?.duplicate) return res.json({ duplicate: true });

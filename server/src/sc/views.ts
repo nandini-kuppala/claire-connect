@@ -58,13 +58,16 @@ export interface JobSummary {
   outputLabel: string | null;
   lots: string[];
   movementIds: string[];
+  /** Goods sent on from this job to another unit (a hop) or sold where they were: no longer there. */
+  sent_on: number;
 }
 
 /** Summaries of my open jobs (owner = me), optionally for one performer. */
 export async function jobSummaries(ctx: Ctx, opts: { performer?: PartyRef; statuses?: string[] } = {}): Promise<JobSummary[]> {
   const filter: any = { 'owner_party.k': 'b', 'owner_party.id': ctx.businessId, 'client_party.id': ctx.businessId, status: { $in: opts.statuses ?? ['issued', 'in_progress'] } };
   if (opts.performer) Object.assign(filter, { 'performer_party.k': opts.performer.k, 'performer_party.id': opts.performer.id });
-  const jobs = await col('sc_jobs').find(filter).sort({ expected_at: 1 }).limit(200).toArray();
+  // Every open job (a busy unit can have hundreds); a low cap silently hid newly sent work from Out with others.
+  const jobs = await col('sc_jobs').find(filter).sort({ expected_at: 1 }).limit(1000).toArray();
   if (!jobs.length) return [];
   const movIds = [...new Set(jobs.flatMap((j: any) => [...j.inputs.map((i: any) => i.movement_id), ...(j.returns ?? [])]).filter(Boolean))];
   const movs = new Map((await col('sc_movements').find({ _id: { $in: movIds }, cancelled_at: null } as any).toArray()).map((m: any) => [m._id, m]));
@@ -109,7 +112,7 @@ export async function jobSummaries(ctx: Ctx, opts: { performer?: PartyRef; statu
       id: j._id, process_key: j.process_key, performer: j.performer_party, status: j.status, since: j.business_date, expected_at: j.expected_at,
       late: j.cancelled_at ? { status: 'on_time' as const, days: 0, reason: null } : lateness(j.expected_at, today, { pausedDays: (j.pauses ?? []).reduce((n: number, p: any) => n + workingDaysBetween(p.from, p.to ?? today), 0), reason: (j.pauses ?? []).some((p: any) => !p.to) ? 'held_for_dues' : j.ready_at ? 'ready_not_collected' : 'processing' }),
       ready: !!j.ready_at, cancelled: !!j.cancelled_at, held: (j.pauses ?? []).find((p: any) => !p.to)?.reason ?? null, dim, sent, issued, issuedBasis: bases.size > 1 ? 'mixed' : ((bases.values().next().value ?? 'sent') as 'sent' | 'their_figure'),
-      outputs, pending: p.input, pendingAsOutput: kind === 'mass_losing' ? p.asOutput : null, overYield: p.overYield,
+      outputs, sent_on: hopped.get(j._id) ?? 0, pending: p.input, pendingAsOutput: kind === 'mass_losing' ? p.asOutput : null, overYield: p.overYield,
       // Loss is shown only once nothing is estimated to be left (or the owner said it was the last); before that the
       // remainder is still being processed, not lost.
       lossPctSoFar: kind === 'mass_losing' && outputs > 0 && (p.input === 0 || j.status === 'completed') ? Math.round(((issued - outputs) / issued) * 1000) / 10 : null, lossNormPct: j.loss_norm_pct ?? 0,

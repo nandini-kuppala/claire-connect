@@ -2,7 +2,7 @@
 import { col, find, byId, insert, update } from './db/index.js';
 import { chat } from './chat.js';
 import { BOT, features } from './config.js';
-import { triage } from './ai.js';
+import { triage, translate } from './ai.js';
 import { trustOf, invalidateTrust } from './trust.js';
 import { id, now, inr, HttpError } from './util.js';
 import { balanceAmount } from './money.js';
@@ -71,12 +71,14 @@ const LOAD_STATUSES: TicketStatus[] = ['assigned', 'in_progress', 'waiting_user'
 const SLA_MIN: Record<Priority, number> = { P1: 5, P2: 15, P3: 60 };
 const ACTIVE_WINDOW_MS = 3 * 60_000;
 const DEFAULT_PRIORITY: Record<string, Priority> = {
-  help: 'P3', dispute: 'P2', quality_dispute: 'P2', payment_followup: 'P2', concierge: 'P2',
+  help: 'P3', dispute: 'P2', quality_dispute: 'P2', short_delivery: 'P2', late_delivery: 'P2', payment_followup: 'P2', concierge: 'P2',
   seller_nudge: 'P3', onboarding_assist: 'P3', verification_visit: 'P3',
 };
-const MULTI_PARTY = new Set(['dispute', 'quality_dispute', 'payment_followup', 'concierge']);
+const MULTI_PARTY = new Set(['dispute', 'quality_dispute', 'short_delivery', 'late_delivery', 'payment_followup', 'concierge']);
+/** Newer ticket types are handled by agents who already carry the broader skill. */
+const SKILL_ALIAS: Record<string, string> = { short_delivery: 'quality_dispute', late_delivery: 'dispute' };
 const TYPE_LABEL: Record<string, string> = {
-  help: 'Help request', dispute: 'Dispute', quality_dispute: 'Quality dispute', payment_followup: 'Payment follow-up', concierge: 'Large order concierge',
+  help: 'Help request', dispute: 'Dispute', quality_dispute: 'Quality dispute', short_delivery: 'Short delivery', late_delivery: 'Late delivery', payment_followup: 'Payment follow-up', concierge: 'Large order concierge',
   seller_nudge: 'Seller nudge', onboarding_assist: 'Onboarding help', verification_visit: 'Unit verification',
 };
 
@@ -206,6 +208,8 @@ async function factsBrief(t: TicketDoc) {
   const bal = order ? inr(balanceOf(order)) : '';
   const next: Record<string, string> = {
     quality_dispute: 'Ask the buyer for photos and the count of faulty pieces, then call the seller with the LR / packing details and agree on replacement, partial refund or recount.',
+    short_delivery: 'Ask the buyer how many pieces and bundles arrived against the invoice, check the seller\'s packing list and LR weight, then agree on sending the missing pieces, a partial refund or a recount.',
+    late_delivery: 'Check the promised dispatch days against the order dates, call the seller for a firm dispatch / delivery date and the LR, and update the buyer.',
     payment_followup: order
       ? `Call the buyer about the pending balance of ${bal}${order.balance_due_at ? ` (due ${fmtDate(order.balance_due_at)})` : ''}; agree a payment date and record it on the order.`
       : 'Call the buyer about the pending payment and agree a payment date.',
@@ -356,7 +360,7 @@ export async function dispatch(ticketId: string, opts: { exclude?: string[] } = 
   const need = t.language_needed ?? [];
   const allLangs = (a: AgentDoc) => need.every((l) => (a.languages ?? []).includes(l));
   const anyLang = (a: AgentDoc) => need.some((l) => (a.languages ?? []).includes(l));
-  const skill = (a: AgentDoc) => (a.skills ?? []).includes(t.type);
+  const skill = (a: AgentDoc) => (a.skills ?? []).includes(t.type) || (!!SKILL_ALIAS[t.type] && (a.skills ?? []).includes(SKILL_ALIAS[t.type]));
   const region = (a: AgentDoc) => (t.type === 'verification_visit' && a.region ? 0 : 1);
   const pick = (xs: AgentDoc[]) =>
     [...xs].sort((x, y) => load(x) - load(y) || region(x) - region(y) || (x.last_assigned_at ?? 0) - (y.last_assigned_at ?? 0))[0];
@@ -510,15 +514,30 @@ export async function resolveTicket(ticketId: string, agentUserId: string, input
 
   const conv = t.conversation_id ? await byId('conversations', t.conversation_id) : null;
   if (conv) {
-    await safe('resolved card', chat.group(conv.channel_id, BOT.claire, CC_CARD, { kind: 'resolved', ticketCode: t.code, outcome } satisfies CardPayload));
+    // One card per reader language: the outcome (and the agent's note in it) is translated for each side.
+    const members = await find('users', { _id: { $in: ((conv.user_ids ?? []) as string[]).filter((u) => u.startsWith('u_')) } }, { projection: { language: 1 } });
+    const byLang = new Map<string, string[]>();
+    for (const u of members) byLang.set((u.language as string) || 'en', [...(byLang.get((u.language as string) || 'en') ?? []), u._id as string]);
+    for (const [lang, ids] of byLang) {
+      const text = await outcomeIn(outcome, lang);
+      await safe('resolved card', chat.group(conv.channel_id, BOT.claire, CC_CARD, { kind: 'resolved', ticketCode: t.code, outcome: text } satisfies CardPayload, { onlyTo: ids }));
+    }
     // Claire's auto-replies resume once the human leaves the conversation.
     await col('conversations').updateOne({ _id: conv.id } as any, { $set: { agent_user_id: null, updated_at: at } });
   } else if (t.requester_user_id) {
     const requester = await byId('users', t.requester_user_id);
-    await safe('resolved notice', chat.system([t.requester_user_id], rt(requester?.language ?? 'en', 'resolved', { code: t.code, outcome })));
+    const lang = requester?.language ?? 'en';
+    await safe('resolved notice', chat.system([t.requester_user_id], rt(lang, 'resolved', { code: t.code, outcome: await outcomeIn(outcome, lang) })));
   }
   for (const b of t.business_ids) invalidateTrust(b);
   return byId<TicketDoc>('tickets', t.id);
+}
+
+/** The desk writes outcomes in English; readers get them in their language (English on failure). */
+async function outcomeIn(outcome: string, lang: string) {
+  if (!lang || lang === 'en') return outcome;
+  const [out] = await translate([outcome], lang, 'en').catch(() => [outcome]);
+  return out?.trim() || outcome;
 }
 
 // ── Views for the console ─────────────────────────────────────────────────

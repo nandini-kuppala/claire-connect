@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api, ApiError, errorText } from '../../lib/api';
 import { Button } from '../../components/Button';
+import { AlertTriangle, CheckCircle2 } from '../../icons';
 import { LinkS } from './Link.strings';
 import { StaffS } from './Staff.strings';
 import { qty as fmtQty } from './format';
@@ -21,6 +22,7 @@ export function LinkBanners({ owner, onChange }: { owner: boolean; onChange?: ()
   const [sugg, setSugg] = useState<{ count: number; pending: number } | null>(null);
   const [props, setProps] = useState<Prop[]>([]);
   const [msg, setMsg] = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -38,13 +40,15 @@ export function LinkBanners({ owner, onChange }: { owner: boolean; onChange?: ()
 
   const act = async (key: string, fn: () => Promise<unknown>, done?: string) => {
     setBusy(key);
+    setErr(null);
     try {
       await fn();
-      if (done) setMsg(done);
+      setMsg(done ?? null);
       await load();
       onChange?.();
     } catch (e) {
-      setMsg(errorText(e));
+      setMsg(null);
+      setErr(errorText(e));
     } finally {
       setBusy(null);
     }
@@ -54,7 +58,8 @@ export function LinkBanners({ owner, onChange }: { owner: boolean; onChange?: ()
   const box = 'mx-4 mt-3 rounded-[16px] border border-line bg-surface px-4 py-3';
   return (
     <>
-      {msg && <p role="status" className="mx-4 mt-3 rounded-[14px] bg-success-tint px-3 py-2 text-[14px] text-success">{msg}</p>}
+      {msg && <p role="status" className="mx-4 mt-3 flex items-start gap-2 rounded-[14px] bg-success-tint px-3 py-2 text-[14px] text-success"><CheckCircle2 size={16} className="mt-0.5 shrink-0" aria-hidden />{msg}</p>}
+      {err && <p role="alert" className="mx-4 mt-3 flex items-start gap-2 rounded-[14px] bg-danger-tint px-3 py-2 text-[14px] text-danger"><AlertTriangle size={16} className="mt-0.5 shrink-0" aria-hidden />{err}</p>}
       {(appr.counts.length > 0 || appr.suggestions.length > 0) && <h2 className="mx-4 mt-4 font-head text-[16px] font-semibold text-ink">{st('waiting')}</h2>}
       {appr.counts.map((c) => (
         <div key={c.id} className={box}>

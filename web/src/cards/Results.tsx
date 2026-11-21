@@ -28,7 +28,8 @@ export function ResultsCard({ message, payload, ctx }: CardProps<'results'>) {
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const singles = [...payload.singles, ...payload.mto];
+  // In-budget options first; ones above the budget carry a flag.
+  const singles = [...payload.singles, ...payload.mto].sort((a, b) => Number(!!a.overBudget) - Number(!!b.overBudget));
   const all = [...payload.singles, ...payload.combos, ...payload.mto];
   const sellers = new Set(all.flatMap((m) => m.lines.map((l) => l.businessId))).size;
   const first = all[0];
@@ -101,6 +102,9 @@ export function ResultsCard({ message, payload, ctx }: CardProps<'results'>) {
                     <span className="text-faint"> · </span>
                     {m.readyDays <= 1 ? s('ready_1') : s('ready_in', { n: m.readyDays })}
                   </span>
+                  {m.overBudget && (
+                    <span className="mt-1 inline-flex h-6 items-center rounded-full bg-sunken px-2.5 text-[12px] font-semibold text-ink-2">{s('tag_above_budget')}</span>
+                  )}
                 </button>
                 <Button
                   size="sm"
@@ -129,6 +133,9 @@ export function ResultsCard({ message, payload, ctx }: CardProps<'results'>) {
                   <span className="text-faint"> · </span>
                   {combo.readyDays <= 1 ? s('ready_1') : s('ready_in', { n: combo.readyDays })}
                 </p>
+                {combo.overBudget && (
+                  <span className="mt-1 inline-flex h-6 items-center rounded-full bg-sunken px-2.5 text-[12px] font-semibold text-ink-2">{s('tag_above_budget')}</span>
+                )}
               </div>
               <Button
                 size="sm"

@@ -6,7 +6,7 @@ import { BOT, features } from './config.js';
 import { getBiz, publicBiz, usersOf, type UserRow } from './biz.js';
 import { trustOf, invalidateTrust } from './trust.js';
 import { marketBand } from './match.js';
-import { draftSellerReply } from './ai.js';
+import { draftSellerReply, translate } from './ai.js';
 import { createTicket, nextSeq, safe, ensureChatUsers, ensureNexconnGroup, langName, OPEN_STATUSES } from './desk.js';
 import { id, now, inr, HttpError } from './util.js';
 import { advanceAmount, balanceAmount } from './money.js';
@@ -153,6 +153,7 @@ const P: Record<string, Record<string, string>> = {
     problem: 'Order {code}: a problem was reported. Trade Desk ticket {ticket} is open; a person will join this chat.',
     desk_called: 'I have asked our Trade Desk to help here. A person will join this chat soon ({ticket}).',
     auto_label: 'Auto-reply by Claire for {seller}',
+    auto_copy: 'Claire replied to the buyer for you: "{reply}"',
     auto_fallback: 'Namaste! {title}: {price} per {unit}, minimum {moq}{stock}. Please share quantity, sizes and delivery date.',
     auto_stock: ', {stock} ready',
     sample: 'Sample requested: {title} · sizes {sizes}{note}.',
@@ -190,6 +191,7 @@ const P: Record<string, Record<string, string>> = {
     problem: 'ऑर्डर {code}: समस्या दर्ज हुई। ट्रेड डेस्क टिकट {ticket} खुला है; कोई इस चैट में जुड़ेगा।',
     desk_called: 'मैंने ट्रेड डेस्क से मदद मांगी है। जल्द ही कोई इस चैट में जुड़ेगा ({ticket})।',
     auto_label: '{seller} की ओर से Claire का ऑटो-जवाब',
+    auto_copy: 'Claire ने आपकी ओर से खरीदार को जवाब दिया: "{reply}"',
     auto_fallback: 'नमस्ते! {title}: {price} प्रति {unit}, कम से कम {moq}{stock}। कृपया मात्रा, साइज़ और डिलीवरी की तारीख बताएं।',
     auto_stock: ', {stock} तैयार',
     sample: 'सैंपल माँगा: {title} · साइज़ {sizes}{note}।',
@@ -227,6 +229,7 @@ const P: Record<string, Record<string, string>> = {
     problem: 'ஆர்டர் {code}: பிரச்சனை பதிவானது. டிரேட் டெஸ்க் டிக்கெட் {ticket} திறக்கப்பட்டது; ஒருவர் இந்த சாட்டில் சேருவார்.',
     desk_called: 'டிரேட் டெஸ்க் உதவியைக் கேட்டுள்ளேன். விரைவில் ஒருவர் இந்த சாட்டில் சேருவார் ({ticket}).',
     auto_label: '{seller} சார்பாக Claire தானியங்கி பதில்',
+    auto_copy: 'உங்கள் சார்பாக Claire வாங்குபவருக்கு பதில் அளித்தது: "{reply}"',
     auto_fallback: 'வணக்கம்! {title}: ஒரு {unit} {price}, குறைந்தது {moq}{stock}. அளவு, சைஸ், டெலிவரி தேதியை சொல்லுங்கள்.',
     auto_stock: ', {stock} தயார்',
     sample: 'மாதிரி கேட்கப்பட்டது: {title} · சைஸ் {sizes}{note}.',
@@ -271,8 +274,18 @@ async function systemBoth(order: Pick<OrderDoc, 'buyer_business_id' | 'seller_bu
 async function targeted(channelId: string, users: UserRow[], type: string, build: (lang: string) => object, from: string = BOT.claire) {
   const byLang = new Map<string, string[]>();
   for (const u of users) byLang.set(u.language || 'en', [...(byLang.get(u.language || 'en') ?? []), u.id]);
-  for (const [lang, ids] of byLang) await safe(`targeted ${type}`, chat.group(channelId, from, type, build(lang), { onlyTo: ids }));
+  for (const [lang, ids] of byLang) {
+    const content = build(lang);
+    const send = () => chat.group(channelId, from, type, content, { onlyTo: ids });
+    // A Nexconn timeout ("aborted") loses a private tip: try once more after a short pause.
+    await safe(`targeted ${type}`, send().catch(async (err) => {
+      if (!/abort|timeout|timed out|network/i.test(String((err as Error)?.message ?? ''))) throw err;
+      await new Promise((r) => setTimeout(r, RETRY_DELAY_MS));
+      return send();
+    }));
+  }
 }
+const RETRY_DELAY_MS = 1500;
 
 /** A shared notice in the deal chat, sent per language so each member reads it in their own language. */
 async function noticeAll(conv: ConversationDoc, build: (lang: string) => string, tone: 'info' | 'success' | 'warn' = 'info') {
@@ -508,12 +521,19 @@ export interface OfferInput {
   kind?: OfferKind;
 }
 
-async function defaultsFor(conv: ConversationDoc, listingId?: string) {
+async function defaultsFor(conv: ConversationDoc, listingId?: string, priceHint?: number) {
   const requirement = conv.requirement_id ? await byId('requirements', conv.requirement_id) : null;
   let listing = listingId ? await byId('listings', listingId) : null;
   if (!listing && requirement?.listing_id) listing = await byId('listings', requirement.listing_id);
   if (!listing && requirement?.category && conv.seller_business_id) {
     listing = await findOne('listings', { business_id: conv.seller_business_id, category: requirement.category, active: 1 }, { sort: { price: 1 } });
+  }
+  // A chat opened from a storefront has no requirement: take the seller's product whose price is closest
+  // to the one on the table (₹19 is the stitching job, not the ₹150 T-shirt), for title, unit and kind.
+  if (!listing && !requirement && conv.seller_business_id && priceHint && priceHint > 0) {
+    const mine = await find('listings', { business_id: conv.seller_business_id, active: 1 }, { limit: 50 });
+    const gap = (l: any) => Math.abs(Math.log(Number(l.price) / priceHint)) || 0;
+    listing = mine.filter((l) => Number(l.price) > 0).sort((a, b) => gap(a) - gap(b))[0] ?? null;
   }
   return { requirement, listing };
 }
@@ -526,7 +546,7 @@ export async function createOffer(user: UserRow, input: OfferInput, opts: { pare
   const fromBiz = user.business_id!;
   const toBiz = side === 'buyer' ? conv.seller_business_id! : conv.buyer_business_id!;
   const parent = opts.parent;
-  const { requirement, listing } = parent ? { requirement: null, listing: null } : await defaultsFor(conv, input.listingId);
+  const { requirement, listing } = parent ? { requirement: null, listing: null } : await defaultsFor(conv, input.listingId, input.unitPrice);
 
   const qty = Math.round(input.qty ?? parent?.qty ?? requirement?.qty ?? listing?.moq ?? 100);
   if (!(qty > 0)) throw new HttpError(400, 'Please give a quantity.');
@@ -578,7 +598,7 @@ export async function createOffer(user: UserRow, input: OfferInput, opts: { pare
   return offer;
 }
 
-export async function respondOffer(user: UserRow, offerId: string, action: 'accept' | 'decline' | 'counter', unitPrice?: number) {
+export async function respondOffer(user: UserRow, offerId: string, action: 'accept' | 'decline' | 'counter', unitPrice?: number, qty?: number) {
   const offer = await byId<OfferDoc>('offers', offerId);
   if (!offer) throw new HttpError(404, 'Offer not found');
   const conv = await getConversation(offer.conversation_id);
@@ -596,7 +616,9 @@ export async function respondOffer(user: UserRow, offerId: string, action: 'acce
   await noteActivity(conv, sideOf(conv, user));
 
   if (action === 'counter') {
-    const counter = await createOffer(user, { conversationId: conv.id, unitPrice: unitPrice! }, { parent: { ...offer, status: 'countered' } });
+    // A counter may also change the quantity (e.g. the seller can make 600 of the 1,000 asked).
+    const counterQty = qty && qty > 0 ? Math.round(qty) : undefined;
+    const counter = await createOffer(user, { conversationId: conv.id, unitPrice: unitPrice!, qty: counterQty }, { parent: { ...offer, status: 'countered' } });
     return { offer: counter };
   }
   if (action === 'decline') {
@@ -700,6 +722,16 @@ const FLOW: OrderStatus[] = ['confirmed', 'advance_paid', 'in_production', 'disp
 const EVENT_STATUS: Partial<Record<OrderEventType, OrderStatus>> = {
   advance_paid: 'advance_paid', in_production: 'in_production', dispatched: 'dispatched', delivered: 'delivered', balance_paid: 'closed',
 };
+const LATE = /\b(late|delay(ed)?|not (yet )?(arrived|received|delivered)|still waiting)\b|देर|देरी|लेट|अभी तक नहीं|தாமத|வரவில்லை/i;
+/** Problem report → Trade Desk ticket type (short quantity, late delivery, payment, quality, other). */
+export function problemTicketType(reason: unknown, note?: unknown): string {
+  const r = String(reason ?? '').toLowerCase();
+  if (r === 'short' || r === 'short_qty' || r === 'shortage') return 'short_delivery';
+  if (r === 'late' || r === 'delay') return 'late_delivery';
+  if (r === 'payment') return 'payment_followup';
+  if (['damaged', 'colour', 'color', 'quality'].includes(r)) return 'quality_dispute';
+  return LATE.test(String(note ?? '')) ? 'late_delivery' : r === 'other' ? 'dispute' : 'quality_dispute';
+}
 const BUYER_EVENTS = new Set<OrderEventType>(['advance_paid', 'delivered', 'balance_paid']);
 const SELLER_EVENTS = new Set<OrderEventType>(['payment_confirmed', 'in_production', 'dispatched']);
 
@@ -803,7 +835,7 @@ export async function orderEvent(user: UserRow, orderId: string, type: OrderEven
       const names = await bizNames([order.buyer_business_id, order.seller_business_id]);
       const reason = [payload.reason, payload.note ?? payload.text].filter(Boolean).join(': ');
       const t = await createTicket({
-        type: 'quality_dispute', trigger: 'problem_report', priority: 'P2', requesterUserId: user.id, businessIds: [order.buyer_business_id, order.seller_business_id],
+        type: problemTicketType(payload.reason, payload.note ?? payload.text), trigger: 'problem_report', priority: 'P2', requesterUserId: user.id, businessIds: [order.buyer_business_id, order.seller_business_id],
         languages: [user.language, names.get(order.buyer_business_id)?.language, names.get(order.seller_business_id)?.language].filter(Boolean) as string[],
         orderId: order.id, conversationId: conv?.id, description: reason || 'Problem reported on delivery',
       });
@@ -980,6 +1012,19 @@ export function detectPrice(text: string): number | null {
   return null;
 }
 
+const PIECE_UNIT = /^\s*(pcs?\b|pieces?\b|piece\b|nos\b|पीस|नग|பீஸ்|துண்டு)/i;
+/** Finds a piece count in free text ("1,000 pcs at ₹19", "1000 पीस 19 रुपये में", "1000 பீஸ் 19 ரூபாய்க்கு"). */
+export function detectQty(text: string): number | null {
+  for (const m of text.matchAll(/(\d[\d,]*)(?:\.\d+)?/g)) {
+    const n = Number(m[1].replace(/,/g, ''));
+    if (!Number.isInteger(n) || n < 1 || n > 10_000_000) continue;
+    const idx = m.index ?? 0;
+    if (text[idx - 1] === '₹' || /(₹|rs\.?)\s*$/i.test(text.slice(Math.max(0, idx - 4), idx))) continue;
+    if (PIECE_UNIT.test(text.slice(idx + m[0].length, idx + m[0].length + 12))) return n;
+  }
+  return null;
+}
+
 export async function handleInbound(conversationId: string, senderUserId: string, input: { text: string; lang?: string; messageId?: string }) {
   const text = (input.text ?? '').trim();
   if (!text) return { ok: true };
@@ -1019,12 +1064,16 @@ export async function handleInbound(conversationId: string, senderUserId: string
   const price = detectPrice(text);
   if (price && (side === 'buyer' || side === 'seller')) {
     result.price = price;
+    // A quantity next to the price ("1,000 pcs at ₹19") travels in the chip: `offer:<price>:<qty>`.
+    const qty = detectQty(text);
     const pending = await findOne<OfferDoc>('offers', { conversation_id: conv.id, to_business_id: sender.business_id, status: 'pending' }, { sort: { created_at: -1 } });
-    if (!pending || pending.unit_price !== price) {
+    if (!pending || pending.unit_price !== price || (qty && qty !== pending.qty)) {
       const lang = sender.language || 'en';
+      const q = qty ? `:${qty}` : '';
+      const label = (key: string) => tr(lang, key, { price: inr(price) }) + (qty ? ` · ${num(qty)} ${unitOf(lang, 'piece')}` : '');
       const hint: HintPayload = pending
-        ? { text: tr(lang, 'counter_hint', { price: inr(price) }), action: { label: tr(lang, 'counter_label', { price: inr(price) }), chipId: `counter:${price}` } }
-        : { text: await buyerOfferHint(conv, side, lang, price), action: { label: tr(lang, 'offer_label', { price: inr(price) }), chipId: `offer:${price}` } };
+        ? { text: tr(lang, 'counter_hint', { price: inr(price) }), action: { label: label('counter_label'), chipId: `counter:${price}${q}` } }
+        : { text: await buyerOfferHint(conv, side, lang, price), action: { label: label('offer_label'), chipId: `offer:${price}${q}` } };
       await safe('price hint', chat.group(conv.channel_id, BOT.claire, CC_HINT, hint, { onlyTo: [sender.id] }));
     }
   }
@@ -1081,7 +1130,15 @@ async function autoReply(convId: string, buyerUser: UserRow, buyerText: string, 
   if (!latest || latest.agent_user_id || (latest.last_seller_msg_at ?? 0) > buyerAt) return;
 
   await safe('auto reply', chat.group(conv.channel_id, sellerUser.id, 'RC:TxtMsg', { content: reply, extra: 'auto' }));
-  await safe('auto label', chat.group(conv.channel_id, BOT.claire, CC_CARD, { kind: 'notice', tone: 'info', text: tr(lang, 'auto_label', { seller: seller.name }) } satisfies CardPayload));
+  // Each member reads the "auto-reply by Claire" notice in their own language.
+  await noticeAll(conv, (l) => tr(l, 'auto_label', { seller: seller.name }));
+  // The seller gets a private copy of what was said on their behalf, in their language.
+  const byLang = new Map<string, UserRow[]>();
+  for (const u of sellerUsers) byLang.set(u.language || 'en', [...(byLang.get(u.language || 'en') ?? []), u]);
+  for (const [sl, users] of byLang) {
+    const copy = sl === lang ? reply : (await translate([reply], sl, lang).catch(() => [reply]))[0] || reply;
+    await targeted(conv.channel_id, users, CC_HINT, () => ({ text: tr(sl, 'auto_copy', { reply: copy }) }) satisfies HintPayload);
+  }
   const at = now();
   await update('conversations', convId, { last_auto_reply_at: at, last_at: at, last_text: reply.slice(0, 140), updated_at: at });
 }
@@ -1170,12 +1227,19 @@ export async function conversationDetail(user: UserRow, convId: string) {
   ]);
   const names = await bizNames(conv.business_ids);
   const orderIds = new Set(orders.map((o) => o.id));
+  // The product this deal is about, for the header's "listed" price (never an offer price).
+  const listingId = (offers.at(-1)?.listing_id ?? requirement?.listing_id ?? null) as string | null;
+  let listing = listingId ? await byId('listings', listingId) : null;
+  if (!listing && requirement?.category && conv.seller_business_id) {
+    listing = await findOne('listings', { business_id: conv.seller_business_id, category: requirement.category, active: 1 }, { sort: { price: 1 } });
+  }
   const nameOf = (b: string) => names.get(b)?.name ?? '';
   return {
     conversation: convOut(conv),
     counterpart,
     me: { userId: user.id, businessId: user.business_id, side, language: user.language },
     requirement: requirement ? { ...strip(requirement), title: requirement.title ?? reqTitle(requirement) } : null,
+    listing: listing ? { id: listing._id ?? listing.id, title: listing.title, price: listing.price, unit: listing.unit } : null,
     offers: offers.map((o) => ({ ...strip(o), card: offerCard(o, nameOf(o.from_business_id)), mine: o.from_business_id === user.business_id })),
     orders: orders.map((o) => ({ ...strip(o), card: orderCard(o, nameOf(o.buyer_business_id), nameOf(o.seller_business_id)) })),
     agent: agentUser ? { id: agentUser.id, name: agentUser.name, languages: agentDoc?.languages ?? [], languageNames: (agentDoc?.languages ?? []).map(langName) } : null,
@@ -1186,19 +1250,21 @@ export async function conversationDetail(user: UserRow, convId: string) {
 }
 
 // ── Hint chips from deal chats (one endpoint for the client) ───────────────
-/** Handles `counter:<price>`, `offer:<price>`, `quote:<price>`, `accept:<offerId>`, `decline:<offerId>`. */
+/** Handles `counter:<price>[:<qty>]`, `offer:<price>[:<qty>]`, `quote:<price>[:<qty>]`, `accept:<offerId>`, `decline:<offerId>`. */
 export async function dealChip(user: UserRow, convId: string, chipId: string) {
   const conv = await getConversation(convId);
   assertMember(conv, user);
-  const [ns, val] = chipId.split(':');
+  const [ns, val, rawQty] = chipId.split(':');
   if (ns === 'accept' || ns === 'decline') return respondOffer(user, val, ns);
   const price = Number(val);
   if (!['counter', 'offer', 'quote'].includes(ns) || !(price > 0)) throw new HttpError(400, 'Unknown action.');
+  const n = Number(rawQty);
+  const qty = Number.isInteger(n) && n > 0 && n <= 10_000_000 ? n : undefined;
   if (ns === 'counter') {
     const pending = await findOne<OfferDoc>('offers', { conversation_id: conv.id, to_business_id: user.business_id, status: 'pending' }, { sort: { created_at: -1 } });
-    if (pending) return respondOffer(user, pending.id, 'counter', price);
+    if (pending) return respondOffer(user, pending.id, 'counter', price, qty);
   }
-  return { offer: await createOffer(user, { conversationId: conv.id, unitPrice: price }) };
+  return { offer: await createOffer(user, { conversationId: conv.id, unitPrice: price, qty }) };
 }
 
 /** Buyer-side tip with market context: the seller's listed price and the usual settling range (never the floor price). */
@@ -1212,9 +1278,14 @@ async function buyerOfferHint(conv: any, side: string, lang: string, price: numb
     const listing = await findOne('listings', filter, { sort: { price: 1 } });
     const listed = Number(listing?.price);
     if (!listed || price >= listed) return plain;
-    const lo = Math.round(listed * 0.94);
-    const hi = Math.round(listed * 0.97);
-    return tr(lang, 'offer_hint_ctx', { listed: inr(listed), lo: inr(lo), hi: inr(hi), price: inr(price) });
+    // Round low down and high up (₹0.5 steps under ₹100) so a small price never collapses to "₹21–₹21".
+    const step = listed < 100 ? 0.5 : 1;
+    let hi = Math.ceil((listed * 0.97) / step) * step;
+    if (hi >= listed) hi = listed - step;
+    let lo = Math.floor((listed * 0.94) / step) * step;
+    if (lo >= hi) lo = hi - step;
+    const rs = (n: number) => '₹' + n.toLocaleString('en-IN', { maximumFractionDigits: 2 });
+    return tr(lang, 'offer_hint_ctx', { listed: rs(listed), lo: rs(lo), hi: rs(hi), price: rs(price) });
   } catch {
     return plain;
   }

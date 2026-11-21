@@ -20,7 +20,7 @@ export interface OfferValues {
 export interface OfferSheetProps {
   open: boolean;
   onClose: () => void;
-  /** 'new' = full offer form; 'counter' = price only (respond endpoint takes unitPrice). */
+  /** 'new' = full offer form; 'counter' = price and quantity (respond endpoint takes unitPrice + qty). */
   mode: 'new' | 'counter';
   lang: string;
   unit: string;
@@ -69,8 +69,8 @@ export function OfferSheet({ open, onClose, mode, lang, unit, title, initial, th
 
   const p = Number(price);
   const q = Number(qty);
-  const valid = p > 0 && Number.isFinite(p) && (mode === 'counter' || (q > 0 && Number.isInteger(q)));
-  const total = valid ? p * (mode === 'counter' ? initial.qty ?? 0 : q) : 0;
+  const valid = p > 0 && Number.isFinite(p) && q > 0 && Number.isInteger(q);
+  const total = valid ? p * q : 0;
 
   const step = (dir: 1 | -1) => {
     const cur = Number(price) || theirPrice || 0;
@@ -91,7 +91,7 @@ export function OfferSheet({ open, onClose, mode, lang, unit, title, initial, th
     setError(null);
     try {
       await onSubmit({
-        qty: mode === 'counter' ? initial.qty ?? 0 : q,
+        qty: q,
         unitPrice: p,
         dispatchDays,
         advancePct,
@@ -120,7 +120,7 @@ export function OfferSheet({ open, onClose, mode, lang, unit, title, initial, th
             <p className="mb-2 flex items-baseline justify-between text-[14px] text-ink-2">
               <span>
                 {t('total')}
-                {mode === 'new' && q > 0 && ` · ${num(q)} ${unitQty(unit, q, lang)}`}
+                {q > 0 && ` · ${num(q)} ${unitQty(unit, q, lang)}`}
               </span>
               <span className="font-head text-[18px] font-bold text-ink tabular-nums">{inr(total)}</span>
             </p>
@@ -187,17 +187,17 @@ export function OfferSheet({ open, onClose, mode, lang, unit, title, initial, th
           )}
         </div>
 
+        <Field label={`${t('qty')} (${unitQty(unit, 2, lang)})`}>
+          <input
+            type="text"
+            inputMode="numeric"
+            value={qty}
+            onChange={(e) => setQty(e.target.value.replace(/[^0-9]/g, ''))}
+            className={inputCls}
+          />
+        </Field>
         {mode === 'new' ? (
           <>
-            <Field label={`${t('qty')} (${unitQty(unit, 2, lang)})`}>
-              <input
-                type="text"
-                inputMode="numeric"
-                value={qty}
-                onChange={(e) => setQty(e.target.value.replace(/[^0-9]/g, ''))}
-                className={inputCls}
-              />
-            </Field>
             <div>
               <span className="mb-1.5 block text-[13px] font-medium text-ink-2">{t('dispatch_days')}</span>
               <ChoiceChips label={t('dispatch_days')} options={DISPATCH.map((d) => ({ value: d, label: String(d) }))} value={dispatchDays} onChange={setDispatch} />

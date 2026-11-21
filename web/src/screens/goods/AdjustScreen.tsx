@@ -26,6 +26,7 @@ interface AtUnit { id: string; label: string; lot: string | null; grade: string;
 interface Hist { id: string; op: string; label: string; to_label: string | null; lot: string | null; qty: number; book: number; dim: string; reason: string | null; business_date: string }
 const inputCls = 'min-h-12 w-full rounded-[16px] border border-line-strong bg-surface px-3.5 text-[16px] outline-none focus:border-primary';
 const UNITLESS = ['rolls', 'cones', 'bundles', 'bags', 'boxes'];
+const REGRADE_TO: Grade[] = ['A', 'B', 'rework', 'reject'];
 
 export default function AdjustScreen() {
   const t = TradeS.use();
@@ -72,6 +73,8 @@ export default function AdjustScreen() {
 
   const open = (x: Row) => {
     setSel(x); setOp('count'); setQty(''); setUnit(x.units.find((u) => !UNITLESS.includes(u)) ?? ''); setToSpec(null); setLot(''); setWhy(''); setError(null);
+    // Preselect the first grade it can change to (never its own grade, which the choices leave out).
+    setGrade(REGRADE_TO.find((g) => g !== x.grade) ?? 'A');
   };
   const counted = sel && Number(qty) >= 0 && qty !== '' ? toBase(Number(qty), unit, sel.dimension) : null;
   const diff = sel && counted?.ok ? counted.base - sel.qty : null;
@@ -138,7 +141,7 @@ export default function AdjustScreen() {
 
       <Sheet open={!!sel} onClose={() => setSel(null)} title={sel?.spec?.label_en}
         footer={<Button block size="lg" loading={busy}
-          disabled={!sel || (op === 'count' ? !counted?.ok : !(Number(qty) > 0)) || (op === 'respec' && !toSpec) || (op === 'relot' && !lot.trim()) || (op === 'write_off' && why.trim().length < 2)}
+          disabled={!sel || (op === 'count' ? !counted?.ok : !(Number(qty) > 0)) || (op === 'respec' && !toSpec) || (op === 'relot' && !lot.trim()) || (op === 'regrade' && grade === sel.grade) || (op === 'write_off' && why.trim().length < 2)}
           onClick={() => sel && void submit({ op, holding_id: sel.id, qty: Number(qty), unit, ...(op === 'regrade' ? { to_grade: grade } : {}), ...(op === 'respec' ? { to_spec_id: toSpec?.spec.id } : {}), ...(op === 'relot' ? { to_lot: lot.trim() } : {}), ...(why.trim() ? { reason: why.trim() } : {}) }, t('saved'))}>
           {opLabel(op)}</Button>}>
         {sel && (
@@ -161,7 +164,7 @@ export default function AdjustScreen() {
             {op === 'count' && diff !== null && <p className={clsx('text-[15px] font-semibold', diff === 0 ? 'text-success' : 'text-accent-ink')}>{diff === 0 ? t('diff_same') : diff > 0 ? t('diff_more', { qty: fmtQty(diff, sel.dimension) }) : t('diff_less', { qty: fmtQty(-diff, sel.dimension) })}</p>}
             {op === 'regrade' && (
               <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label={t('grade')}>
-                {(['A', 'B', 'rework', 'reject'] as Grade[]).filter((g) => g !== sel.grade).map((g) => (
+                {REGRADE_TO.filter((g) => g !== sel.grade).map((g) => (
                   <button key={g} role="radio" aria-checked={grade === g} onClick={() => setGrade(g)} className={clsx('min-h-10 rounded-full border px-3 text-[13.5px] font-semibold', grade === g ? 'border-primary bg-primary text-white' : 'border-line-strong bg-surface text-ink')}>{jb(`g_${g}` as 'g_A')}</button>
                 ))}
               </div>

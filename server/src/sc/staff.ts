@@ -6,6 +6,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { col, insert } from '../db/index.js';
 import { h, HttpError, id, now } from '../util.js';
+import { verifyToken } from '../util.js';
 import { chat } from '../chat.js';
 import { cfg } from '../config.js';
 import { forgetRole } from '../staffGuard.js';
@@ -59,6 +60,8 @@ router.post(
     const existing: any = await col('users').findOne({ phone } as any);
     let userId: string;
     if (existing) {
+      // Support agents and supervisors are not business users: never turn one into someone's staff.
+      if (existing.role && !['owner', 'staff'].includes(existing.role)) return res.status(409).json({ error: 'This number can’t be added as staff.', code: 'not_allowed' });
       if (existing.business_id && existing.business_id !== req.ctx.businessId) return res.status(409).json({ error: 'This number already belongs to another business.', code: 'other_business' });
       if (existing.business_id === req.ctx.businessId) return res.status(409).json({ error: existing.role === 'staff' ? 'Already on your staff.' : 'This is an owner of your business.', code: 'already' });
       userId = existing.id ?? existing._id;
@@ -91,7 +94,14 @@ router.delete(
 router.post(
   '/sc/me/pin',
   h(async (req: ScRequest, res) => {
-    const b = z.object({ pin: z.string().regex(/^\d{4}$/).nullable() }).parse(req.body);
+    const b = z.object({ pin: z.string().regex(/^\d{4}$/).nullable(), current: z.string().regex(/^\d{4}$/).optional() }).parse(req.body);
+    // Changing or removing a PIN needs the current one — or a fresh OTP sign-in (the way back if it's forgotten).
+    const u: any = await col('users').findOne({ $or: [{ _id: req.ctx.userId }, { id: req.ctx.userId }] } as any, { projection: { pin_hash: 1 } });
+    if (u?.pin_hash) {
+      const iat = Number((verifyToken(req.headers.authorization?.replace(/^Bearer /, '')) as any)?.iat ?? 0);
+      const fresh = Date.now() - iat < 15 * 60_000;
+      if (!fresh && (!b.current || pinHash(req.ctx.userId, b.current) !== u.pin_hash)) return res.status(403).json({ error: 'Enter your current PIN first.', code: 'current_pin' });
+    }
     await col('users').updateOne({ $or: [{ _id: req.ctx.userId }, { id: req.ctx.userId }] } as any, { $set: { pin_hash: b.pin ? pinHash(req.ctx.userId, b.pin) : null } });
     res.json({ has_pin: !!b.pin });
   }),

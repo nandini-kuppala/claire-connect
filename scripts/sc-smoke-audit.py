@@ -97,6 +97,7 @@ call('POST', f"/api/sc/movements/{sm['movement']['id']}/share-now", {}, R)
 _, mm = call('GET', f"/api/sc/movements/{sm['movement']['id']}", tok=L); call('POST', f"/api/sc/movements/{sm['movement']['id']}/confirm", {'lines': [{'line_id': mm['lines'][0]['line_id']}]}, L)
 gar = spec('mt_garment', {'style': 'AUD-1', 'colour': 'navy', 'size': 'M'}, L)
 s, sb = call('POST', f"/api/sc/jobs/{sm['job']['id']}/send-back", {'client_id': cid(), 'lines': [{'spec_id': gar, 'grade': 'A', 'qty': 50, 'unit': 'pcs'}]}, L)
+call('POST', f"/api/sc/movements/{sb['movement']['id']}/share-now", {}, L)  # delivery counts once past the undo window
 time.sleep(2)
 o = call('GET', f'/api/orders/{jw}', tok=R)[1]; o = o.get('order', o)
 check("5. Lakshmi's send-back of all 50 marks the job-work order delivered", s == 201 and o.get('status') == 'delivered' and o.get('delivered_at'), (s, o.get('status')))

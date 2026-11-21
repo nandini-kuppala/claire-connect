@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import clsx from 'clsx';
-import { api } from '../lib/api';
+import { api, errorText } from '../lib/api';
 import { postOrQueue } from '../lib/offline';
 import { formatQty } from '@shared/sc/units';
 import type { Dimension } from '@shared/sc/types';
@@ -11,6 +11,7 @@ import type { CardOf } from './types';
 import type { CardCtx } from './types';
 import { AlertTriangle, ArrowDown, ArrowRight, CheckCircle2, Clock } from '../icons';
 import { ScCardS } from './ScCards.strings';
+import { OfflineS } from '../screens/goods/Offline.strings';
 import { useSession } from '../store/session';
 
 const shortDate = (d: string, lang: string) => {
@@ -30,7 +31,9 @@ export function MovementCard({ payload: p, ctx }: { payload: CardOf<'movement'>;
   const s = ScCardS.use();
   const nav = useNavigate();
   const [busy, setBusy] = useState(false);
-  const [done, setDone] = useState(false);
+  const [done, setDone] = useState<false | 'sent' | 'queued'>(false);
+  const [error, setError] = useState<string | null>(null);
+  const off = OfflineS.use();
   const goodsOn = useSession((st) => st.features?.supplyChain === true);
   const meId = ctx.me.businessId;
   const iAmSender = meId === p.fromBusinessId;
@@ -44,16 +47,24 @@ export function MovementCard({ payload: p, ctx }: { payload: CardOf<'movement'>;
     p.state === 'cancelled' ? { text: s('st_cancelled'), cls: 'bg-sunken text-ink-2', Icon: Clock }
     : p.state === 'disputed' ? { text: s('st_disputed'), cls: 'bg-danger-tint text-danger', Icon: AlertTriangle }
     : p.state === 'within_tolerance' ? { text: s('st_within'), cls: 'bg-success-tint text-success', Icon: CheckCircle2 }
+    : done === 'queued' ? { text: off('saved_phone'), cls: 'bg-accent-tint text-accent-ink', Icon: Clock }
     : p.state === 'confirmed' || done ? { text: s('st_confirmed'), cls: 'bg-success-tint text-success', Icon: CheckCircle2 }
     : iConfirm ? { text: s('st_sent'), cls: 'bg-accent-tint text-accent-ink', Icon: Clock }
     : { text: s('st_waiting', { name: other }), cls: 'bg-sunken text-ink-2', Icon: Clock };
 
   const confirmAll = async () => {
     setBusy(true);
+    setError(null);
     try {
-      await postOrQueue(`/api/sc/movements/${p.movementId}/${isReturn ? 'sender-figure' : 'confirm'}`, { lines: p.lines.map((l) => ({ line_id: l.lineId })) }, p.lines.map((l) => l.label).join(', '));
-      setDone(true);
-      ctx.refresh();
+      const r = await postOrQueue(`/api/sc/movements/${p.movementId}/${isReturn ? 'sender-figure' : 'confirm'}`, { lines: p.lines.map((l) => ({ line_id: l.lineId })) }, p.lines.map((l) => l.label).join(', '));
+      // Offline it is only kept on this phone until it sends: don't call it confirmed yet.
+      if (r && typeof r === 'object' && 'queued' in r) setDone('queued');
+      else {
+        setDone('sent');
+        ctx.refresh();
+      }
+    } catch (e) {
+      setError(errorText(e));
     } finally {
       setBusy(false);
     }
@@ -84,6 +95,12 @@ export function MovementCard({ payload: p, ctx }: { payload: CardOf<'movement'>;
         <st.Icon size={14} aria-hidden />
         {st.text}
       </span>
+      {error && (
+        <p role="alert" className="mt-2 flex items-start gap-1.5 rounded-[12px] bg-danger-tint px-2.5 py-1.5 text-[13px] text-danger">
+          <AlertTriangle size={14} className="mt-0.5 shrink-0" aria-hidden />
+          {error}
+        </p>
+      )}
       {goodsOn && <div className="mt-2.5 flex flex-wrap gap-2">
         {iConfirm && (
           <>

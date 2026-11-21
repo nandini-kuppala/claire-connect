@@ -1,9 +1,9 @@
 // In my unit → Others' goods (03 S10/S11): goods this unit holds for principals, grouped by whom it works for, never
 // mixed with its own. Bulk actions per principal; on desktop a keyboard-first table to record returns in one go (U2).
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import clsx from 'clsx';
-import { api, errorText } from '../../lib/api';
+import { api, ApiError, errorText } from '../../lib/api';
 import { Button } from '../../components/Button';
 import { ChevronRight } from '../../icons';
 import { useSession } from '../../store/session';
@@ -40,6 +40,9 @@ export function Others({ onCount }: { onCount?: (n: number) => void }) {
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [returns, setReturns] = useState<Record<string, string>>({});
+  // One client id per desktop row, kept across retries (and dropped once that row is saved), so a row whose save
+  // reached the server before an error is not recorded twice. A changed quantity is a new record, so a new id.
+  const rowIds = useRef<Record<string, { qty: string; id: string }>>({});
 
   const load = useCallback(async () => {
     const d = await api.get<{ groups: Group[] }>('/api/sc/goods/others');
@@ -53,11 +56,22 @@ export function Others({ onCount }: { onCount?: (n: number) => void }) {
     setMsg(null);
     try {
       let any = false;
+      let skipped = false;
       for (const j of g.jobs) {
-        if (kind === 'ready' && !j.ready) { await api.post(`/api/sc/jobs/${j.id}/ready`, { ready: true }); any = true; }
+        if (kind === 'ready' && !j.ready) {
+          // Ready means something done is waiting here; jobs with nothing done stay as they are.
+          if (!(j.outputsHere > 0)) { skipped = true; continue; }
+          try {
+            await api.post(`/api/sc/jobs/${j.id}/ready`, { ready: true });
+            any = true;
+          } catch (e) {
+            if (e instanceof ApiError && e.status === 409) { skipped = true; continue; }
+            throw e;
+          }
+        }
         if (kind === 'return' && j.outputsHere > 0) any = (await returnReady(j.id)) || any;
       }
-      setMsg(any ? w('saved') : w('nothing_ready'));
+      setMsg(kind === 'ready' && skipped ? (any ? `${w('saved')} ${w('ready_skipped')}` : w('ready_skipped')) : any ? w('saved') : w('nothing_ready'));
       await load();
     } catch (e) {
       setMsg(errorText(e));
@@ -77,13 +91,19 @@ export function Others({ onCount }: { onCount?: (n: number) => void }) {
         const rl = await api.get<{ lines: ReadyLine[] }>(`/api/sc/jobs/${jobId}/ready-lines`);
         const first = rl.lines[0];
         if (!first) continue;
-        await api.post(`/api/sc/jobs/${jobId}/send-back`, { client_id: clientId(), lines: [{ spec_id: first.spec_id, grade: first.grade, qty: n, unit: unitOf(first.dim) }] });
+        const prev = rowIds.current[jobId];
+        const cid = prev && prev.qty === v ? prev.id : clientId();
+        rowIds.current[jobId] = { qty: v, id: cid };
+        await api.post(`/api/sc/jobs/${jobId}/send-back`, { client_id: cid, lines: [{ spec_id: first.spec_id, grade: first.grade, qty: n, unit: unitOf(first.dim) }] });
+        // Saved: take the row out at once, so a later failure and a second tap cannot send it again.
+        delete rowIds.current[jobId];
+        setReturns((x) => { const rest = { ...x }; delete rest[jobId]; return rest; });
       }
-      setReturns({});
       setMsg(w('saved'));
       await load();
     } catch (e) {
       setMsg(errorText(e));
+      await load().catch(() => undefined);
     } finally {
       setBusy(null);
     }

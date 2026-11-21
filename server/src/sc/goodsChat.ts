@@ -136,6 +136,11 @@ export async function processDueCards(limit = 20) {
           const { matchReceiverFirst } = await import('./records.js');
           await matchReceiverFirst(built.payload.toBusinessId, built.payload.fromBusinessId).catch((e) => console.warn('[sc] match', e.message));
         }
+        // …and an order it belongs to may now be covered (coverage ignores records still inside their undo window).
+        if (row.ref.kind === 'movement') {
+          const { orderCoverageForMovement } = await import('./orders.js');
+          await orderCoverageForMovement(row.ref.id).catch((e) => console.warn('[sc] order coverage', e.message));
+        }
       } catch (err) {
         console.warn('[sc] card send failed', row._id, (err as Error).message);
         await col('sc_notify').updateOne({ _id: row._id } as any, { $set: { claimed_at: null } });
