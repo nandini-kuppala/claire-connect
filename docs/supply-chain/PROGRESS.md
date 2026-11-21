@@ -804,6 +804,25 @@ Four independent reviews (ledger core; money/orders/staff/links/Claire; the Good
   - After a Trade Desk ticket resolves, the order card in chat keeps the dispute line (it isn't re-posted).
   - The desk-only labels "Short delivery" and "Late delivery" are English.
 
+### Stress test with Nexconn chat: 30 concurrent connections (2026-11-22)
+`scripts/sc-load-nexconn.mjs 30 90`. 20 test businesses (9300000001–9300000020; the last 10 created for this run; none deleted, none on the demo logins). Each of 30 worker processes is one virtual user:
+- it logs in and opens a real **Nexconn Web SDK** connection (`@nexconn/chat` NCEngine, the app's own SDK, in Node with browser shims);
+- it runs the Goods mix over HTTP (60 % reads, 40 % writes, no think time);
+- every 3–5 s it sends a chat message in its Goods conversation, and its partner times delivery.
+
+The 30 workers run over 20 users, so 10 owners are on two devices at once. Local dev server against the remote Atlas dev database.
+
+| | Result |
+|---|---|
+| HTTP | 843 requests, **8.4 req/s, 0 errors**; median 2.6 s, p95 5.0 s, max 6.1 s |
+| Chat (Nexconn) | 26 connections up (connect median 1.0 s); **308 messages sent, 0 failures** (send median 155 ms, p95 177 ms); 573 deliveries to partners, **delivery median 317 ms, p95 361 ms, max 450 ms**; 0 connection drops |
+| Server | CPU 6 % avg / 34 % max; 286 MB; `/api/health` 1 ms median |
+| Data | ledger check 0 problems after the run |
+
+- **Throughput stays at about 8–10 requests/s from 10 to 30 workers, and latency grows with load.** The bottleneck is still the database (remote round trips), not the API server or Nexconn, as in the 21 Nov test.
+- **Chat delivery through Nexconn stayed fast** (about 0.3 s) throughout.
+- **Harness limit:** 4 of 30 workers crashed inside the Nexconn Web SDK's protobuf decoder under Node ("pb decode error … Illegal buffer") on a downstream batch. Forcing `binaryType = 'arraybuffer'` didn't help. This is the browser SDK running in Node, not the app; their HTTP and chat stats are missing from the totals.
+
 ## Open questions
 - T8: a separate free Atlas cluster for integration tests needs to be created by the user (not blocking slice 0's pure tests).
 

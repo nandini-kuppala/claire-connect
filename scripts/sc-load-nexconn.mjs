@@ -54,8 +54,13 @@ if (CHILD) {
     }
   }
   globalThis.XMLHttpRequest = XHR;
+  // Browsers hand binary frames to the SDK as ArrayBuffers; Node's WebSocket defaults to Blob, which the SDK's
+  // protobuf decoder can't read ("pb decode error … Illegal buffer").
+  const NodeWS = globalThis.WebSocket;
+  globalThis.WebSocket = class extends NodeWS { constructor(...a) { super(...a); this.binaryType = 'arraybuffer'; } };
   const { NCEngine, AreaCode, GroupChannel, SendTextMessageParams, MessageHandler, ConnectionStatusHandler } = await import('../node_modules/@nexconn/chat/index.mjs');
 
+  let runStart = Date.now() + 3_600_000; // set when the run starts
   const out = { wid, phone, ops: {}, codes: {}, chat: { connectMs: null, connected: false, sent: 0, sendFail: 0, sendMs: [], received: 0, deliveryMs: [], drops: 0 } };
   const rec = (op, s, ms) => { (out.ops[op] ??= []).push(Math.round(ms)); const c = (out.codes[op] ??= {}); c[s] = (c[s] ?? 0) + 1; };
   const v = await login(phone);
@@ -74,7 +79,8 @@ if (CHILD) {
         for (const m of messages) {
           const text = m.content?.text ?? m.content?.content ?? '';
           const hit = /^lt\|(\d+)\|/.exec(String(text));
-          if (hit) { out.chat.received += 1; out.chat.deliveryMs.push(Date.now() - Number(hit[1])); }
+          // Only messages sent during this run count (older ones are pulled down as history when we connect).
+          if (hit && Number(hit[1]) >= runStart) { out.chat.received += 1; out.chat.deliveryMs.push(Date.now() - Number(hit[1])); }
         }
       },
     }));
@@ -121,6 +127,7 @@ if (CHILD) {
 
   process.send?.({ ready: true });
   await new Promise((res) => process.once('message', res)); // start together
+  runStart = Date.now() - 1000;
   const until = Date.now() + Number(seconds) * 1000;
   let nextChat = Date.now() + Math.random() * 4000;
   while (Date.now() < until) {
@@ -128,7 +135,9 @@ if (CHILD) {
     await (Math.random() < 0.6 ? read() : write());
   }
   await new Promise((r) => setTimeout(r, 6000)); // let the last chat messages arrive
+  out.chat.connected = out.chat.connected; const wasConnected = out.chat.connected; out.chat.connected = false; // our own disconnect is not a drop
   try { await NCEngine.disconnect?.(); } catch { /* best effort */ }
+  out.chat.connected = wasConnected;
   process.send?.({ result: out });
   setTimeout(() => process.exit(0), 200);
 } else {
@@ -146,6 +155,14 @@ if (CHILD) {
     users.push({ phone, id: v.user.business_id });
   }
   for (const u of users) execSync(`bash -lc 'cd /Users/dev/Desktop/claire && source ~/.nvm/nvm.sh >/dev/null && nvm use 24 >/dev/null && MONGODB_DB=nexconn_sc_dev npm run sc:flag -w server -- ${u.phone} on >/dev/null'`);
+  // The flag can take a moment to show (it is cached server-side): wait until each business can open Goods.
+  for (const u of users) {
+    for (let i = 0; i < 40; i++) {
+      const t = (await login(u.phone)).token;
+      if ((await call('GET', '/api/sc/home', undefined, t)).s === 200) break;
+      await new Promise((r) => setTimeout(r, 1500));
+    }
+  }
   // Make sure each pair in the ring has a Goods conversation (it is created with the first shared record).
   for (const [i, u] of users.entries()) {
     const p = users[(i + 1) % users.length];
@@ -164,10 +181,13 @@ if (CHILD) {
 
   const kids = [];
   const results = [];
+  const crashes = [];
   for (let w = 0; w < WORKERS; w++) {
     const i = w % users.length;
     const kid = spawn(process.execPath, [new URL(import.meta.url).pathname, '--child', users[i].phone, users[(i + 1) % users.length].id, String(SECONDS), String(w)], { stdio: ['ignore', 'ignore', 'pipe', 'ipc'] });
-    kid.stderr.on('data', () => {}); // the SDK logs warnings; ignore
+    let errTail = '';
+    kid.stderr.on('data', (d) => { errTail = (errTail + d.toString()).slice(-4000); });
+    kid.on('exit', (code) => { if (code) crashes.push({ w, code, err: errTail.split('\n').filter((l) => /Error|error/.test(l) && !/WARN/.test(l)).slice(-3).join(' | ').slice(0, 300) }); });
     kids.push(new Promise((res) => {
       kid.on('message', (m) => { if (m.result) results.push(m.result); if (m.ready) kid.ready = true; });
       kid.on('exit', () => res());
@@ -200,6 +220,7 @@ if (CHILD) {
   };
   const v = execSync("bash -lc 'cd /Users/dev/Desktop/claire/server && source ~/.nvm/nvm.sh >/dev/null && nvm use 24 >/dev/null && MONGODB_DB=nexconn_sc_dev npx tsx src/sc/verify.ts | tail -1'").toString().trim();
   summary.ledger = v;
+  summary.crashed_workers = crashes;
   console.log(JSON.stringify(summary, null, 1));
   if (process.env.LOAD_OUT) writeFileSync(process.env.LOAD_OUT, JSON.stringify(summary, null, 1));
   process.exit(0);
