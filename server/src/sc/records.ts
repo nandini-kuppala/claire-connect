@@ -312,7 +312,15 @@ router.post(
       const base = l.qty !== undefined ? qtyBase(l.qty, l.unit ?? info.units[0], info, l.factor).base : winningAssertion(line.sent)!.base_qty;
       const mine = (line.received as any[]).find((a) => a.evidence === 'account' && a.by?.business_id === ctx.businessId && a.base_qty === base);
       if (mine) { results.push({ line_id: l.line_id, unchanged: true, disputeId: null }); continue; } // a second tap or a second staff member
-      results.push({ line_id: l.line_id, ...(await applyReceipt(ctx, m._id, l.line_id, base, 'account', b.business_date ?? todayIST())) });
+      try {
+        results.push({ line_id: l.line_id, ...(await applyReceipt(ctx, m._id, l.line_id, base, 'account', b.business_date ?? todayIST())) });
+      } catch (e) {
+        // Two people tapping Received at the same moment: the first one's receipt won; the second is the same figure.
+        const fresh: any = await col('sc_movements').findOne({ _id: m._id } as any, { projection: { lines: 1 } });
+        const fl = fresh?.lines?.find((x: any) => x.line_id === l.line_id);
+        if (fl?.received?.some((a: any) => a.evidence === 'account' && a.by?.business_id === ctx.businessId && a.base_qty === base)) { results.push({ line_id: l.line_id, unchanged: true, disputeId: null }); continue; }
+        throw e;
+      }
     }
     await afterChange(m._id, results);
     res.json({ results });

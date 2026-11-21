@@ -49,6 +49,9 @@ See the Phase 7 report in `PROGRESS.md`.
   - Sakthi Stitching 9000002003, Ganga Tailoring 9000002004, Vel Garments 9000002005.
 - Re-seed or replay with `python3 scripts/sc-demo-scenarios.py` (dev server running). Each run adds a fresh set of records with its own lot codes.
 
+## Load test (21 Nov)
+About 10 requests/s with no errors and correct data at 10–20 concurrent workers against the remote dev database; median 1–2 s, limited by ~74 ms database round trips, not the server. Details and how to speed it up: the load test report in `PROGRESS.md`. Test businesses: phones 9300000001–9300000010 (OTP 123456 on the dev server; not demo accounts). Re-run: `python3 scripts/sc-load-test.py` (dev server running).
+
 ## What is left
 - **Flow view** (S9 in `03-product-ux.md`): the one-screen view of a whole order or run.
 - **Nightly demo reset;** the demo businesses on the login demo list.

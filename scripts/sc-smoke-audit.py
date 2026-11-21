@@ -124,6 +124,16 @@ s, rt = call('POST', '/api/sc/movements/trade', {'kind': 'buyer_returned', 'part
 bb = call('GET', f"/api/sc/bills/c/{buyer['id']}", tok=R)[1]['balance']
 check('9. sell 100 kg at ₹200, 20 kg come back: they owe ₹16,000, not ₹20,000', s == 201 and bb['they_owe'] == 1600000, (s, bb and bb['they_owe']))
 
+# 11. Two people tapping Received on the same delivery at once: one receipt, the other "unchanged" (load test finding)
+s, m = call('POST', '/api/sc/movements/send', {'to': {'k': 'b', 'id': 'b_lakshmi'}, 'process_key': 'stitching', 'lines': [{'spec_id': kit, 'qty': 10, 'unit': 'pcs'}], 'client_id': cid(), 'allow_untracked': True, 'untracked_reason': 'audit'}, R)
+call('POST', f"/api/sc/movements/{m['movement']['id']}/share-now", {}, R)
+_, mm = call('GET', f"/api/sc/movements/{m['movement']['id']}", tok=L)
+res = []
+th = [threading.Thread(target=lambda: res.append(call('POST', f"/api/sc/movements/{m['movement']['id']}/confirm", {'lines': [{'line_id': mm['lines'][0]['line_id']}]}, L))) for _ in range(4)]
+[t.start() for t in th]; [t.join() for t in th]
+_, m2 = call('GET', f"/api/sc/movements/{m['movement']['id']}", tok=R)
+check('11. four Received taps at once: all succeed, one receipt recorded', all(x[0] == 200 for x in res) and sum(1 for a in m2['lines'][0]['received'] if a.get('by') == 'b_lakshmi' and a.get('evidence') == 'account') == 1, [x[0] for x in res])
+
 v = subprocess.run(['bash', '-lc', 'cd /Users/dev/Desktop/claire/server && source ~/.nvm/nvm.sh >/dev/null && nvm use 24 >/dev/null && MONGODB_DB=nexconn_sc_dev npx tsx src/sc/verify.ts | tail -1'], capture_output=True, text=True).stdout.strip()
 check('ledger check: 0 problems', v.endswith('0 problem(s)'), v)
 print('ALL PASS' if ok else 'SOME FAILED'); sys.exit(0 if ok else 1)

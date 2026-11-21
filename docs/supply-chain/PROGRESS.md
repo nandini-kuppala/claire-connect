@@ -713,6 +713,27 @@ Governing brief: `docs/supply-chain/BRIEF.md` (re-read at the start of every pha
   - The order card's Goods link shows even when the other side doesn't use Goods (the page then says so).
   - All overlay and ta/hi translations need native review.
 
+### Load test (2026-11-21)
+`scripts/sc-load-test.py`: 10 new test businesses (phones 9300000001–9300000010; flagged for Goods, **not** demo, not on the demo logins), each acting as one business in a ring (sends work to the next, confirms what the previous sent, records returns, sales and payments, reads lists, bills and reports). The mix is 60 % reads, 40 % writes, each worker back to back with no think time. Measured against the **local dev server** (one Node process, tsx dev mode, on a 10-core Mac) using the **remote Atlas dev database** (about 74 ms per round trip from this machine).
+
+| Concurrent workers | Requests/s | p50 | p95 | p99 | Errors | Server CPU (avg / max) | Memory | `/api/health` (no DB) |
+|---|---|---|---|---|---|---|---|---|
+| 1 | 1.3 | 0.66 s | 1.4 s | 1.8 s | 0 | 4 % / 25 % | 179 MB | 3 ms |
+| 10 | 8.7 | 0.97 s | 2.0 s | 2.1 s | 0 | 8 % / 21 % | 252 MB | 2 ms |
+| 20 | 9.5 | 1.85 s | 3.8 s | 3.9 s | 0 | 6 % / 20 % | 259 MB | 2 ms |
+
+- **Correctness held under load:**
+  - 103 concurrent sends → 103 unique movements;
+  - replaying 30 of them with the same business and client id made 0 new records;
+  - ledger check 0 problems.
+- **Throughput levels off at about 10 requests/s, and latency doubles from 10 to 20 workers.** The bottleneck is the database, not the server: server CPU stays under 10 % and `/api/health` answers in 2–3 ms throughout. Each request makes 10–20 sequential round trips at about 74 ms each, and writes add a transaction.
+- **The first run (before the fix below) had about 20-second stalls** hitting every endpoint at once. The server had nothing in its log, and the second run had none. This points at the shared database (possibly a shared-tier operations limit; the cluster tier isn't readable with this user), so worth watching.
+- **Fixed:** two people tapping Received on the same delivery at once got a 409 "not enough in stock" for the second tap (the ledger was right; the message was wrong). It now answers "unchanged" (audit smoke check 11).
+- **To make it fast** (not done):
+  - host the API in the same region as the database (round trips of ~1 ms instead of ~74 ms);
+  - check the Atlas tier and move off a shared tier if it is one;
+  - batch the sequential queries in the hottest routes (coming, confirm, send, bills).
+
 ## Open questions
 - T8: a separate free Atlas cluster for integration tests needs to be created by the user (not blocking slice 0's pure tests).
 
