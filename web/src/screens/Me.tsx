@@ -13,11 +13,18 @@ import { badgeLabel, strings } from '../cards/strings';
 import { LANGS } from '../../../shared/taxonomy';
 import { ErrorBar, Spinner, TrustBreakdown, errMsg, listOf, normBiz, normTrust, patchSession, useMe, type Biz, type Trust } from '../desk/kit';
 import { MeS } from './Me.strings';
+import { StaffProfile } from './StaffProfile';
 
 type AutoMode = 'off' | 'suggest' | 'auto';
 type S = ReturnType<typeof MeS.use>;
 
+/** Staff see a simple profile (slice 7): no business, trust, store or auto-reply settings. */
 export default function Me() {
+  const staff = useSession((st) => st.user?.role === 'staff');
+  return staff ? <StaffProfile /> : <OwnerMe />;
+}
+
+function OwnerMe() {
   const s = MeS.use();
   const t = useT();
   const nav = useNavigate();

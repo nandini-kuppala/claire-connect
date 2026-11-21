@@ -115,17 +115,16 @@ In Claire's chat (Home → ask box, or the chat tab), type or speak in any of th
 - They see only "N businesses have records with your number" and can **ask to link**.
 - You **approve** (or decline) on your Goods page. Their records then merge under their business, one row per unit, and they can confirm from their own account.
 
-### 4.10 Staff (in progress)
-- **Built on the server:**
-  - the owner adds staff by phone;
-  - staff use Goods and Claire only (no prices, deal rooms, orders or store);
-  - an optional PIN for shared phones;
-  - big stock counts by staff wait for the owner;
-  - staff can suggest how to settle a difference, but only the owner settles.
-- **Not built yet:** the screens for these. See `HANDOVER.md`.
+### 4.10 Staff
+- **Adding staff:** the owner adds staff in Goods → Setup → **Staff**, with a name and phone number. The person logs in with that phone and the OTP.
+- **What staff see:** Goods (opening on Coming in), Chats (Goods conversations only), Claire and a simple profile. They never see prices, buyers' chats, orders, the store or Trade Desk; the server refuses those even if someone tries.
+- **Shared phones:** anyone can set a 4-digit **PIN for this phone** in Setup. The app then asks for it once each time it opens, so records show who made them.
+- **Big counts wait:** if staff count stock more than 5 pcs or 2 kg away from the book, the count waits in the owner's **Waiting for you**, to approve or reject.
+- **Differences:** staff can suggest how to settle a difference, but only the owner settles it. The other business never sees the suggestion.
+
+**Try it:** log in as Kavitha (9600000001, OTP 123456, PIN 2468). Notice there is no Home or Orders tab, and that Goods opens on Coming in.
 
 ## 5. What is not built yet
-- **Staff:** the screens (above).
 - **Reports and money:** bills, payments, loss reports (slice 8a).
 - **Orders:** linking marketplace orders to goods (8b).
 - **Flow view** of a whole order (9).

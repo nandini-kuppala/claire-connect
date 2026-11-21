@@ -58,7 +58,8 @@ export default function Goods() {
   const nav = useNavigate();
   const lang = useSession((st) => st.user?.language || 'en');
   const [params, setParams] = useSearchParams();
-  const [tab, setTabState] = useState<Tab>(() => (params.get('tab') as Tab) || readTab());
+  const isStaff = useSession((st) => st.user?.role === 'staff');
+  const [tab, setTabState] = useState<Tab>(() => (params.get('tab') as Tab) || (isStaff && !(() => { try { return localStorage.getItem(TAB_KEY); } catch { return null; } })() ? 'coming' : readTab()));
   const [home, setHome] = useState<Home | null>(null);
   const [out, setOut] = useState<OutRow[] | null>(null);
   const [coming, setComing] = useState<Job[] | null>(null);

@@ -2,7 +2,7 @@
 import { defineStrings } from '../lib/localStrings';
 
 export const NavGoodsS = defineStrings('nav_sc', {
-  en: { goods: 'Goods' },
-  ta: { goods: 'சரக்கு' },
-  hi: { goods: 'माल' },
+  en: { goods: 'Goods', claire: 'Claire' },
+  ta: { goods: 'சரக்கு', claire: 'Claire' },
+  hi: { goods: 'माल', claire: 'Claire' },
 });

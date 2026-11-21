@@ -3,7 +3,7 @@
 Governing brief: `docs/supply-chain/BRIEF.md` (re-read at the start of every phase and after any context compaction).
 
 ## Current phase
-**Phase 6 — slices 0 to 6 done; slice 7 (staff) in progress: server side written and typechecked, web + smoke left. See `HANDOVER.md` for exactly what is left.** Work stays on branch `supply-chain` (pushed; not merged to main).
+**Phase 6 — slices 0 to 7 done. Next: slice 8a (reports and money). The Haiku tier of personal Claire is still off until `ANTHROPIC_API_KEY` is set and verified (slice 5).** Work stays on branch `supply-chain` (pushed; not merged to main). `HANDOVER.md` and `BEGINNER-GUIDE.md` sit next to this file.
 
 ## Phase status
 | Phase | Doc | Status |
@@ -14,7 +14,7 @@ Governing brief: `docs/supply-chain/BRIEF.md` (re-read at the start of every pha
 | 3 Product & UX | `03-product-ux.md`, `ui-principles.md`, `mockups/` (16 screens) | Done 2026-11-21, rendered at 375/1280 px en+ta, red-teamed, **approved** (U1–U9 defaults) |
 | 4 Technical design | `04-technical-design.md` | Done 2026-11-21, model check run, red-teamed, **approved** (T1–T9 defaults) |
 | 5 Build plan | `05-build-plan.md` (v2) | Done 2026-11-21, red-teamed, **approved** (B1–B3 defaults) |
-| 6 Implementation | slices on branch `supply-chain` | Slices 0–6 done 2026-11-21 |
+| 6 Implementation | slices on branch `supply-chain` | Slices 0–7 done 2026-11-21 |
 | 7 Final verification | | Not started |
 
 ## Decisions made
@@ -478,8 +478,52 @@ Governing brief: `docs/supply-chain/BRIEF.md` (re-read at the start of every pha
   - The contact's side can't propose dispute outcomes from the page yet; the recorder settles one-sided differences.
   - The "seen" beacon needs JavaScript; without it, seen is set on the first answer.
 
+### Slice 7 — Staff (2026-11-21)
+- **Built:**
+  - **Provisioning** (`sc/staff.ts`, 04 §10.3b): the owner adds staff by name and phone.
+    - A phone already in another business → refused. A phone with no business → attached as staff. A new phone → a staff user (`role:'staff'`, `onboarded:1`) who logs in with the normal OTP.
+    - Staff join every Goods conversation of the business; new Goods conversations include both sides' staff. Deal rooms never include staff (`usersOf` returns owners only).
+    - Removing staff detaches them.
+  - **A staff guard on every API route** (`staffGuard.ts`, mounted before all routes): an allow-list of sign-in, own profile (not the business's auto-reply), Claire, voice, Goods, and Goods conversations only. Every other route, including future ones, returns 403 `staff_forbidden`.
+    - The inbox lists Goods conversations only.
+    - Claire answers staff about goods only; the marketplace flow says "buying and selling are for the owner".
+  - **PIN on a shared phone**: set or remove it in Setup; asked once per session by a full-screen keypad (`PinGate`); locked after 5 wrong tries in 5 minutes.
+    - Hashed with the server secret; `/me` returns `has_pin`, never the hash.
+  - **D5 count approvals**: a staff count differing from the book by more than 5 pcs / 2 kg / 2 m waits for the owner (202 `pending`, nothing posted). The owner approves (posts against the book as it is then) or rejects in **Waiting for you** on the Goods home.
+  - **Staff suggest, the owner settles**: a staff "use their count" on a difference becomes a suggestion shown only to the owner (the other side never sees it). Accept and escalate stay owner-only.
+  - **Web**:
+    - Staff land on Goods → Coming in, with tabs Goods · Chats · Claire · Profile.
+    - Home, orders, store, Trade Desk and onboarding redirect away.
+    - A simple staff profile: name, whose staff, language, PIN, log out.
+    - Setup has Staff (owner: add, list with "PIN set", remove) and "PIN for this phone" (everyone).
+    - "Waiting for you" (owner) shows staff counts and suggestions.
+    - The count sheet and the dispute screen tell staff "Sent to the owner" / "Suggested to the owner".
+- **Checks:**
+  - typecheck + lint green; 24/24 unit tests.
+  - **`scripts/sc-smoke-s7.py`: 34/34**:
+    - add Kavitha; again → `already`; another business's phone → `other_business` (both ways);
+    - she logs in as staff, onboarded; no PIN hash in `/me`; staff can't add staff;
+    - **19 existing routes refuse her**: deals open / combo, offers, orders and order events, requirements, listings, catalog, desk, business profile, auto-reply, onboarding, ratings, samples, job offers, and a deal-room conversation;
+    - her inbox is Goods only; she can change her language;
+    - she reads Out / Coming / In / stock, but rates, links, staff, approvals, close, reopen, write-off, casualty and sell-part refuse her; no prices in what she reads;
+    - **scenario U**: she confirms Lakshmi's 180 at the gate; her count 40 short waits (book unchanged); 3 short posts at once; Ravi sees "Kavitha counted …" and approves → the book becomes her count; staff can't approve;
+    - her dispute suggestion stays open, is hidden from Lakshmi and shown to Ravi; staff can't accept;
+    - PIN: set, wrong refused, right accepted, locked after repeats, Ravi sees "PIN set";
+    - removed → her login no longer reaches Ravi's goods.
+  - s1–s6, the Claire smoke and `sc:verify` still pass (see the commit).
+  - **Browser** (Kavitha, Tamil, 375 px): home redirects to Goods → Coming in with the staff tabs; the staff profile; the PIN keypad (2468 → in). Owner Setup shows "Kavitha · PIN set".
+- **Fixed during checks:**
+  - The owner's profile page (trust score, store listing call refused with an error banner) showed for staff; staff now get their own profile.
+  - A staff suggestion would have shown in the red error box; it's now a green notice.
+- **Known gaps:**
+  - A staff member belongs to one business (D8: one person in two businesses is deferred).
+  - The PIN is per browser session, not per device lock.
+  - Staff can view Setup (owner controls are disabled server-side).
+  - Size-by-size voice receiving at the gate uses the existing confirm screen and mic; a dedicated "Arrived" flow is not built.
+  - The demo staff user "Kavitha" (9600000001, PIN 2468) is on the dev DB only.
+
 ## Open questions
 - T8: a separate free Atlas cluster for integration tests needs to be created by the user (not blocking slice 0's pure tests).
 
 ## Next
-Slice 7 (staff: phone logins added by the owner, optional PIN, role-limited Record, counts above the threshold pending approval). Optional: add the Anthropic key and verify the Haiku tier.
+Slice 8a (reports and money: bills, settlements, record payment, loss and turnaround reports). Optional: add the Anthropic key and verify the Haiku tier.

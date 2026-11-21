@@ -6,6 +6,7 @@ import { useSession, isAgent, isOnboarded } from './store/session';
 import { engine } from './chat/engine';
 import { useLocaleVersion } from './locales';
 import { AppShell } from './components/AppShell';
+import { PinGate } from './components/PinGate';
 import Login from './screens/Login';
 import Language from './screens/Language';
 import Inbox from './screens/Inbox';
@@ -70,6 +71,9 @@ function ChatConnection() {
   return null;
 }
 
+/** Pages a staff login never sees: home (marketplace), orders, store, Trade Desk, onboarding. */
+const STAFF_AWAY = /^\/(?:$|orders|store|s\/|desk|onboarding|catalog|requirements)/;
+
 function RequireAuth({ children, allowUnonboarded = false, agentOk = true }: { children: ReactNode; allowUnonboarded?: boolean; agentOk?: boolean }) {
   const token = useSession((s) => s.token);
   const user = useSession((s) => s.user);
@@ -79,7 +83,9 @@ function RequireAuth({ children, allowUnonboarded = false, agentOk = true }: { c
   if (!user) return ready ? <Navigate to="/login" replace /> : <Splash />;
   if (!agentOk && isAgent(user)) return <Navigate to="/desk" replace />;
   if (!allowUnonboarded && !isAgent(user) && !isOnboarded(user)) return <Navigate to="/onboarding" replace />;
-  return <>{children}</>;
+  // Staff use Goods, Claire and Goods conversations only (04 §10.3b); the server refuses the rest anyway.
+  if (user.role === 'staff' && STAFF_AWAY.test(location.pathname)) return <Navigate to="/goods?tab=coming" replace />;
+  return <PinGate>{children}</PinGate>;
 }
 
 /** /chat/claire is the Claire screen; any other id is a deal / support conversation. */

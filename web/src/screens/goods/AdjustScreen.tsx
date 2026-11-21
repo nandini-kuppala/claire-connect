@@ -11,6 +11,7 @@ import { useSession } from '../../store/session';
 import { todayIST } from '@shared/sc/dates';
 import { toBase } from '@shared/sc/units';
 import { TradeS } from './Trade.strings';
+import { StaffS } from './Staff.strings';
 import { JobS } from './Job.strings';
 import { RecS } from './Record.strings';
 import { SpecPicker } from './SpecPicker';
@@ -27,6 +28,7 @@ const UNITLESS = ['rolls', 'cones', 'bundles', 'bags', 'boxes'];
 
 export default function AdjustScreen() {
   const t = TradeS.use();
+  const sf = StaffS.use();
   const jb = JobS.use();
   const r = RecS.use();
   const nav = useNavigate();
@@ -76,8 +78,8 @@ export default function AdjustScreen() {
   const submit = async (body: Record<string, unknown>, done: string) => {
     setBusy(true); setError(null);
     try {
-      await api.post('/api/sc/adjust', { ...body, client_id: clientId(), business_date: todayIST() });
-      setSel(null); setFound(null); setMsg(done); setTimeout(() => setMsg(null), 2500);
+      const r = await api.post<{ adjustment?: { pending?: boolean } }>('/api/sc/adjust', { ...body, client_id: clientId(), business_date: todayIST() });
+      setSel(null); setFound(null); setMsg(r.adjustment?.pending ? sf('pending_sent') : done); setTimeout(() => setMsg(null), 2500);
       await load();
     } catch (e) { setError(errorText(e)); } finally { setBusy(false); }
   };

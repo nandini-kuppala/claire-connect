@@ -5,13 +5,17 @@ import { useNavigate } from 'react-router-dom';
 import { api, ApiError, errorText } from '../../lib/api';
 import { Button } from '../../components/Button';
 import { LinkS } from './Link.strings';
+import { StaffS } from './Staff.strings';
 import { qty as fmtQty } from './format';
 
 interface Req { contact_id: string; contact_name: string; business: { id: string; name: string; sub: string } }
+interface Appr { counts: { id: string; label: string; lot: string | null; dim: string; book: number; counted: number; by: string }[]; suggestions: { dispute_id: string; label: string; outcome: string; by: string }[] }
 interface Prop { id: string; job_id: string; name: string; qty: number; dim: string; label: string }
 
 export function LinkBanners({ owner, onChange }: { owner: boolean; onChange?: () => void }) {
   const s = LinkS.use();
+  const st = StaffS.use();
+  const [appr, setAppr] = useState<Appr>({ counts: [], suggestions: [] });
   const nav = useNavigate();
   const [reqs, setReqs] = useState<Req[]>([]);
   const [sugg, setSugg] = useState<{ count: number; pending: number } | null>(null);
@@ -20,6 +24,7 @@ export function LinkBanners({ owner, onChange }: { owner: boolean; onChange?: ()
   const [busy, setBusy] = useState<string | null>(null);
 
   const load = useCallback(async () => {
+    setAppr(await api.get<Appr>('/api/sc/approvals').catch(() => ({ counts: [], suggestions: [] })));
     const [r, g, p] = await Promise.all([
       api.get<{ requests: Req[] }>('/api/sc/linking/requests').catch(() => ({ requests: [] })),
       api.get<{ count: number; pending: number }>('/api/sc/linking/suggestions').catch(() => null),
@@ -50,6 +55,23 @@ export function LinkBanners({ owner, onChange }: { owner: boolean; onChange?: ()
   return (
     <>
       {msg && <p role="status" className="mx-4 mt-3 rounded-[14px] bg-success-tint px-3 py-2 text-[14px] text-success">{msg}</p>}
+      {(appr.counts.length > 0 || appr.suggestions.length > 0) && <h2 className="mx-4 mt-4 font-head text-[16px] font-semibold text-ink">{st('waiting')}</h2>}
+      {appr.counts.map((c) => (
+        <div key={c.id} className={box}>
+          <p className="text-[15px] font-semibold text-ink">{st('count_line', { who: c.by, counted: fmtQty(c.counted, c.dim), label: c.label, book: fmtQty(c.book, c.dim) })}</p>
+          {c.lot && <p className="text-[13px] text-meta">{c.lot}</p>}
+          <div className="mt-2 flex flex-wrap gap-2">
+            <Button size="sm" loading={busy === c.id} onClick={() => void act(c.id, () => api.post(`/api/sc/adjust/${c.id}/approve`))}>{st('approve')}</Button>
+            <Button size="sm" variant="ghost" onClick={() => void act(`r${c.id}`, () => api.post(`/api/sc/adjust/${c.id}/reject`))}>{st('reject')}</Button>
+          </div>
+        </div>
+      ))}
+      {appr.suggestions.map((g) => (
+        <div key={g.dispute_id} className={box}>
+          <p className="text-[15px] font-semibold text-ink">{st('suggest_line', { who: g.by, label: g.label, outcome: st(`o_${g.outcome}` as 'o_sent') })}</p>
+          <Button size="sm" className="mt-2" onClick={() => nav(`/goods/dispute/${g.dispute_id}`)}>{st('open')}</Button>
+        </div>
+      ))}
       {reqs.map((r) => (
         <div key={r.contact_id} className={box}>
           <p className="text-[15px] font-semibold text-ink">{s('asks_link', { biz: r.business.name, contact: r.contact_name })}</p>

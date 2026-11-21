@@ -1,6 +1,6 @@
 // Bottom tab bar: Home (Claire) · Chats · Orders · Store (sellers) · Profile. Flat, warm, no floating blobs.
 import { NavLink } from 'react-router-dom';
-import { ClipboardList, Home, Package, Store, User, MessagesSquare } from '../icons';
+import { Bot, ClipboardList, Home, Package, Store, User, MessagesSquare } from '../icons';
 import clsx from 'clsx';
 import type { LucideIcon } from '../icons';
 import { useT } from '../i18n';
@@ -39,7 +39,13 @@ export function RailNav({ unread = 0 }: { unread?: number }) {
   const sg = NavGoodsS.use();
   const item = ({ isActive }: { isActive: boolean }) =>
     clsx('flex min-h-11 items-center gap-3 rounded-[14px] px-3 text-[15px] font-semibold transition-colors', isActive ? 'bg-primary-tint text-primary' : 'text-ink-2 hover:bg-sunken');
-  const items: [string, LucideIcon, string, boolean?, number?][] = [
+  const staff = useSession((st) => st.user?.role === 'staff');
+  const items: [string, LucideIcon, string, boolean?, number?][] = staff ? [
+    ['/goods', Package, sg('goods')],
+    ['/chats', MessagesSquare, t('nav_chats'), false, unread],
+    ['/chat/claire', Bot, sg('claire')],
+    ['/me', User, t('nav_me')],
+  ] : [
     ['/', Home, t('nav_home'), true],
     ['/chats', MessagesSquare, t('nav_chats'), false, unread],
     ['/goods', Package, sg('goods')],
@@ -66,6 +72,21 @@ export function BottomNav({ unread = 0 }: { unread?: number }) {
   const goodsOn = useSession((s) => s.features?.supplyChain === true);
   const sg = NavGoodsS.use();
   const sells = (business?.sells?.length ?? 0) > 0;
+  const staff = useSession((st) => st.user?.role === 'staff');
+
+  // Staff (slice 7): Goods · Chats · Claire · Profile. No home marketplace, orders or store.
+  if (goodsOn && staff) {
+    return (
+      <nav aria-label="Main" className="fixed inset-x-0 bottom-0 z-30 mx-auto w-full max-w-[480px] border-t border-line bg-surface pb-[var(--safe-bottom)]">
+        <div className="flex items-stretch px-1">
+          <Tab to="/goods" icon={Package} label={sg('goods')} />
+          <Tab to="/chats" icon={MessagesSquare} label={t('nav_chats')} badge={unread} />
+          <Tab to="/chat/claire" icon={Bot} label={sg('claire')} />
+          <Tab to="/me" icon={User} label={t('nav_me')} />
+        </div>
+      </nav>
+    );
+  }
 
   // With the supply-chain flag on (03 U1): Home · Chats · Goods · Orders · Profile; the Store lives in Profile and Home.
   if (goodsOn) {

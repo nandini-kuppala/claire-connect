@@ -6,6 +6,7 @@ import clsx from 'clsx';
 import { api, errorText } from '../../lib/api';
 import { Button } from '../../components/Button';
 import { TradeS } from './Trade.strings';
+import { StaffS } from './Staff.strings';
 import { ArrowLeft, ChevronRight, LifeBuoy } from '../../icons';
 import { TwoS } from './Two.strings';
 import { qty as fmtQty } from './format';
@@ -22,10 +23,12 @@ export default function DisputeScreen() {
   const s = TwoS.use();
   const nav = useNavigate();
   const tr = TradeS.use();
+  const sf = StaffS.use();
   const { id } = useParams();
   const [d, setD] = useState<D | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [desk, setDesk] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -73,8 +76,9 @@ export default function DisputeScreen() {
     setBusy(path);
     setError(null);
     try {
-      const r = await api.post<{ ticket?: { code: string } }>(`/api/sc/disputes/${d.id}/${path}`, body);
+      const r = await api.post<{ ticket?: { code: string }; suggested?: boolean }>(`/api/sc/disputes/${d.id}/${path}`, body);
       if (r.ticket) setDesk(r.ticket.code);
+      if (r.suggested) setNotice(sf('suggested'));
       await load();
     } catch (e) {
       setError(errorText(e));
@@ -131,7 +135,7 @@ export default function DisputeScreen() {
           <ul className="mx-4 mt-2 divide-y divide-line overflow-hidden rounded-[18px] border border-line bg-surface">
             {options.map(({ o, label }) => (
               <li key={o}>
-                <button disabled={!open || !owner || !!busy} onClick={() => void act('propose', { outcome: o })} className="flex w-full items-start gap-3 px-4 py-3 text-left hover:bg-sunken disabled:opacity-60">
+                <button disabled={!open || !!busy} onClick={() => void act('propose', { outcome: o })} className="flex w-full items-start gap-3 px-4 py-3 text-left hover:bg-sunken disabled:opacity-60">
                   <span className="min-w-0 flex-1">
                     <span className="block text-[15.5px] font-semibold text-ink">{label}</span>
                     <span className="mt-0.5 block text-[13.5px] leading-snug text-ink-2">{effect(o)}</span>
@@ -154,6 +158,7 @@ export default function DisputeScreen() {
         </>
       )}
       {error && <p className={clsx('mx-4 mt-4 rounded-[14px] bg-danger-tint px-3 py-2 text-[14px] text-danger')}>{error}</p>}
+      {notice && <p role="status" className="mx-4 mt-4 rounded-[14px] bg-success-tint px-3 py-2 text-[14px] text-success">{notice}</p>}
     </div>
   );
 }

@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import clsx from 'clsx';
-import { api, errorText } from '../../lib/api';
+import { api, ApiError, errorText } from '../../lib/api';
 import { Button } from '../../components/Button';
 import { Sheet } from '../../components/Sheet';
 import { ArrowLeft, Check, Plus } from '../../icons';
@@ -11,6 +11,7 @@ import { SpecPicker } from './SpecPicker';
 import { WorkS } from './Work.strings';
 import { JobS } from './Job.strings';
 import { LinkS } from './Link.strings';
+import { StaffS } from './Staff.strings';
 import { useSession } from '../../store/session';
 import type { Contact, Place, ResolvedSpec, Spec } from './types';
 import type { Style } from './GridSheet';
@@ -50,6 +51,13 @@ export default function GoodsSetup() {
   const wk = WorkS.use();
   const jb = JobS.use();
   const lk = LinkS.use();
+  const st = StaffS.use();
+  const me = useSession((x) => x.user);
+  const refreshMe = useSession((x) => x.refresh);
+  const [staff, setStaff] = useState<{ id: string; name: string; phone: string; has_pin: boolean }[]>([]);
+  const [newStaff, setNewStaff] = useState<{ name: string; phone: string } | null>(null);
+  const [pinDraft, setPinDraft] = useState('');
+  const [note, setNote] = useState<string | null>(null);
   const [links, setLinks] = useState<{ id: string; name: string; seen_at: number | null; stopped_at: number | null; stopped_by: string | null }[]>([]);
   const lang = useSession((st) => st.user?.language || 'en');
   const [procs, setProcs] = useState<{ key: string; labels: Record<string, string>; default_turnaround_days: number }[]>([]);
@@ -89,6 +97,7 @@ export default function GoodsSetup() {
     setProcs(t.processes);
     setStyles((await api.get<{ styles: Style[] }>('/api/sc/styles')).styles);
     setLinks((await api.get<{ links: typeof links }>('/api/sc/links')).links);
+    if (h.role === 'owner') setStaff((await api.get<{ staff: typeof staff }>('/api/sc/staff')).staff);
     setOffers(Object.fromEntries(o.offerings.map((x) => [x.process_key, { on: true, capacity_per_day: x.capacity_per_day ? String(x.capacity_per_day) : '', turnaround_days: x.turnaround_days ? String(x.turnaround_days) : '' }])));
   }, []);
 
@@ -255,6 +264,48 @@ export default function GoodsSetup() {
             ))}
           </ul>
         )}
+      </Section>
+
+      {owner && (
+        <Section title={st('staff')} hint={st('staff_hint')} action={<Button size="sm" variant="tint" icon={Plus} onClick={() => { setNewStaff({ name: '', phone: '' }); setNote(null); }}>{st('add')}</Button>}>
+          {staff.length > 0 && (
+            <ul className="divide-y divide-line overflow-hidden rounded-[18px] border border-line bg-surface">
+              {staff.map((x) => (
+                <li key={x.id} className="flex items-center gap-3 px-4 py-3">
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[15px] font-semibold text-ink">{x.name}</span>
+                    <span className="block text-[13px] text-meta">{[x.phone, x.has_pin ? st('has_pin') : null].filter(Boolean).join(' · ')}</span>
+                  </span>
+                  <Button size="sm" variant="ghost" onClick={async () => { await api.del(`/api/sc/staff/${x.id}`); void load(); }}>{st('remove')}</Button>
+                </li>
+              ))}
+            </ul>
+          )}
+          {newStaff && (
+            <div className="mt-3 space-y-3 rounded-[18px] border border-line bg-surface p-4">
+              <Field label={st('name')}><input className={inputCls} value={newStaff.name} onChange={(e) => setNewStaff({ ...newStaff, name: e.target.value })} /></Field>
+              <Field label={st('phone')}><input className={inputCls} inputMode="tel" placeholder="98765 43210" value={newStaff.phone} onChange={(e) => setNewStaff({ ...newStaff, phone: e.target.value })} /></Field>
+              <Button disabled={!newStaff.name.trim() || newStaff.phone.replace(/\D/g, '').length < 10} onClick={async () => {
+                try {
+                  await api.post('/api/sc/staff', { name: newStaff.name.trim(), phone: newStaff.phone });
+                  setNewStaff(null); setNote(st('added')); void load();
+                } catch (e) {
+                  const code = (e as ApiError).body as { code?: string } | undefined;
+                  setNote(code?.code === 'other_business' ? st('other_business') : code?.code === 'already' ? st('already') : errorText(e));
+                }
+              }}>{st('add')}</Button>
+            </div>
+          )}
+          {note && <p role="status" className="mt-2 text-[14px] text-ink-2">{note}</p>}
+        </Section>
+      )}
+
+      <Section title={st('pin')} hint={st('pin_hint')}>
+        <div className="flex flex-wrap items-center gap-2">
+          <input className="h-12 w-28 rounded-[14px] border border-line-strong bg-surface px-3 text-center font-head text-[20px] tracking-[0.4em] tabular-nums" inputMode="numeric" maxLength={4} aria-label={st('pin')} value={pinDraft} onChange={(e) => setPinDraft(e.target.value.replace(/\D/g, '').slice(0, 4))} />
+          <Button disabled={pinDraft.length !== 4} onClick={async () => { await api.post('/api/sc/me/pin', { pin: pinDraft }); try { sessionStorage.setItem('cc_pin_ok', me?.id ?? ''); } catch { /* fine */ } setPinDraft(''); setNote(st('pin_saved')); void refreshMe(); }}>{st('pin_set')}</Button>
+          {me?.has_pin ? <Button variant="ghost" onClick={async () => { await api.post('/api/sc/me/pin', { pin: null }); setNote(st('pin_removed')); void refreshMe(); }}>{st('pin_clear')}</Button> : null}
+        </div>
       </Section>
 
       {links.length > 0 && (
