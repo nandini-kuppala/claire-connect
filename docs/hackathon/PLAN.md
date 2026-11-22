@@ -37,7 +37,14 @@
 - [x] 5. Draft the 3-minute video: a scene list plus the voiceover script (`VIDEO-SCRIPT.md`). **CHECKPOINT: the owner reviews before recording.**
 - [x] 6. Desktop backdrop: a tinted page background around a white app column (web change, then deploy with the owner's OK).
 - [x] 7. Write-up PDF (`docs/hackathon/CLAIRE-Connect-writeup.pdf`), plus traction-proof ideas.
-- [ ] 8. After the script is approved: record (Playwright), narrate (Neerja plain), compose a 3:00 cut, and upload (the owner does the upload).
+- [x] 8. Produce the video (v2 script after the owner's feedback). It is `demo-video/v2/renders/CLAIRE-Connect-3min.mp4` (3:20, 1080p30, −16 LUFS), also copied to `~/Desktop/CLAIRE-Connect-hackathon-3min.mp4`. **The owner uploads it** (YouTube, unlisted or public) and pastes the link.
+  - **Pipeline:**
+    1. `v2/segments.json` → `../narrate.py` (Neerja plain, +25 %);
+    2. `render.mjs` renders the animated scenes from `anim.html`;
+    3. `capture2.mjs market|goods|desk` records the live footage (dev server, two phones);
+    4. `stages2.mjs` draws the stage backgrounds;
+    5. `compose2.py` composes the final video.
+  - **Third-party photos** in `v2/assets/` are not committed (gitignored). Put them back to re-render scenes 1 and 2.
 - [ ] 9. Owner decisions:
   - merge `supply-chain` → `main` and deploy;
   - set `SC_ENABLED=1` and flag the demo businesses in production so Goods is live for the judges.

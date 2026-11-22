@@ -1,0 +1,276 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Figtree:wght@400;500;600;700&family=Noto+Sans+Tamil:wght@500;600&family=Noto+Sans+Devanagari:wght@500;600&family=Noto+Sans+Bengali:wght@500;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:1920px;height:1080px;overflow:hidden;background:#fff}
+body{font-family:Figtree,'Noto Sans Tamil','Noto Sans Devanagari','Noto Sans Bengali',sans-serif;color:#13203B;position:relative}
+.h{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;letter-spacing:-0.02em}
+.abs{position:absolute}
+.kicker{display:inline-flex;align-items:center;gap:10px;padding:10px 22px;border-radius:999px;background:#E6F6F1;color:#1F8C73;font-weight:700;font-size:24px}
+.kicker.red{background:#F7E4DB;color:#B9502F}
+.kicker.amber{background:#FBEFD9;color:#9A6512}
+.brand{position:absolute;right:110px;top:70px;display:flex;align-items:center;gap:14px;font-family:'Bricolage Grotesque';font-weight:800;font-size:30px}
+.brand b{color:#3DB394}
+.card{background:#fff;border:2px solid #E7E9EC;border-radius:30px}
+.src{position:absolute;left:110px;bottom:46px;color:#8A93A3;font-size:19px;font-weight:500}
+.stat .n{white-space:nowrap;font-family:'Bricolage Grotesque';font-weight:800;font-size:66px;line-height:1;color:#1F8C73;letter-spacing:-0.02em}
+.stat .l{font-size:26px;color:#3A465C;margin-top:12px;line-height:1.3}
+.pill{display:inline-flex;align-items:center;gap:10px;padding:12px 22px;border-radius:999px;font-weight:700;font-size:24px}
+.node{position:absolute;width:190px;text-align:center}
+.node .c{width:132px;height:132px;margin:0 auto;border-radius:36px;display:flex;align-items:center;justify-content:center}
+.node .t{font-weight:700;font-size:26px;margin-top:14px}
+.node .s{font-size:20px;color:#667085;margin-top:4px}
+.bubble{position:absolute;padding:14px 20px;border-radius:22px;background:#fff;border:2px solid #E7E9EC;font-size:22px;font-weight:600;box-shadow:0 8px 24px rgba(16,24,40,.06)}
+</style></head>
+<body><div id="stage" class="abs" style="inset:0"></div>
+<script>
+// ── tiny deterministic animation kit: everything is a pure function of t (seconds) ──────────────
+const cl = (x) => Math.max(0, Math.min(1, x));
+const ease = (k) => 1 - Math.pow(1 - k, 3);
+const easeIO = (k) => (k < .5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2);
+const P = (t, a, d = .6) => ease(cl((t - a) / d));
+const LOGO = (h) => `<svg viewBox="0 0 140 130" height="${h}" width="${(h * 140) / 130}"><path d="M30 16c22-12 64-14 88 2 14 9 17 40 12 66-5 25-30 40-62 42-26 2-50-8-58-30C2 72 4 30 30 16Z" fill="#3DB394"/><path d="M8 98c6 14 22 24 42 27-16 1-32-6-40-16-2-3-3-7-2-11Z" fill="#2E9C80"/><circle cx="30" cy="34" r="9" fill="#fff"/><path d="M113 4l-3 9M126 10l-7 7M132 24l-9 2" stroke="#3DB394" stroke-width="5" stroke-linecap="round"/><g transform="translate(14 22) scale(0.86)"><path d="M60 30v-9" stroke="#fff" stroke-width="5" stroke-linecap="round"/><circle cx="60" cy="18" r="6" fill="#fff"/><rect x="20" y="52" width="10" height="26" rx="5" fill="#fff"/><rect x="90" y="52" width="10" height="26" rx="5" fill="#fff"/><rect x="26" y="30" width="68" height="64" rx="26" fill="#fff"/><rect x="33" y="42" width="54" height="38" rx="17" fill="#13203B"/><path d="M43 61c3-5 8-5 11 0M66 61c3-5 8-5 11 0M53 69c4 4 10 4 14 0" stroke="#55D6B4" stroke-width="4" stroke-linecap="round" fill="none"/></g></svg>`;
+const BRAND = `<div class="brand">${LOGO(50)}<span>CLAIRE <b>Connect</b></span></div>`;
+// Line icons (stroke = currentColor), 24-unit grid.
+const I = {
+  user: '<circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/>',
+  store: '<path d="M3 9l1.5-5h15L21 9M3 9h18v2a3 3 0 0 1-6 0 3 3 0 0 1-6 0 3 3 0 0 1-6 0V9ZM5 13v8h14v-8M10 21v-5h4v5"/>',
+  factory: '<path d="M3 21V10l6 4V10l6 4V6h6v15H3ZM7 17h2M12 17h2M17 17h2"/>',
+  box: '<path d="M3 7l9-4 9 4-9 4-9-4ZM3 7v10l9 4 9-4V7M12 11v10"/>',
+  phone: '<rect x="6" y="2" width="12" height="20" rx="3"/><path d="M11 18h2"/>',
+  call: '<path d="M5 3h4l2 5-2.5 1.5a11 11 0 0 0 6 6L16 13l5 2v4a2 2 0 0 1-2 2A17 17 0 0 1 3 5a2 2 0 0 1 2-2Z"/>',
+  chat: '<path d="M4 5h16v11H9l-5 4V5Z"/>',
+  search: '<circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/>',
+  lang: '<path d="M4 5h8M8 3v2M6 5c0 4 3 7 6 8M10 5c-1 4-4 7-6 8M13 21l4-10 4 10M14.5 18h5"/>',
+  route: '<circle cx="6" cy="18" r="2.5"/><circle cx="18" cy="6" r="2.5"/><path d="M8.5 18H15a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h6.5"/>',
+  truck: '<path d="M2 6h11v10H2zM13 10h5l3 3v3h-8M6 19a2 2 0 1 0 0-.1M17 19a2 2 0 1 0 0-.1"/>',
+  plane: '<path d="M2 16l20-6-20-6 4 6-4 6ZM6 10h16"/>',
+  rupee: '<path d="M6 4h12M6 9h12M9 4c6 0 6 9 0 9H7l8 8"/>',
+  yarn: '<circle cx="12" cy="12" r="8"/><path d="M5 9c4 0 10 2 14 7M6 15c3-4 8-7 12-7M9 4c2 4 2 12-1 17"/>',
+  drop: '<path d="M12 3c4 5 6 8 6 11a6 6 0 0 1-12 0c0-3 2-6 6-11Z"/>',
+  scissors: '<circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M8.5 7.5L20 18M8.5 16.5L20 6"/>',
+  print: '<path d="M6 9V3h12v6M6 18H4v-7h16v7h-2M7 14h10v7H7z"/>',
+  needle: '<path d="M4 20L18 6M15 3l6 6M14 8l2 2M3 21c3-1 5 0 6 2"/>',
+  check: '<path d="M4 12l5 5L20 6"/>',
+  clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  card: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h4"/>',
+  eye: '<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>',
+  hist: '<path d="M3 12a9 9 0 1 0 3-6.7M3 4v4h4M12 8v4l3 2"/>',
+  dots: '<circle cx="6" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="18" cy="12" r="1.6"/>',
+  video: '<rect x="2" y="6" width="14" height="12" rx="2"/><path d="M16 10l6-3v10l-6-3"/>',
+  hook: '<path d="M12 3v8a4 4 0 1 1-4 4M12 3l3 3M12 3L9 6"/>',
+  bell: '<path d="M6 16V11a6 6 0 1 1 12 0v5l2 2H4l2-2ZM10 21h4"/>',
+  headset: '<path d="M4 14v-2a8 8 0 0 1 16 0v2M4 14h3v5H5a1 1 0 0 1-1-1v-4ZM20 14h-3v5h2a1 1 0 0 0 1-1v-4Z"/>',
+  photo: '<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 17l-6-6-9 9"/>',
+};
+const ic = (name, size = 56, color = 'currentColor', w = 1.8) => `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round">${I[name]}</svg>`;
+
+// Declarative motion: data-a = appear time, data-d = duration, data-fx = up|down|left|right|pop|fade, data-out = disappear time.
+function motion(t) {
+  for (const el of document.querySelectorAll('[data-a]')) {
+    const a = +el.dataset.a, d = +(el.dataset.d || .6), fx = el.dataset.fx || 'up', k = P(t, a, d);
+    const out = el.dataset.out ? 1 - P(t, +el.dataset.out, .4) : 1;
+    const m = 1 - k, dist = +(el.dataset.dist || 40);
+    let tr = '';
+    if (fx === 'up') tr = `translateY(${m * dist}px)`;
+    if (fx === 'down') tr = `translateY(${-m * dist}px)`;
+    if (fx === 'left') tr = `translateX(${m * dist * 2}px)`;
+    if (fx === 'right') tr = `translateX(${-m * dist * 2}px)`;
+    if (fx === 'pop') tr = `scale(${.6 + .4 * k + Math.sin(k * Math.PI) * .06})`;
+    el.style.opacity = String(k * out);
+    el.style.transform = (el.dataset.base || '') + ' ' + tr;
+  }
+  for (const el of document.querySelectorAll('[data-count]')) {
+    const a = +el.dataset.ca, d = +(el.dataset.cd || 1.4), v = +el.dataset.count * easeIO(cl((t - a) / d));
+    const fmt = el.dataset.fmt || '';
+    el.textContent = (el.dataset.pre || '') + Math.round(v).toLocaleString('en-IN') + fmt;
+  }
+  for (const el of document.querySelectorAll('[data-w]')) { // bars: data-w target %, data-wa start
+    el.style.width = (+el.dataset.w * easeIO(cl((t - +el.dataset.wa) / +(el.dataset.wd || 1.2)))) + '%';
+  }
+  for (const el of document.querySelectorAll('[data-draw]')) { // svg stroke draw: data-draw start, data-dd duration
+    const L = +el.getAttribute('data-len') || 1000; const k = easeIO(cl((t - +el.dataset.draw) / +(el.dataset.dd || 1)));
+    el.style.strokeDasharray = L; el.style.strokeDashoffset = String(L * (1 - k));
+  }
+}
+
+// ── Scenes ──────────────────────────────────────────────────────────────────────────────────────
+const S = {};
+let custom = null;
+
+// 1 · Tiruppur, knitwear capital
+S.s01 = () => `
+  <div class="abs" style="left:0;top:0;width:1000px;height:1080px;overflow:hidden">
+    <img id="ph" src="assets/photo2.jpg" style="position:absolute;height:1080px;left:-260px;top:0">
+    <div class="abs" style="inset:0;background:linear-gradient(90deg,rgba(255,255,255,0) 70%,#fff 100%)"></div>
+  </div>
+  <div class="abs" style="left:1040px;top:150px;width:800px">
+    <div class="kicker" data-a=".2">Tiruppur, Tamil Nadu</div>
+    <div class="h" style="font-size:74px;line-height:1.02;margin-top:22px" data-a=".5">India's knitwear<br><span style="color:#3DB394">capital</span></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:26px 34px;margin-top:48px">
+      <div class="stat card" style="padding:28px 30px" data-a="3.2"><div class="n"><span data-count="46000" data-ca="3.3" data-pre="₹"></span><span style="font-size:44px"> cr</span></div><div class="l">knitwear exports, FY26</div></div>
+      <div class="stat card" style="padding:28px 30px" data-a="6.6"><div class="n">~₹<span data-count="35000" data-ca="6.7"></span><span style="font-size:44px"> cr</span></div><div class="l">sold inside India (est.)</div></div>
+      <div class="stat card" style="padding:28px 30px" data-a="9.2"><div class="n">6–10<span style="font-size:44px"> lakh</span></div><div class="l">people employed</div></div>
+      <div class="stat card" style="padding:28px 30px" data-a="10.4"><div class="n"><span data-count="95" data-ca="10.5" data-cd=".9"></span>%</div><div class="l">small businesses (MSMEs)</div></div>
+    </div>
+  </div>
+  <div class="src" style="left:1060px">Sources: Tiruppur Exporters' Association via Business Standard (Jun 2026) · Deccan Herald · Apparel Resources</div>`;
+S.s01.fx = (t) => { const k = cl(t / 13); document.getElementById('ph').style.transform = `scale(${1.04 + k * .06}) translateX(${-k * 30}px)`; };
+
+// 2 · Trade fairs and middlemen
+S.s02 = () => `
+  <div class="abs" style="left:110px;top:90px"><div class="kicker red" data-a=".1">The problem · 1</div>
+    <div class="h" style="font-size:64px;margin-top:18px" data-a=".3">Trade still runs on <span style="color:#B9502F">trade fairs</span></div></div>
+  <div class="abs" style="left:110px;top:300px;width:820px;height:470px;border-radius:30px;overflow:hidden" data-a=".6" data-fx="fade">
+    <img id="fair" src="assets/photo5.jpg" style="position:absolute;height:470px;left:-120px">
+    <div class="abs" style="left:18px;bottom:16px;color:#fff;font-size:18px;font-weight:600;text-shadow:0 1px 4px rgba(0,0,0,.6)">A knit fair in Tiruppur · photo: trade press</div>
+  </div>
+  <div class="abs" style="left:1010px;top:300px;width:800px">
+    <div style="display:flex;align-items:center;gap:22px" data-a="2.6">
+      <div class="node" style="position:relative;width:170px"><div class="c" style="background:#EEF2FF;color:#3A465C">${ic('user', 64)}</div><div class="t">Buyer</div><div class="s">Kolkata</div></div>
+      <div style="flex:1;position:relative;height:120px">
+        <svg width="100%" height="120" viewBox="0 0 300 120" style="position:absolute"><path d="M10 80 Q150 -10 290 80" fill="none" stroke="#B9502F" stroke-width="4" stroke-dasharray="10 10" data-draw="2.9" data-dd="1.6" data-len="340"/></svg>
+        <div class="abs" style="left:110px;top:-8px;color:#B9502F" data-a="3.6" data-fx="pop">${ic('plane', 46, '#B9502F')}</div>
+        <div class="abs" style="left:60px;top:84px;font-size:22px;font-weight:700;color:#B9502F" data-a="4.2">₹ travel + days away</div>
+      </div>
+      <div class="node" style="position:relative;width:170px"><div class="c" style="background:#E6F6F1;color:#1F8C73">${ic('store', 64)}</div><div class="t">Trade fair</div><div class="s">Tiruppur</div></div>
+    </div>
+    <div style="height:2px;background:#E7E9EC;margin:34px 0" data-a="5.4" data-fx="fade"></div>
+    <div style="font-size:26px;font-weight:700;color:#3A465C;margin-bottom:18px" data-a="5.6">Can't travel? Buy through middlemen</div>
+    <div style="display:flex;align-items:center;gap:12px">
+      ${[['factory', 'Maker', '#1F8C73', 6.0], ['store', 'Wholesaler', '#9A6512', 6.8], ['store', 'Reseller', '#9A6512', 7.6], ['user', 'Buyer', '#3A465C', 8.4]].map(([i, l, c, a], n) => `
+        ${n ? `<div style="display:flex;flex-direction:column;align-items:center;gap:4px" data-a="${a - .2}" data-fx="fade"><div style="font-size:22px;font-weight:800;color:#B9502F">+₹</div><svg width="56" height="14"><path d="M2 7h48M44 2l6 5-6 5" stroke="#B9502F" stroke-width="3" fill="none"/></svg></div>` : ''}
+        <div style="text-align:center" data-a="${a}" data-fx="pop"><div style="width:104px;height:104px;border-radius:30px;background:#F3F4F6;display:flex;align-items:center;justify-content:center;color:${c}">${ic(i, 50)}</div><div style="font-weight:700;font-size:21px;margin-top:10px">${l}</div></div>`).join('')}
+    </div>
+  </div>`;
+S.s02.fx = (t) => { document.getElementById('fair').style.transform = `scale(${1.05 + cl(t / 12) * .07})`; };
+
+// 3 · Unsold stock
+S.s03 = () => `
+  <div class="abs" style="left:110px;top:90px"><div class="kicker red" data-a=".1">The problem · 2</div>
+    <div class="h" style="font-size:64px;margin-top:18px" data-a=".3">Makers sit on <span style="color:#B9502F">unsold stock</span></div></div>
+  <div id="boxes" class="abs" style="left:150px;top:340px;width:760px;height:560px"></div>
+  <div class="abs" style="left:1060px;top:420px;width:740px">
+    <div class="card" style="padding:44px 48px" data-a="4.4">
+      <div style="font-size:28px;font-weight:700;color:#3A465C">Garments sold in one festival season</div>
+      <div style="display:flex;height:84px;border-radius:20px;overflow:hidden;margin-top:28px;background:#F3F4F6">
+        <div data-w="70" data-wa="4.8" style="overflow:hidden;background:#B9502F;display:flex;align-items:center;padding-left:24px;color:#fff;font-weight:800;font-size:34px;white-space:nowrap">70% old stock</div>
+        <div data-w="30" data-wa="5.9" data-wd=".8" style="overflow:hidden;background:#3DB394;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:28px;white-space:nowrap">30% new</div>
+      </div>
+      <div style="font-size:20px;color:#8A93A3;margin-top:22px">Source: TEMA president, via DT Next</div>
+    </div>
+  </div>`;
+S.s03.fx = (t) => {
+  const host = document.getElementById('boxes'); if (!host.dataset.made) {
+    let h = ''; let i = 0;
+    for (let r = 0; r < 4; r++) for (let c = 0; c < 6 - (r % 2); c++) { h += `<div class="bx" data-i="${i++}" style="position:absolute;left:${c * 122 + (r % 2) * 61}px;top:${440 - r * 112}px;width:112px;height:104px;border-radius:12px;background:#E8C79A;border:3px solid #C69A5E"><div style="position:absolute;left:44px;top:0;width:18px;height:100%;background:#D9B27A"></div><div style="position:absolute;right:10px;bottom:8px;font-size:15px;font-weight:800;color:#8A5A1E">UNSOLD</div></div>`; }
+    host.innerHTML = h; host.dataset.made = 1;
+  }
+  for (const b of host.querySelectorAll('.bx')) { const k = P(t, .6 + +b.dataset.i * .16, .45); b.style.opacity = k; b.style.transform = `translateY(${-(1 - k) * 160}px)`; }
+};
+
+// 4 · WhatsApp hustle
+S.s04 = () => {
+  const chats = [['Delhi', 'भाई, rate kya hai?'], ['Kolkata', 'দাম কত?'], ['Mumbai', 'Price for 500?'], ['Jaipur', 'MOQ?'], ['Surat', 'Photos again pls'], ['Lucknow', 'कब तक भेजोगे?'], ['Patna', 'Sizes?'], ['Pune', 'Any discount?'], ['Kochi', 'GST bill?'], ['Guwahati', 'Call me']];
+  const pos = (i) => { const a = -Math.PI * .92 + (i / 9) * Math.PI * 1.84; return [960 + Math.cos(a) * 640 - 150, 600 + Math.sin(a) * 330 - 40]; };
+  return `
+  <div class="abs" style="left:110px;top:90px"><div class="kicker red" data-a=".1">The problem · 3</div>
+    <div class="h" style="font-size:60px;margin-top:18px" data-a=".3">Selling one WhatsApp chat at a time</div></div>
+  <div class="abs" style="left:870px;top:440px;width:180px;height:320px;border-radius:34px;border:8px solid #13203B;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px" data-a=".5" data-fx="pop">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">${[0, 1, 2, 3].map(() => `<div style="width:54px;height:54px;border-radius:10px;background:#E6F6F1;color:#1F8C73;display:flex;align-items:center;justify-content:center">${ic('photo', 30)}</div>`).join('')}</div>
+    <div style="font-size:17px;font-weight:700;color:#3A465C">Seller, Tiruppur</div>
+  </div>
+  <div class="abs" style="left:780px;top:800px;width:360px;text-align:center"><span class="pill" style="background:#13203B;color:#fff" data-a="1.2">Sent to <span data-count="10" data-ca="1.3" data-cd="3.2"></span> buyers today</span></div>
+  ${chats.map(([city, msg], i) => { const [x, y] = pos(i); return `<div class="bubble" style="left:${x}px;top:${y}px;width:300px" data-a="${1.3 + i * .32}" data-fx="pop"><div style="display:flex;align-items:center;gap:10px"><span style="color:#1F8C73">${ic('photo', 26)}</span><span style="font-size:18px;color:#667085">${city}</span><span style="margin-left:auto;color:#B9502F" data-a="${5.2 + (i % 4) * .25}" data-fx="pop">${ic('call', 24, '#B9502F')}</span></div><div style="margin-top:6px">${msg}</div></div>`; }).join('')}`;
+};
+
+// 5 · Bridge
+S.s05 = () => `
+  <div class="abs" style="left:0;right:0;top:150px;text-align:center"><div class="h" style="font-size:66px" data-a=".2">What if we could bridge that gap?</div></div>
+  ${[['store', 'Trade fairs', 470], ['box', 'Unsold stock', 860], ['chat', 'WhatsApp selling', 1250]].map(([i, l, x], n) => `<div class="abs" id="g${n}" style="left:${x}px;top:330px;width:200px;text-align:center"><div style="width:130px;height:130px;margin:0 auto;border-radius:36px;background:#F7E4DB;color:#B9502F;display:flex;align-items:center;justify-content:center">${ic(i, 60)}</div><div style="font-weight:700;font-size:24px;margin-top:12px">${l}</div></div>`).join('')}
+  <div class="abs" id="hub" style="left:0;right:0;top:540px;display:flex;flex-direction:column;align-items:center">
+    ${LOGO(170)}
+    <div class="h" style="font-size:92px;margin-top:16px;line-height:1">CLAIRE <span style="color:#3DB394">Connect</span></div>
+    <div style="font-size:30px;color:#3A465C;margin-top:16px">One chat app for the whole trade</div>
+    <div class="kicker" style="margin-top:24px">Built on the Nexconn Chat SDK</div>
+  </div>`;
+S.s05.fx = (t) => {
+  for (let n = 0; n < 3; n++) { const g = document.getElementById('g' + n); const k = P(t, .3 + n * .2, .5), m = easeIO(cl((t - 2.4) / 1)); g.style.opacity = k * (1 - m); const x = [470, 860, 1250][n]; g.style.transform = `translate(${(860 - x) * m}px, ${260 * m}px) scale(${1 - .6 * m})`; }
+  const h = document.getElementById('hub'); const k = P(t, 3.1, .8); h.style.opacity = k; h.style.transform = `scale(${.85 + .15 * k})`;
+};
+
+// 6 · How it works in three steps
+S.s06 = () => `
+  <div class="abs" style="left:0;right:0;top:110px;text-align:center"><div class="kicker" data-a=".1">How it works</div><div class="h" style="font-size:62px;margin-top:18px" data-a=".2">Three things, in one chat</div></div>
+  <div class="abs" style="left:150px;right:150px;top:400px;display:grid;grid-template-columns:repeat(3,1fr);gap:40px">
+    ${[['search', 'Ask Claire', 'The AI assistant finds and ranks the right makers', .8], ['lang', 'Deal in your language', 'Every message translated. Sample, offer and order in the chat.', 4.0], ['route', 'Track production', 'Every hand-off in the supply chain, confirmed by both sides', 7.6]].map(([i, t, s, a], n) => `
+      <div class="card" style="padding:44px 40px;min-height:380px" data-a="${a}" data-fx="up" data-dist="60">
+        <div style="display:flex;align-items:center;gap:16px"><div style="width:96px;height:96px;border-radius:28px;background:#E6F6F1;color:#1F8C73;display:flex;align-items:center;justify-content:center">${ic(i, 52)}</div><div class="h" style="font-size:72px;color:#E6F6F1;margin-left:auto">${n + 1}</div></div>
+        <div class="h" style="font-size:40px;margin-top:28px">${t}</div>
+        <div style="font-size:26px;color:#3A465C;margin-top:14px;line-height:1.35">${s}</div></div>`).join('')}
+  </div>`;
+
+// 10 · The chain, built backwards from the order
+S.s10 = () => {
+  const N = [['yarn', 'Fabric', 'knitter / fabric shop', 0], ['drop', 'Dye', 'dyeing unit', 0], ['scissors', 'Cut', 'in his unit', 1], ['print', 'Print', 'printing unit', 0], ['needle', 'Stitch', 'stitching units', 0], ['box', 'Pack', 'in his unit', 1], ['user', 'Buyer', 'Amit, Kolkata', 2]];
+  // appear right → left, timed to the voice
+  const at = [11.0, 8.0, 9.2, 10.0, 10.6, 11.6, 4.0].map((x, i) => x);
+  return `
+  <div class="abs" style="left:110px;top:90px"><div class="kicker amber" data-a=".1">After the order</div>
+    <div class="h" style="font-size:60px;margin-top:18px" data-a=".3">Winning the order is only the start</div></div>
+  <div class="abs" style="left:110px;top:300px;display:flex;gap:28px" data-a="2.4">
+    <span class="pill" style="background:#E6F6F1;color:#1F8C73"><span style="width:16px;height:16px;border-radius:5px;background:#3DB394"></span>In his own unit</span>
+    <span class="pill" style="background:#FBEFD9;color:#9A6512"><span style="width:16px;height:16px;border-radius:5px;background:#E8A33D"></span>Outside units</span></div>
+  <svg class="abs" style="left:0;top:0" width="1920" height="1080"><path d="M196 600 H1700" stroke="#E7E9EC" stroke-width="6" fill="none"/><path id="flowline" d="M196 600 H1700" stroke="#3DB394" stroke-width="6" fill="none" data-draw="7.4" data-dd="5.4" data-len="1504"/></svg>
+  ${N.map(([i, l, s, own], n) => `<div class="node" style="left:${100 + n * 250}px;top:470px" data-a="${[6.2, 5.8, 3.4, 5.4, 5.0, 2.6, 1.0][n]}" data-fx="pop">
+      <div class="c" style="background:${own === 1 ? '#E6F6F1' : own === 2 ? '#13203B' : '#FBEFD9'};color:${own === 1 ? '#1F8C73' : own === 2 ? '#fff' : '#9A6512'}">${ic(i, 64)}</div>
+      <div class="t">${l}</div><div class="s">${s}</div></div>`).join('')}
+  ${[0, 1, 2, 3, 4, 5].map((n) => `<div class="abs truck" data-n="${n}" style="left:${100 + n * 250 + 150}px;top:410px;color:#9A6512">${ic('truck', 40, '#9A6512')}</div>`).join('')}
+  ${N.slice(0, 6).map((_, n) => `<div class="abs" style="left:${100 + n * 250 + 66}px;top:700px;width:60px;height:60px;border-radius:50%;background:#3DB394;color:#fff;display:flex;align-items:center;justify-content:center" data-a="${13.4 + n * .25}" data-fx="pop">${ic('check', 34, '#fff', 3)}</div>`).join('')}
+  <div class="abs" style="left:0;right:0;top:820px;text-align:center"><span class="pill" style="background:#13203B;color:#fff;font-size:30px;padding:16px 32px" data-a="14.0">Every hand-off can be tracked in CLAIRE Connect</span></div>`;
+};
+S.s10.fx = (t) => { for (const tr of document.querySelectorAll('.truck')) { const n = +tr.dataset.n; const k = cl((t - 7.6 - n * .85) / 1.2); tr.style.opacity = k > 0 && k < 1 ? 1 : 0; tr.style.transform = `translateX(${k * 120 - 60}px)`; } };
+
+// 15 · All on Nexconn
+S.s15 = () => {
+  const items = [['chat', 'Chat SDK', 'web, @nexconn/chat'], ['user', 'Direct channels', 'private chat with Claire'], ['route', 'Group channels', 'deal rooms, goods chats'], ['bell', 'System channel', 'order and payment updates'], ['card', 'Custom message cards', 'offer, order, sample, hand-off'], ['eye', 'Targeted messages', "Claire's private tips"], ['lang', 'Translation', '10 Indian languages'], ['hist', 'History and read receipts', 'unread counts, paging'], ['dots', 'Typing indicators', 'live presence'], ['video', 'Call SDK', 'voice and video calls'], ['hook', 'Webhooks', 'server reacts to messages'], ['headset', 'Agent dispatch', 'Trade Desk joins the group']];
+  return `
+  <div class="abs" style="left:110px;top:80px;display:flex;align-items:center;gap:22px" data-a=".1"><div class="h" style="font-size:60px">All of it runs on <span style="color:#3DB394">Nexconn</span></div></div>
+  <div class="abs" style="left:110px;right:110px;top:220px;display:grid;grid-template-columns:repeat(4,1fr);gap:22px">
+    ${items.map(([i, t, s], n) => `<div class="card" style="padding:26px 26px;display:flex;gap:18px;align-items:center" data-a="${.3 + n * .22}" data-fx="pop"><div style="width:72px;height:72px;flex:none;border-radius:22px;background:#E6F6F1;color:#1F8C73;display:flex;align-items:center;justify-content:center">${ic(i, 40)}</div><div><div style="font-weight:800;font-size:25px">${t}</div><div style="font-size:19px;color:#667085;margin-top:3px">${s}</div></div></div>`).join('')}
+  </div>
+  <div class="abs" style="left:110px;bottom:70px;font-size:22px;color:#667085" data-a="3.2">Nexconn App Key <span style="font-family:ui-monospace,Menlo,monospace;color:#1F8C73;background:#E6F6F1;padding:4px 10px;border-radius:8px">m7ua80gbmcvhm</span></div>`;
+};
+
+// 16 · Market potential
+S.s16 = () => `
+  <div class="abs" style="left:110px;top:90px"><div class="kicker" data-a=".1">The opportunity</div>
+    <div class="h" style="font-size:62px;margin-top:18px" data-a=".3">A market built from small businesses</div></div>
+  <div class="abs" style="left:110px;top:330px;width:980px">
+    <div style="font-size:26px;font-weight:700;color:#3A465C" data-a=".6">Tiruppur knitwear exports</div>
+    <div style="margin-top:24px;display:flex;align-items:center;gap:20px" data-a=".8"><div style="width:180px;font-weight:700;font-size:24px">FY26</div><div style="flex:1;height:70px;background:#F3F4F6;border-radius:18px;overflow:hidden"><div data-w="46" data-wa="1.0" style="height:100%;background:#3DB394;border-radius:18px"></div></div><div class="h" style="width:200px;font-size:40px;color:#1F8C73">₹46,000 cr</div></div>
+    <div style="margin-top:22px;display:flex;align-items:center;gap:20px" data-a="2.0"><div style="width:180px;font-weight:700;font-size:24px">2030 target</div><div style="flex:1;height:70px;background:#F3F4F6;border-radius:18px;overflow:hidden"><div data-w="100" data-wa="2.2" data-wd="1.6" style="height:100%;background:#13203B;border-radius:18px"></div></div><div class="h" style="width:200px;font-size:40px">₹1 lakh cr</div></div>
+    <div style="font-size:20px;color:#8A93A3;margin-top:22px" data-a="2.4">TEA target via Business Standard (Jun 2026). Analysts call it a stretch.</div>
+  </div>
+  <div class="abs" style="left:1180px;top:330px;width:630px;display:grid;gap:22px">
+    ${[['~₹35,000 cr', 'sold inside India each year (est.)', 4.2], ['6–10 lakh', 'people employed', 5.0], ['95%', 'of units are small businesses', 5.8]].map(([n, l, a]) => `<div class="card stat" style="padding:26px 30px" data-a="${a}" data-fx="left"><div class="n" style="font-size:60px">${n}</div><div class="l" style="font-size:24px">${l}</div></div>`).join('')}
+  </div>
+  <div class="abs" style="left:110px;top:800px;width:980px" data-a="7.2"><div class="card" style="padding:28px 34px;background:#E6F6F1;border-color:#BFE7DA;font-size:30px;font-weight:700;color:#14614E">Every one of them can get a direct line to buyers, and to each other.</div></div>`;
+
+// 17 · End card
+S.s17 = () => `
+  <div class="abs" style="inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center">
+    <div data-a=".1" data-fx="pop">${LOGO(180)}</div>
+    <div class="h" style="font-size:110px;margin-top:22px;line-height:1" data-a=".4">CLAIRE <span style="color:#3DB394">Connect</span></div>
+    <div style="font-size:38px;color:#3A465C;margin-top:26px" data-a="1.0">Every business in the chain, in its own language, in one chat.</div>
+    <div class="pill" style="margin-top:44px;background:#13203B;color:#fff;font-size:34px;padding:18px 36px" data-a="1.8">claire-connect.onrender.com</div>
+    <div style="font-size:22px;color:#667085;margin-top:18px" data-a="2.2">Try it: "Explore as a demo business" · github.com/nandini-kuppala/claire-connect</div>
+    <div class="kicker" style="margin-top:30px" data-a="2.6">Built on the Nexconn Chat SDK · Nexconn Build Challenge 2026</div>
+  </div>`;
+
+let current = null;
+window.show = (id) => { document.getElementById('stage').innerHTML = (id === 's17' || id === 's05' ? '' : BRAND) + S[id](); current = id; custom = S[id].fx || null; return document.fonts.ready.then(() => Promise.all([...document.images].map((im) => im.complete ? 1 : new Promise((r) => (im.onload = im.onerror = r))))); };
+window.render = (t) => { if (custom) custom(t); motion(t); };
+</script></body></html>

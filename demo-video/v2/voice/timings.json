@@ -1,0 +1,91 @@
+{
+ "voice": "en-IN-NeerjaNeural",
+ "rate": "+25%",
+ "segments": [
+  {
+   "id": "s01",
+   "file": "voice/s01.mp3",
+   "seconds": 12.31
+  },
+  {
+   "id": "s02",
+   "file": "voice/s02.mp3",
+   "seconds": 11.02
+  },
+  {
+   "id": "s03",
+   "file": "voice/s03.mp3",
+   "seconds": 8.83
+  },
+  {
+   "id": "s04",
+   "file": "voice/s04.mp3",
+   "seconds": 8.66
+  },
+  {
+   "id": "s05",
+   "file": "voice/s05.mp3",
+   "seconds": 8.09
+  },
+  {
+   "id": "s06",
+   "file": "voice/s06.mp3",
+   "seconds": 11.47
+  },
+  {
+   "id": "s07",
+   "file": "voice/s07.mp3",
+   "seconds": 10.32
+  },
+  {
+   "id": "s08",
+   "file": "voice/s08.mp3",
+   "seconds": 10.82
+  },
+  {
+   "id": "s09",
+   "file": "voice/s09.mp3",
+   "seconds": 17.21
+  },
+  {
+   "id": "s10",
+   "file": "voice/s10.mp3",
+   "seconds": 17.35
+  },
+  {
+   "id": "s11",
+   "file": "voice/s11.mp3",
+   "seconds": 11.4
+  },
+  {
+   "id": "s12",
+   "file": "voice/s12.mp3",
+   "seconds": 7.75
+  },
+  {
+   "id": "s13",
+   "file": "voice/s13.mp3",
+   "seconds": 5.57
+  },
+  {
+   "id": "s14",
+   "file": "voice/s14.mp3",
+   "seconds": 11.33
+  },
+  {
+   "id": "s15",
+   "file": "voice/s15.mp3",
+   "seconds": 5.95
+  },
+  {
+   "id": "s16",
+   "file": "voice/s16.mp3",
+   "seconds": 11.33
+  },
+  {
+   "id": "s17",
+   "file": "voice/s17.mp3",
+   "seconds": 5.69
+  }
+ ]
+}
