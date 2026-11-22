@@ -25,6 +25,47 @@ const tap = async (loc, wait = 600) => { await loc.first().scrollIntoViewIfNeede
 async function typeIn(page, loc, text, ms = 40) { await loc.click(); for (const ch of text) { await page.keyboard.insertText(ch); await sleep(ms); } }
 async function scrollEnd(page) { await page.evaluate(() => { for (const el of document.querySelectorAll('div,main')) if (el.scrollHeight > el.clientHeight + 10 && getComputedStyle(el).overflowY !== 'visible') el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' }); }); }
 async function smooth(page, y, ms = 1200) { await page.evaluate(([y, ms]) => new Promise((res) => { const el = document.scrollingElement; const f = el.scrollTop, to = y; const t0 = performance.now(); const st = (t) => { const k = Math.min(1, (t - t0) / ms); el.scrollTop = f + (to - f) * (k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2); k < 1 ? requestAnimationFrame(st) : res(); }; requestAnimationFrame(st); }), [y, ms]); }
+// Frame-accurate sync: flash every page magenta at the same moment; compose finds that frame in each video.
+let flashAt = null;
+async function syncFlash(pages) {
+  await Promise.all(pages.map((pg) => pg.evaluate(() => { const d = document.createElement('div'); d.id = 'cc-sync'; d.style.cssText = 'position:fixed;inset:0;z-index:2147483647;background:#ff00ff;display:none'; document.body.appendChild(d); })));
+  flashAt = now();
+  await Promise.all(pages.map((pg) => pg.evaluate(() => { const d = document.getElementById('cc-sync'); d.style.display = 'block'; setTimeout(() => d.remove(), 400); })));
+  await sleep(900);
+}
+
+// Exact-time recording: Chrome's screencast stamps every frame with its capture time; we rebuild a constant-rate video
+// from those stamps, so pages recorded together stay in sync to the frame (Playwright's recorder drifts under load).
+const casts = {};
+async function castPage(browser, name, token) {
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, baseURL: WEB, locale: 'en-IN' });
+  await ctx.addInitScript(TAP_JS); await ctx.addInitScript((t) => localStorage.setItem('cc_token', t), token);
+  const page = await ctx.newPage();
+  const dir = OUT + name + '/frames/'; fs.mkdirSync(dir, { recursive: true });
+  const frames = []; const cdp = await ctx.newCDPSession(page);
+  cdp.on('Page.screencastFrame', ({ data, metadata, sessionId }) => {
+    const f = dir + String(frames.length).padStart(6, '0') + '.jpg'; fs.writeFileSync(f, Buffer.from(data, 'base64'));
+    frames.push({ f, t: metadata.timestamp - T0 / 1000 }); cdp.send('Page.screencastFrameAck', { sessionId }).catch(() => {});
+  });
+  await cdp.send('Page.startScreencast', { format: 'jpeg', quality: 88, maxWidth: 780, maxHeight: 1688, everyNthFrame: 1 });
+  casts[name] = { frames, cdp, ctx }; starts[name] = now();
+  return { ctx, page };
+}
+async function finishCasts() {
+  const out = {};
+  for (const [name, c] of Object.entries(casts)) {
+    await c.cdp.send('Page.stopScreencast').catch(() => {}); await c.ctx.close();
+    const fr = c.frames; const end = now(); const lines = [];
+    for (let i = 0; i < fr.length; i++) { const d = (i + 1 < fr.length ? fr[i + 1].t : end) - fr[i].t; lines.push(`file '${fr[i].f}'`, `duration ${Math.max(0.001, d).toFixed(4)}`); }
+    lines.push(`file '${fr[fr.length - 1].f}'`);
+    const list = OUT + name + '/frames.txt'; fs.writeFileSync(list, lines.join('\n'));
+    const mp4 = OUT + name + '/cast.mp4';
+    const { spawnSync } = await import('node:child_process');
+    spawnSync('ffmpeg', ['-v', 'error', '-y', '-f', 'concat', '-safe', '0', '-i', list, '-vf', 'fps=30,scale=780:1688:force_original_aspect_ratio=decrease,pad=780:1688', '-c:v', 'libx264', '-crf', '17', '-pix_fmt', 'yuv420p', mp4]);
+    out[name] = { mp4, t0: fr[0].t, frames: fr.length };
+  }
+  return out;
+}
 const shot = (p, n) => p.screenshot({ path: OUT + n + '.png' }).catch(() => {});
 
 const browser = await chromium.launch();
@@ -91,10 +132,11 @@ if (ONLY === 'market2') {
   const T1 = 'வணக்கம் அமித்! ஒரு பீஸ் ₹98. மாதிரியை இரண்டு நாளில் உங்கள் கடைக்கே அனுப்புகிறேன்.';
   const H2 = 'सैंपल मिल गया, कपड़ा और सिलाई बढ़िया है। मुझे 1000 पीस चाहिए। ज़्यादा से ज़्यादा कितनी छूट दे सकती हैं?';
   for (const [t, to] of [[H1, 'ta'], [T1, 'hi'], [H2, 'ta']]) await api('/translate', { token: amitT, method: 'POST', body: { texts: [t], to } }).catch(() => {});
-  const A = await phone(browser, 'amit', amitT), L = await phone(browser, 'lakshmi', lakT);
+  const A = await castPage(browser, 'amit', amitT), L = await castPage(browser, 'lakshmi', lakT);
   const a = A.page, l = L.page;
   const sendBtn = (pg) => pg.locator('textarea').last().locator('xpath=ancestor::*[.//button][1]').locator('button').last();
   await Promise.all([a.goto('/'), l.goto('/')]); await sleep(4000);
+  await syncFlash([a, l]);
   mark('s07', 'start'); await sleep(1200);
   await typeIn(a, a.locator('input').first(), '₹120 से कम में 1000 कॉटन टी-शर्ट, कोलकाता', 55);
   await a.keyboard.press('Enter'); await sleep(2500);
@@ -134,7 +176,8 @@ if (ONLY === 'market2') {
   await tap(a.getByRole('button', { name: /^स्वीकार$/ }).last(), 1300); await tap(a.getByRole('button', { name: /हाँ, स्वीकार/ }), 3500);
   await scrollEnd(a); await scrollEnd(l); await sleep(4500);
   mark('s09', 'end');
-  await A.ctx.close(); await L.ctx.close();
+  const cast = await finishCasts();
+  fs.writeFileSync(OUT + 'cast_market2.json', JSON.stringify(cast, null, 1));
   await api('/me', { token: amitT, method: 'PATCH', body: { language: 'en' } });
 }
 if (ONLY === 'ratings') {
@@ -220,5 +263,5 @@ if (ONLY === 'desk') {
 await browser.close();
 const vids = {}; for (const n of Object.keys(starts)) { const f = fs.readdirSync(OUT + n).filter((x) => x.endsWith('.webm')).map((x) => OUT + n + '/' + x).sort((x, y) => fs.statSync(y).mtimeMs - fs.statSync(x).mtimeMs)[0]; vids[n] = f; }
 const prev = fs.existsSync(OUT + 'all.json') ? JSON.parse(fs.readFileSync(OUT + 'all.json')) : {};
-fs.writeFileSync(OUT + 'all.json', JSON.stringify({ ...prev, [ONLY]: { starts, marks, vids } }, null, 1));
+fs.writeFileSync(OUT + 'all.json', JSON.stringify({ ...prev, [ONLY]: { starts, marks, vids, flashAt } }, null, 1));
 console.log('done', ONLY);
