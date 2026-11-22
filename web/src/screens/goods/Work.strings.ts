@@ -1,0 +1,47 @@
+// Strings for the job worker's side (slice 3). "To verify" (glossary.md).
+import { defineStrings } from '../../lib/localStrings';
+
+export const WorkS = defineStrings('goods_work', {
+  en: {
+    mine: 'Mine', others: "Others' goods", for_name: 'for {name}', received: 'Received', done: 'Done here', sent_back: 'Sent back', forwarded: 'Sent on',
+    here_inputs: 'Still to work on', here_done: 'Done, not yet sent back', ready: 'Ready to collect', held: 'Held for dues', their_record: 'their record',
+    record_done: 'Record work done', mark_ready: 'Mark ready', unmark_ready: 'Not ready', hold: 'Hold for dues', release: 'Release', send_back: 'Send back to owner',
+    forward: 'Forward to another unit', return_ready: "Return what's ready", mark_all_ready: 'Mark all ready', nothing_ready: 'Nothing done is waiting to go back.', ready_skipped: 'Jobs with nothing done yet were left as they are.',
+    work_done_title: 'Work done', send_back_title: 'Send back', forward_title: 'Forward to another unit', pick_unit: 'Choose the unit', how_many: 'How many',
+    instructed: '{name} asked you to send this on to {to}', send_on: 'Send on to {to}', disclosure: '{owner} is GST-registered and will see who you send this to.',
+    generic_note: 'They will see a plain name for the goods, without style codes or brands.', saved: 'Saved.', no_others: 'You are not holding anyone else’s goods.',
+    tell_send_on: 'Tell them to send it on', tell_title: 'Send on to another unit', tell_hint: 'They will forward it to the unit you pick. You will see it there.',
+    save_returns: 'Save returns', return_qty: 'Return', desk_hint: 'Type the quantities going back and save once.',
+    grid: 'Sizes and colours', grid_title: 'Sizes and colours', style: 'Style no.', colours: 'Colours', sizes: 'Sizes', add_colour: 'Add colour', total: 'Total',
+    add_lines: 'Add these', with_trims: 'Add trims for these pieces', kind: 'What', offerings: 'Work you take', offerings_hint: 'Units searching for job work find you by this.',
+    per_day: 'per day', days: 'usual days', save: 'Save', lot_mix: 'Two lots in one size: {sizes}. Shade may differ.', styles: 'Styles', styles_hint: 'Sizes and trims per piece. Used when you send kits by size.', trims: 'Trims per piece', each: 'each', spare: 'spare %', add_trim: 'Add trim', add_style: 'Add style', size_add: 'Other size', remove: 'Remove',
+  },
+  ta: {
+    mine: 'என்னுடையது', others: 'மற்றவர்களின் சரக்கு', for_name: '{name}-க்காக', received: 'பெற்றது', done: 'இங்கே முடிந்தது', sent_back: 'திருப்பி அனுப்பியது', forwarded: 'மேலே அனுப்பியது',
+    here_inputs: 'இன்னும் வேலை செய்ய', here_done: 'முடிந்தது, இன்னும் அனுப்பவில்லை', ready: 'எடுக்க தயார்', held: 'பாக்கிக்காக நிறுத்தியது', their_record: 'அவர்கள் பதிவு',
+    record_done: 'முடிந்த வேலையைப் பதி', mark_ready: 'தயார் எனக் குறி', unmark_ready: 'தயார் இல்லை', hold: 'பாக்கிக்காக நிறுத்து', release: 'விடுவி', send_back: 'உரிமையாளருக்குத் திருப்பி அனுப்பு',
+    forward: 'வேறு யூனிட்டுக்கு அனுப்பு', return_ready: 'தயாரானதைத் திருப்பி அனுப்பு', mark_all_ready: 'எல்லாம் தயார்', nothing_ready: 'திருப்பி அனுப்ப எதுவும் காத்திருக்கவில்லை.', ready_skipped: 'இன்னும் வேலை முடியாதவை அப்படியே விடப்பட்டன.',
+    work_done_title: 'முடிந்த வேலை', send_back_title: 'திருப்பி அனுப்பு', forward_title: 'வேறு யூனிட்டுக்கு அனுப்பு', pick_unit: 'யூனிட்டைத் தேர்ந்தெடு', how_many: 'எத்தனை',
+    instructed: '{name} இதை {to}-க்கு அனுப்பச் சொன்னார்', send_on: '{to}-க்கு அனுப்பு', disclosure: '{owner} GST பதிவு செய்தவர்; நீங்கள் யாருக்கு அனுப்புகிறீர்கள் என்று அவருக்குத் தெரியும்.',
+    generic_note: 'சரக்கின் பெயர் ஸ்டைல் எண், பிராண்ட் இல்லாமல் அவர்களுக்குத் தெரியும்.', saved: 'சேமித்தது.', no_others: 'நீங்கள் மற்றவர்களின் சரக்கை வைத்திருக்கவில்லை.',
+    tell_send_on: 'மேலே அனுப்பச் சொல்', tell_title: 'வேறு யூனிட்டுக்கு அனுப்பச் சொல்', tell_hint: 'நீங்கள் தேர்ந்தெடுக்கும் யூனிட்டுக்கு அவர்கள் அனுப்புவார்கள். அங்கே உங்களுக்குத் தெரியும்.',
+    save_returns: 'திருப்பியதைச் சேமி', return_qty: 'திருப்பி', desk_hint: 'திருப்பும் அளவுகளை எழுதி ஒருமுறை சேமியுங்கள்.',
+    grid: 'சைஸ், நிறம்', grid_title: 'சைஸ், நிறம்', style: 'ஸ்டைல் எண்', colours: 'நிறங்கள்', sizes: 'சைஸ்கள்', add_colour: 'நிறம் சேர்', total: 'மொத்தம்',
+    add_lines: 'இவற்றைச் சேர்', with_trims: 'இந்த பீஸ்களுக்கான டிரிம்ஸ் சேர்', kind: 'என்ன', offerings: 'நீங்கள் எடுக்கும் வேலை', offerings_hint: 'ஜாப் வொர்க் தேடுபவர்கள் இதை வைத்து உங்களைக் கண்டுபிடிப்பார்கள்.',
+    per_day: 'ஒரு நாளுக்கு', days: 'வழக்கமான நாள்', save: 'சேமி', lot_mix: 'ஒரு சைஸில் இரண்டு லாட்: {sizes}. ஷேட் மாறலாம்.', styles: 'ஸ்டைல்கள்', styles_hint: 'சைஸ்களும் ஒரு பீஸுக்கான டிரிம்ஸும். சைஸ் வாரியாக கிட் அனுப்பும்போது பயன்படும்.', trims: 'ஒரு பீஸுக்கு டிரிம்ஸ்', each: 'ஒன்றுக்கு', spare: 'கூடுதல் %', add_trim: 'டிரிம் சேர்', add_style: 'ஸ்டைல் சேர்', size_add: 'வேறு சைஸ்', remove: 'நீக்கு',
+  },
+  hi: {
+    mine: 'मेरा', others: 'दूसरों का माल', for_name: '{name} के लिए', received: 'मिला', done: 'यहाँ हुआ', sent_back: 'वापस भेजा', forwarded: 'आगे भेजा',
+    here_inputs: 'अभी काम बाकी', here_done: 'हो गया, अभी वापस नहीं भेजा', ready: 'लेने को तैयार', held: 'बकाया के लिए रोका', their_record: 'उनका रिकॉर्ड',
+    record_done: 'हुआ काम दर्ज करें', mark_ready: 'तैयार बताएँ', unmark_ready: 'तैयार नहीं', hold: 'बकाया के लिए रोकें', release: 'छोड़ें', send_back: 'मालिक को वापस भेजें',
+    forward: 'दूसरी यूनिट को भेजें', return_ready: 'तैयार माल वापस भेजें', mark_all_ready: 'सब तैयार', nothing_ready: 'वापस भेजने को कुछ तैयार नहीं।', ready_skipped: 'जिन कामों में अभी कुछ नहीं हुआ, उन्हें वैसे ही छोड़ा।',
+    work_done_title: 'हुआ काम', send_back_title: 'वापस भेजें', forward_title: 'दूसरी यूनिट को भेजें', pick_unit: 'यूनिट चुनें', how_many: 'कितने',
+    instructed: '{name} ने इसे {to} को भेजने को कहा', send_on: '{to} को भेजें', disclosure: '{owner} GST में पंजीकृत हैं और देखेंगे कि आप किसे भेज रहे हैं।',
+    generic_note: 'उन्हें माल का सादा नाम दिखेगा, बिना स्टाइल नंबर या ब्रांड के।', saved: 'सेव हो गया।', no_others: 'आपके पास किसी और का माल नहीं है।',
+    tell_send_on: 'आगे भेजने को कहें', tell_title: 'दूसरी यूनिट को भेजने को कहें', tell_hint: 'वे आपकी चुनी यूनिट को भेजेंगे। वहाँ आपको दिखेगा।',
+    save_returns: 'वापसी सेव करें', return_qty: 'वापस', desk_hint: 'वापस जाने वाली मात्राएँ लिखें और एक बार सेव करें।',
+    grid: 'साइज़ और रंग', grid_title: 'साइज़ और रंग', style: 'स्टाइल नं.', colours: 'रंग', sizes: 'साइज़', add_colour: 'रंग जोड़ें', total: 'कुल',
+    add_lines: 'ये जोड़ें', with_trims: 'इन पीस के लिए ट्रिम्स जोड़ें', kind: 'क्या', offerings: 'आप कौन सा काम लेते हैं', offerings_hint: 'जॉब वर्क खोजने वाले आपको इससे ढूँढते हैं।',
+    per_day: 'प्रति दिन', days: 'आम दिन', save: 'सेव करें', lot_mix: 'एक साइज़ में दो लॉट: {sizes}। शेड अलग हो सकता है।', styles: 'स्टाइल', styles_hint: 'साइज़ और एक पीस के ट्रिम्स। साइज़ के हिसाब से किट भेजते समय काम आता है।', trims: 'एक पीस के ट्रिम्स', each: 'प्रति पीस', spare: 'अतिरिक्त %', add_trim: 'ट्रिम जोड़ें', add_style: 'स्टाइल जोड़ें', size_add: 'दूसरा साइज़', remove: 'हटाएँ',
+  },
+});

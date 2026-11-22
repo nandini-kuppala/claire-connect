@@ -1,0 +1,458 @@
+// Goods setup (slice 0.5): people you work with, your places, what your unit does, and your names for materials.
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { useNavigate } from 'react-router-dom';
+import clsx from 'clsx';
+import { api, ApiError, errorText } from '../../lib/api';
+import { Button } from '../../components/Button';
+import { Sheet } from '../../components/Sheet';
+import { AlertTriangle, ArrowLeft, Check, Plus } from '../../icons';
+import { SetupS } from './Setup.strings';
+import { SpecPicker } from './SpecPicker';
+import { WorkS } from './Work.strings';
+import { JobS } from './Job.strings';
+import { LinkS } from './Link.strings';
+import { StaffS } from './Staff.strings';
+import { useSession } from '../../store/session';
+import type { Contact, Place, ResolvedSpec, Spec } from './types';
+import type { Style } from './GridSheet';
+
+const CAPS = ['knitting', 'dyeing', 'printing', 'embroidery', 'cutting', 'stitching', 'checking_packing', 'fabric', 'trims', 'yarn', 'transport', 'garments', 'selling_garments'] as const;
+const LANGS = [['ta', 'தமிழ்'], ['hi', 'हिन्दी'], ['en', 'English']] as const;
+
+function Section({ title, hint, action, children }: { title: string; hint: string; action?: ReactNode; children: ReactNode }) {
+  return (
+    <section className="mx-4 mt-6">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className="font-head text-[17px] font-semibold text-ink">{title}</h2>
+          <p className="mt-0.5 text-[13.5px] leading-snug text-meta">{hint}</p>
+        </div>
+        {action}
+      </div>
+      <div className="mt-3">{children}</div>
+    </section>
+  );
+}
+
+function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
+  return (
+    <label className="block">
+      <span className="mb-1.5 block text-[13px] font-semibold text-ink-2">{label}</span>
+      {children}
+      {hint && <span className="mt-1 block text-[12.5px] text-meta">{hint}</span>}
+    </label>
+  );
+}
+
+function ErrLine({ text }: { text?: string | null }) {
+  if (!text) return null;
+  return <p role="alert" className="mt-2 flex items-start gap-2 rounded-[14px] bg-danger-tint px-3 py-2 text-[14px] text-danger"><AlertTriangle size={16} className="mt-0.5 shrink-0" aria-hidden />{text}</p>;
+}
+
+const inputCls = 'min-h-12 w-full rounded-[16px] border border-line-strong bg-surface px-3.5 text-[16px] outline-none focus:border-primary';
+
+export default function GoodsSetup() {
+  const s = SetupS.use();
+  const wk = WorkS.use();
+  const jb = JobS.use();
+  const lk = LinkS.use();
+  const st = StaffS.use();
+  const me = useSession((x) => x.user);
+  const refreshMe = useSession((x) => x.refresh);
+  const [staff, setStaff] = useState<{ id: string; name: string; phone: string; has_pin: boolean }[]>([]);
+  const [newStaff, setNewStaff] = useState<{ name: string; phone: string } | null>(null);
+  const [pinDraft, setPinDraft] = useState('');
+  const [pinCurrent, setPinCurrent] = useState(''); // needed to change or remove an existing PIN
+  const [note, setNote] = useState<string | null>(null);
+  const [links, setLinks] = useState<{ id: string; name: string; seen_at: number | null; stopped_at: number | null; stopped_by: string | null }[]>([]);
+  const lang = useSession((st) => st.user?.language || 'en');
+  const [procs, setProcs] = useState<{ key: string; labels: Record<string, string>; default_turnaround_days: number }[]>([]);
+  const [offers, setOffers] = useState<Record<string, { on: boolean; capacity_per_day?: string; turnaround_days?: string }>>({});
+  const [offersSaved, setOffersSaved] = useState(false);
+  const [styles, setStyles] = useState<Style[]>([]);
+  const [styleForm, setStyleForm] = useState<{ code: string; sizes: string; weight?: string; trims: { spec: ResolvedSpec; per_piece: string; spare_pct: string }[] } | null>(null);
+  const [trimPick, setTrimPick] = useState(false);
+  const nav = useNavigate();
+  const [role, setRole] = useState<'owner' | 'staff'>('owner');
+  const [contacts, setContacts] = useState<Contact[] | null>(null);
+  const [places, setPlaces] = useState<Place[] | null>(null);
+  const [caps, setCaps] = useState<{ suggested: string[]; capabilities: string[] | null; confirmed: boolean } | null>(null);
+  const [capSel, setCapSel] = useState<string[]>([]);
+  const [capSaved, setCapSaved] = useState(false);
+  const [aliases, setAliases] = useState<{ alias: string; spec: Spec }[]>([]);
+  const [sheet, setSheet] = useState<'contact' | 'place' | 'material' | null>(null);
+  const [form, setForm] = useState<Record<string, string>>({});
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  // Errors per section (capabilities, offerings, staff, PIN), shown under the button that failed.
+  const [secErr, setSecErr] = useState<Partial<Record<'caps' | 'offers' | 'staff' | 'pin', string>>>({});
+  const [removeSure, setRemoveSure] = useState<string | null>(null);
+  const failed = (k: 'caps' | 'offers' | 'staff' | 'pin', e: unknown) => setSecErr((x) => ({ ...x, [k]: errorText(e) }));
+  const cleared = (k: 'caps' | 'offers' | 'staff' | 'pin') => setSecErr((x) => ({ ...x, [k]: undefined }));
+
+  const load = useCallback(async () => {
+    const [h, c, p, k, sp] = await Promise.all([
+      api.get<{ role: 'owner' | 'staff' }>('/api/sc/home'),
+      api.get<{ contacts: Contact[] }>('/api/sc/contacts'),
+      api.get<{ places: Place[] }>('/api/sc/places'),
+      api.get<{ suggested: string[]; capabilities: string[] | null; confirmed: boolean }>('/api/sc/capabilities'),
+      api.get<{ aliases: { alias: string; spec: Spec }[] }>('/api/sc/specs'),
+    ]);
+    setRole(h.role);
+    setContacts(c.contacts);
+    setPlaces(p.places);
+    setCaps(k);
+    setCapSel(k.capabilities ?? k.suggested);
+    setAliases(sp.aliases);
+    const [t, o] = await Promise.all([api.get<{ processes: { key: string; labels: Record<string, string>; default_turnaround_days: number }[] }>('/api/sc/templates'), api.get<{ offerings: { process_key: string; capacity_per_day?: number; turnaround_days?: number }[] }>('/api/sc/offerings')]);
+    setProcs(t.processes);
+    setStyles((await api.get<{ styles: Style[] }>('/api/sc/styles')).styles);
+    setLinks((await api.get<{ links: typeof links }>('/api/sc/links').catch(() => ({ links: [] as typeof links }))).links); // owner-only list
+    if (h.role === 'owner') setStaff((await api.get<{ staff: typeof staff }>('/api/sc/staff')).staff);
+    setOffers(Object.fromEntries(o.offerings.map((x) => [x.process_key, { on: true, capacity_per_day: x.capacity_per_day ? String(x.capacity_per_day) : '', turnaround_days: x.turnaround_days ? String(x.turnaround_days) : '' }])));
+  }, []);
+
+  useEffect(() => {
+    void load().catch((e) => setError(errorText(e)));
+  }, [load]);
+
+  const openSheet = (k: 'contact' | 'place' | 'material') => {
+    setForm(k === 'contact' ? { language: 'ta' } : k === 'place' ? { kind: 'godown' } : {});
+    setError(null);
+    setSheet(k);
+  };
+
+  const save = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      if (sheet === 'contact') await api.post('/api/sc/contacts', { name: form.name, phone: form.phone || undefined, language: form.language, role_hint: form.role_hint || undefined });
+      if (sheet === 'place') await api.post('/api/sc/places', { name: form.name, kind: form.kind });
+      setSheet(null);
+      await load();
+    } catch (e) {
+      setError(errorText(e) || s('error'));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const owner = role === 'owner';
+
+  return (
+    <div className="pb-8">
+      <header className="sticky top-0 z-20 flex min-h-[56px] items-center gap-2 border-b border-line bg-surface px-2 pt-[var(--safe-top)]">
+        <button className="flex size-11 items-center justify-center rounded-full text-ink-2 hover:bg-sunken" onClick={() => nav('/goods')} aria-label={s('back')}>
+          <ArrowLeft size={20} />
+        </button>
+        <h1 className="font-head text-[20px] font-bold text-ink">{s('title')}</h1>
+      </header>
+
+      <Section title={s('contacts')} hint={s('contacts_hint')} action={<Button size="sm" variant="tint" icon={Plus} onClick={() => openSheet('contact')}>{s('add_contact')}</Button>}>
+        {contacts && contacts.length === 0 ? (
+          <p className="text-[14.5px] text-ink-2">{s('no_contacts')}</p>
+        ) : (
+          <ul className="divide-y divide-line overflow-hidden rounded-[18px] border border-line bg-surface">
+            {(contacts ?? []).map((c) => (
+              <li key={c.id} className="flex items-start gap-3 px-4 py-3">
+                <div className="min-w-0 flex-1">
+                  <p className="text-[15.5px] font-semibold text-ink">{c.name}</p>
+                  <p className="mt-0.5 text-[13px] text-meta">{[c.role_hint, c.phones[0] ? `+91\u00a0${c.phones[0]}` : null].filter(Boolean).join(' · ')}</p>
+                </div>
+                <span className="shrink-0 rounded-full border border-line-strong px-2.5 py-1 text-[12px] font-semibold text-ink-2">{c.link_state === 'linked' ? s('on_claire') : s('your_contact')}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Section>
+
+      <Section title={s('places')} hint={s('places_hint')} action={owner ? <Button size="sm" variant="tint" icon={Plus} onClick={() => openSheet('place')}>{s('add_place')}</Button> : undefined}>
+        {places && places.length === 0 ? (
+          <p className="text-[14.5px] text-ink-2">{s('no_places')}</p>
+        ) : (
+          <ul className="divide-y divide-line overflow-hidden rounded-[18px] border border-line bg-surface">
+            {(places ?? []).map((p) => (
+              <li key={p.id} className="flex items-center gap-3 px-4 py-3 text-[15.5px] text-ink">
+                <span className="min-w-0 flex-1 font-semibold">{p.name}</span>
+                <span className="text-[13px] text-meta">{s(`k_${p.kind}` as 'k_godown')}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Section>
+
+      {caps && (
+        <Section title={s('caps')} hint={s('caps_hint')}>
+          <div className="flex flex-wrap gap-2" role="group">
+            {CAPS.map((c) => {
+              const on = capSel.includes(c);
+              return (
+                <button
+                  key={c}
+                  disabled={!owner}
+                  aria-pressed={on}
+                  onClick={() => {
+                    setCapSaved(false);
+                    setCapSel((x) => (on ? x.filter((y) => y !== c) : [...x, c]));
+                  }}
+                  className={clsx('inline-flex min-h-11 items-center gap-1.5 rounded-full border px-3.5 text-[14px] font-semibold disabled:opacity-70', on ? 'border-primary bg-primary-tint text-primary' : 'border-line-strong bg-surface text-ink-2')}
+                >
+                  {on && <Check size={15} aria-hidden />}
+                  {s(`c_${c}`)}
+                </button>
+              );
+            })}
+          </div>
+          {owner ? (
+            <Button className="mt-3" variant={capSaved || (caps.confirmed && !capSaved && JSON.stringify(capSel) === JSON.stringify(caps.capabilities)) ? 'secondary' : 'primary'} icon={capSaved ? Check : undefined}
+              onClick={async () => {
+                cleared('caps');
+                try {
+                  await api.post('/api/sc/capabilities', { capabilities: capSel });
+                  setCapSaved(true);
+                } catch (e) { failed('caps', e); }
+              }}>
+              {capSaved ? s('confirmed') : s('confirm')}
+            </Button>
+          ) : (
+            <p className="mt-2 text-[13px] text-meta">{s('owner_only')}</p>
+          )}
+          <ErrLine text={secErr.caps} />
+        </Section>
+      )}
+
+      <Section title={wk('offerings')} hint={wk('offerings_hint')}>
+        <ul className="divide-y divide-line overflow-hidden rounded-[18px] border border-line bg-surface">
+          {procs.map((p) => {
+            const o = offers[p.key];
+            return (
+              <li key={p.key} className="px-4 py-2.5">
+                <label className="flex min-h-11 items-center gap-3 text-[15px] font-semibold text-ink">
+                  <input type="checkbox" className="size-5" disabled={!owner} checked={!!o?.on} onChange={(e) => { setOffersSaved(false); setOffers((x) => ({ ...x, [p.key]: { ...(x[p.key] ?? {}), on: e.target.checked } })); }} />
+                  {p.labels[lang] ?? p.labels.en}
+                </label>
+                {o?.on && (
+                  <div className="mt-1 flex flex-wrap gap-3 pl-8 text-[13px] text-ink-2">
+                    <label className="flex items-center gap-1.5"><input className="h-10 w-20 rounded-[12px] border border-line-strong px-2 text-right tabular-nums" inputMode="numeric" value={o.capacity_per_day ?? ''} onChange={(e) => setOffers((x) => ({ ...x, [p.key]: { ...o, capacity_per_day: e.target.value.replace(/\D/g, '') } }))} />{wk('per_day')}</label>
+                    <label className="flex items-center gap-1.5"><input className="h-10 w-16 rounded-[12px] border border-line-strong px-2 text-right tabular-nums" inputMode="numeric" placeholder={String(p.default_turnaround_days)} value={o.turnaround_days ?? ''} onChange={(e) => setOffers((x) => ({ ...x, [p.key]: { ...o, turnaround_days: e.target.value.replace(/\D/g, '') } }))} />{wk('days')}</label>
+                  </div>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+        {owner && (
+          <Button className="mt-3" variant={offersSaved ? 'secondary' : 'primary'} icon={offersSaved ? Check : undefined}
+            onClick={async () => {
+              cleared('offers');
+              try {
+              await api.put('/api/sc/offerings', { offerings: Object.entries(offers).filter(([, v]) => v.on).map(([k, v]) => ({ process_key: k, ...(Number(v.capacity_per_day) > 0 ? { capacity_per_day: Number(v.capacity_per_day) } : {}), ...(Number(v.turnaround_days) > 0 ? { turnaround_days: Number(v.turnaround_days) } : {}) })) });
+              setOffersSaved(true);
+              } catch (e) { failed('offers', e); }
+            }}>{offersSaved ? s('confirmed') : wk('save')}</Button>
+        )}
+        <ErrLine text={secErr.offers} />
+      </Section>
+
+      <Section title={s('materials')} hint={s('materials_hint')} action={<Button size="sm" variant="tint" icon={Plus} onClick={() => setSheet('material')}>{s('add_material')}</Button>}>
+        {aliases.length === 0 ? (
+          <p className="text-[14.5px] text-ink-2">{s('no_materials')}</p>
+        ) : (
+          <ul className="divide-y divide-line overflow-hidden rounded-[18px] border border-line bg-surface">
+            {aliases.map((a) => (
+              <li key={a.alias} className="px-4 py-3">
+                <p className="text-[15.5px] font-semibold text-ink">{a.alias}</p>
+                <p className="mt-0.5 text-[13px] text-meta">{a.spec.label_en}</p>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Section>
+
+      <Section title={wk('styles')} hint={wk('styles_hint')} action={owner ? <Button size="sm" variant="tint" icon={Plus} onClick={() => setStyleForm({ code: '', sizes: 'S, M, L, XL, XXL', trims: [] })}>{wk('add_style')}</Button> : undefined}>
+        {styles.length > 0 && (
+          <ul className="divide-y divide-line overflow-hidden rounded-[18px] border border-line bg-surface">
+            {styles.map((st) => (
+              <li key={st.id}>
+                <button className="w-full px-4 py-3 text-left disabled:cursor-default" disabled={!owner}
+                  onClick={() => setStyleForm({ code: st.code, sizes: st.size_set.join(', '), weight: st.set_weight_g ? String(st.set_weight_g) : '', trims: st.trims.filter((t) => t.resolved).map((t) => ({ spec: t.resolved!, per_piece: String(t.per_piece), spare_pct: String(t.spare_pct) })) })}>
+                  <p className="text-[15.5px] font-semibold text-ink">{st.code} <span className="font-normal text-meta">· {st.size_set.join(' ')}{st.set_weight_g ? ` · ${st.set_weight_g} g` : ''}</span></p>
+                  {st.trims.length > 0 && <p className="mt-0.5 text-[13px] text-ink-2">{st.trims.map((t) => `${t.resolved?.spec.label_en ?? '—'} × ${t.per_piece}`).join(' · ')}</p>}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Section>
+
+      {owner && (
+        <Section title={st('staff')} hint={st('staff_hint')} action={<Button size="sm" variant="tint" icon={Plus} onClick={() => { setNewStaff({ name: '', phone: '' }); setNote(null); }}>{st('add')}</Button>}>
+          {staff.length > 0 && (
+            <ul className="divide-y divide-line overflow-hidden rounded-[18px] border border-line bg-surface">
+              {staff.map((x) => (
+                <li key={x.id} className="flex items-center gap-3 px-4 py-3">
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[15px] font-semibold text-ink">{x.name}</span>
+                    <span className="block text-[13px] text-meta">{[x.phone, x.has_pin ? st('has_pin') : null].filter(Boolean).join(' · ')}</span>
+                  </span>
+                  {/* Two taps, like "Wrong entry": the first asks, the second removes. */}
+                  <Button size="sm" variant="ghost" className={clsx(removeSure === x.id && 'bg-danger-tint text-danger')} onClick={async () => {
+                    if (removeSure !== x.id) { setRemoveSure(x.id); return; }
+                    setRemoveSure(null);
+                    cleared('staff');
+                    try { await api.del(`/api/sc/staff/${x.id}`); await load(); } catch (e) { failed('staff', e); }
+                  }}>{removeSure === x.id ? st('remove_sure') : st('remove')}</Button>
+                </li>
+              ))}
+            </ul>
+          )}
+          {newStaff && (
+            <div className="mt-3 space-y-3 rounded-[18px] border border-line bg-surface p-4">
+              <Field label={st('name')}><input className={inputCls} value={newStaff.name} onChange={(e) => setNewStaff({ ...newStaff, name: e.target.value })} /></Field>
+              <Field label={st('phone')}><input className={inputCls} inputMode="tel" placeholder="98765 43210" value={newStaff.phone} onChange={(e) => setNewStaff({ ...newStaff, phone: e.target.value })} /></Field>
+              <Button disabled={!newStaff.name.trim() || newStaff.phone.replace(/\D/g, '').length < 10} onClick={async () => {
+                try {
+                  await api.post('/api/sc/staff', { name: newStaff.name.trim(), phone: newStaff.phone });
+                  setNewStaff(null); setNote(st('added')); void load();
+                } catch (e) {
+                  const code = (e as ApiError).body as { code?: string } | undefined;
+                  setNote(code?.code === 'other_business' ? st('other_business') : code?.code === 'already' ? st('already') : errorText(e));
+                }
+              }}>{st('add')}</Button>
+            </div>
+          )}
+          {note && <p role="status" className="mt-2 text-[14px] text-ink-2">{note}</p>}
+          <ErrLine text={secErr.staff} />
+        </Section>
+      )}
+
+      <Section title={st('pin')} hint={st('pin_hint')}>
+        <div className="flex flex-wrap items-center gap-2">
+          {me?.has_pin ? <input className="h-12 w-28 rounded-[14px] border border-line-strong bg-surface px-3 text-center font-head text-[20px] tracking-[0.4em] tabular-nums" inputMode="numeric" maxLength={4} aria-label={st('pin_current')} placeholder={st('pin_current')} value={pinCurrent} onChange={(e) => setPinCurrent(e.target.value.replace(/\D/g, '').slice(0, 4))} /> : null}
+          <input className="h-12 w-28 rounded-[14px] border border-line-strong bg-surface px-3 text-center font-head text-[20px] tracking-[0.4em] tabular-nums" inputMode="numeric" maxLength={4} aria-label={st('pin')} value={pinDraft} onChange={(e) => setPinDraft(e.target.value.replace(/\D/g, '').slice(0, 4))} />
+          <Button disabled={pinDraft.length !== 4} onClick={async () => {
+            cleared('pin');
+            try { await api.post('/api/sc/me/pin', { pin: pinDraft, ...(pinCurrent ? { current: pinCurrent } : {}) }); } catch (e) { failed('pin', e); return; }
+            try { sessionStorage.setItem('cc_pin_ok', me?.id ?? ''); } catch { /* fine */ }
+            setPinDraft(''); setPinCurrent(''); setNote(st('pin_saved')); void refreshMe();
+          }}>{st('pin_set')}</Button>
+          {me?.has_pin ? <Button variant="ghost" onClick={async () => {
+            cleared('pin');
+            try { await api.post('/api/sc/me/pin', { pin: null, ...(pinCurrent ? { current: pinCurrent } : {}) }); } catch (e) { failed('pin', e); return; }
+            setPinCurrent('');
+            setNote(st('pin_removed')); void refreshMe();
+          }}>{st('pin_clear')}</Button> : null}
+        </div>
+        <ErrLine text={secErr.pin} />
+      </Section>
+
+      {links.length > 0 && (
+        <Section title={lk('links')} hint={lk('links_hint')}>
+          <ul className="divide-y divide-line overflow-hidden rounded-[18px] border border-line bg-surface">
+            {links.map((x) => (
+              <li key={x.id} className="flex items-center gap-3 px-4 py-3">
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[15px] font-semibold text-ink">{x.name}</span>
+                  <span className="block text-[13px] text-meta">{x.stopped_at ? (x.stopped_by === 'party' ? lk('stopped_party') : lk('stopped_me')) : x.seen_at ? lk('seen', { date: new Date(x.seen_at).toLocaleDateString(lang === 'en' ? 'en-IN' : `${lang}-IN`, { day: 'numeric', month: 'short' }) }) : lk('not_seen')}</span>
+                </span>
+                {owner && !x.stopped_at && <Button size="sm" variant="ghost" onClick={async () => { await api.del(`/api/sc/links/${x.id}`); void load(); }}>{lk('stop')}</Button>}
+              </li>
+            ))}
+          </ul>
+        </Section>
+      )}
+
+      <Sheet open={!!styleForm} onClose={() => setStyleForm(null)} title={wk('style')}
+        footer={<Button block size="lg" loading={busy} disabled={!styleForm?.code.trim() || !styleForm?.sizes.trim() || styleForm.trims.some((t) => !(Number(t.per_piece) > 0))}
+          onClick={async () => {
+            if (!styleForm) return;
+            setBusy(true); setError(null);
+            try {
+              await api.post('/api/sc/styles', { code: styleForm.code.trim(), size_set: styleForm.sizes.split(/[\s,]+/).filter(Boolean), set_weight_g: Number(styleForm.weight) > 0 ? Number(styleForm.weight) : null, trims: styleForm.trims.map((t) => ({ spec_id: t.spec.spec.id, per_piece: Number(t.per_piece), unit: t.spec.units[0] ?? 'pcs', spare_pct: Number(t.spare_pct) || 0 })) });
+              setStyleForm(null); void load();
+            } catch (e) { setError(errorText(e)); } finally { setBusy(false); }
+          }}>{s('save')}</Button>}>
+        {styleForm && (
+          <div className="space-y-4 pb-2">
+            <Field label={wk('style')}><input className={inputCls + ' uppercase'} placeholder="RKF-P22" value={styleForm.code} onChange={(e) => setStyleForm({ ...styleForm, code: e.target.value })} /></Field>
+            <Field label={wk('sizes')}><input className={inputCls + ' uppercase'} value={styleForm.sizes} onChange={(e) => setStyleForm({ ...styleForm, sizes: e.target.value })} /></Field>
+            <Field label={jb('set_weight')}><input className={inputCls + ' w-32 tabular-nums'} inputMode="decimal" placeholder="230" value={styleForm.weight ?? ''} onChange={(e) => setStyleForm({ ...styleForm, weight: e.target.value.replace(/[^\d.]/g, '') })} /></Field>
+            <div>
+              <span className="mb-1.5 block text-[13px] font-semibold text-ink-2">{wk('trims')}</span>
+              <ul className="space-y-2">
+                {styleForm.trims.map((t, i) => (
+                  <li key={t.spec.spec.id} className="rounded-[14px] border border-line p-3">
+                    <p className="text-[14.5px] font-semibold text-ink">{t.spec.spec.label_en}</p>
+                    <div className="mt-2 flex flex-wrap items-center gap-3 text-[13px] text-ink-2">
+                      <label className="flex items-center gap-1.5"><input className="h-10 w-16 rounded-[12px] border border-line-strong px-2 text-right tabular-nums" inputMode="decimal" value={t.per_piece} onChange={(e) => setStyleForm({ ...styleForm, trims: styleForm.trims.map((x, j) => (j === i ? { ...x, per_piece: e.target.value.replace(/[^\d.]/g, '') } : x)) })} />{t.spec.units[0]} {wk('each')}</label>
+                      <label className="flex items-center gap-1.5"><input className="h-10 w-14 rounded-[12px] border border-line-strong px-2 text-right tabular-nums" inputMode="decimal" value={t.spare_pct} onChange={(e) => setStyleForm({ ...styleForm, trims: styleForm.trims.map((x, j) => (j === i ? { ...x, spare_pct: e.target.value.replace(/[^\d.]/g, '') } : x)) })} />{wk('spare')}</label>
+                      <button className="ml-auto min-h-10 px-2 text-[13px] font-semibold text-danger" onClick={() => setStyleForm({ ...styleForm, trims: styleForm.trims.filter((_, j) => j !== i) })}>{wk('remove')}</button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+              <Button className="mt-2" variant="ghost" icon={Plus} onClick={() => setTrimPick(true)}>{wk('add_trim')}</Button>
+            </div>
+            {error && <p className="rounded-[14px] bg-danger-tint px-3 py-2 text-[14px] text-danger">{error}</p>}
+          </div>
+        )}
+      </Sheet>
+      <SpecPicker open={trimPick} onClose={() => setTrimPick(false)}
+        onPick={(r) => setStyleForm((f) => (f && !f.trims.some((t) => t.spec.spec.id === r.spec.id) ? { ...f, trims: [...f.trims, { spec: r, per_piece: '1', spare_pct: '2' }] } : f))} />
+
+      <Sheet
+        open={sheet === 'contact' || sheet === 'place'}
+        onClose={() => setSheet(null)}
+        title={sheet === 'contact' ? s('add_contact') : s('add_place')}
+        footer={
+          <Button block size="lg" loading={busy} disabled={!form.name?.trim()} onClick={() => void save()}>
+            {s('save')}
+          </Button>
+        }
+      >
+        <div className="space-y-4 pb-2">
+          <Field label={sheet === 'place' ? s('place_name') : s('name')}>
+            <input className={inputCls} placeholder={sheet === 'place' ? s('place_ph') : s('name_ph')} value={form.name ?? ''} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} autoFocus />
+          </Field>
+          {sheet === 'contact' && (
+            <>
+              <Field label={s('phone')} hint={s('phone_hint')}>
+                <input className={inputCls} inputMode="tel" placeholder="98765 43210" value={form.phone ?? ''} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} />
+              </Field>
+              <Field label={s('role_hint')}>
+                <input className={inputCls} placeholder={s('role_ph')} value={form.role_hint ?? ''} onChange={(e) => setForm((f) => ({ ...f, role_hint: e.target.value }))} />
+              </Field>
+              <div>
+                <span className="mb-1.5 block text-[13px] font-semibold text-ink-2">{s('language')}</span>
+                <div className="flex flex-wrap gap-2" role="radiogroup">
+                  {LANGS.map(([code, name]) => (
+                    <button key={code} role="radio" aria-checked={form.language === code} onClick={() => setForm((f) => ({ ...f, language: code }))}
+                      className={clsx('min-h-11 rounded-full border px-4 text-[14px] font-semibold', form.language === code ? 'border-primary bg-primary text-white' : 'border-line-strong bg-surface text-ink')}>
+                      {name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+          {sheet === 'place' && (
+            <div>
+              <span className="mb-1.5 block text-[13px] font-semibold text-ink-2">{s('kind')}</span>
+              <div className="flex flex-wrap gap-2" role="radiogroup">
+                {(['godown', 'floor', 'shop', 'other'] as const).map((k) => (
+                  <button key={k} role="radio" aria-checked={form.kind === k} onClick={() => setForm((f) => ({ ...f, kind: k }))}
+                    className={clsx('min-h-11 rounded-full border px-4 text-[14px] font-semibold', form.kind === k ? 'border-primary bg-primary text-white' : 'border-line-strong bg-surface text-ink')}>
+                    {s(`k_${k}`)}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          {error && <p className="rounded-[14px] bg-danger-tint px-3 py-2 text-[14px] text-danger">{error}</p>}
+        </div>
+      </Sheet>
+
+      <SpecPicker open={sheet === 'material'} createOnly onClose={() => setSheet(null)} onPick={() => void load()} />
+    </div>
+  );
+}

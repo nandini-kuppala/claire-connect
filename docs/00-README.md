@@ -31,3 +31,6 @@ Tiruppur makes ~90 % of India's cotton knitwear exports and sells ~₹35,000 cro
 6. **No buyer/seller role choice** — every business can buy and sell; supply chain = same rails for products, materials and job-work services.
 7. **Asset-light**: no inventory, no lending. Trust comes from records, references and two-way ratings.
 8. **Traction is a feature**: real onboarding with pilot partners on Saturday/Sunday.
+
+## Supply-chain ("Goods") feature
+Built on branch `supply-chain`. Start with `docs/supply-chain/HANDOVER.md`, then `docs/supply-chain/PROGRESS.md`.

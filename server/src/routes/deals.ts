@@ -119,9 +119,12 @@ router.post(
   '/offers/:id/respond',
   requireAuth,
   h(async (req: AuthedRequest, res) => {
-    const body = parse(z.object({ action: z.enum(['accept', 'decline', 'counter']), unitPrice: money.optional() }), req.body);
+    const body = parse(
+      z.object({ action: z.enum(['accept', 'decline', 'counter']), unitPrice: money.optional(), qty: z.coerce.number().int().positive().max(10_000_000).optional() }),
+      req.body,
+    );
     const user = await getUser(req.uid);
-    res.json(await respondOffer(user, req.params.id, body.action, body.unitPrice));
+    res.json(await respondOffer(user, req.params.id, body.action, body.unitPrice, body.qty));
   }),
 );
 

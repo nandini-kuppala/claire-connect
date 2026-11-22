@@ -66,6 +66,8 @@ export interface RCard {
   bestPrice?: boolean;
   fastest?: boolean;
   recommended?: boolean;
+  /** Price is above the buyer's budget (flagged on the card, listed after in-budget options). */
+  overBudget?: boolean;
 }
 
 export interface Requirement {
@@ -150,7 +152,7 @@ export function joinNames(s: RT, names: string[]) {
 }
 
 /** Single-seller options (singles + made-to-order), in server order. */
-export const sellerCards = (d: Detail) => [...d.results.singles, ...d.results.mto];
+export const sellerCards = (d: Detail) => [...d.results.singles, ...d.results.mto].sort((a, b) => Number(!!a.overBudget) - Number(!!b.overBudget));
 
 // ── Header ──
 export function useBack(fallback = '/') {

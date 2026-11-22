@@ -16,7 +16,7 @@ import { dayLabel, sameDay } from '../lib/format';
 import { useT } from '../i18n';
 import { useSession } from '../store/session';
 import { CLAIRE_ID, DESK_ID, UPDATES_ID, channelKey, engine, HISTORY_PAGE, sameChannel, type Channel, type ChatMessage, type ConnState } from './engine';
-import { isDifferent, type TranslateRequest } from './translate';
+import { isDifferent, scriptLang, type TranslateRequest } from './translate';
 import { BubbleShell, MessageBubble, SystemPill, type BubblePosition, type TranslationState } from './MessageBubble';
 import { VoiceBubble } from './VoiceBubble';
 import { Composer } from './Composer';
@@ -86,6 +86,8 @@ export interface ChatViewProps {
   quickReplies?: QuickReply[];
   /** Optional content between the message list and the composer (under the quick replies). */
   footer?: ReactNode;
+  /** Called when a card changed the deal (accept, counter, order step) so the screen reloads its own data too. */
+  onRefresh?: () => void;
   className?: string;
 }
 
@@ -159,6 +161,7 @@ export function ChatView({
   scrollSignal,
   quickReplies,
   footer,
+  onRefresh,
   className,
 }: ChatViewProps) {
   const t = useT();
@@ -194,13 +197,23 @@ export function ChatView({
   const emptyCalled = useRef(false);
   const onEmptyRef = useRef(onEmpty);
   onEmptyRef.current = onEmpty;
+  const onRefreshRef = useRef(onRefresh);
+  onRefreshRef.current = onRefresh;
 
   // ── Scrolling ────────────────────────────────────────────────────────────
   const scrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
     const el = scroller.current;
     if (!el) return;
-    el.scrollTo({ top: el.scrollHeight, behavior });
+    // Far away (long Claire chats): jump; a smooth scroll over thousands of pixels can stall on mobile.
+    const far = el.scrollHeight - el.scrollTop - el.clientHeight > el.clientHeight * 3;
+    el.scrollTo({ top: el.scrollHeight, behavior: far ? 'auto' : behavior });
     setNewCount(0);
+    atBottomRef.current = true;
+    // Streamed text and card images keep growing the log after the tap: land on the real bottom.
+    setTimeout(() => {
+      const cur = scroller.current;
+      if (cur && cur.scrollHeight - cur.scrollTop - cur.clientHeight > 4) cur.scrollTo({ top: cur.scrollHeight, behavior: 'auto' });
+    }, far || behavior !== 'smooth' ? 60 : 500);
   }, []);
 
   useLayoutEffect(() => {
@@ -327,6 +340,12 @@ export function ChatView({
         if (seenOrders.has(m.content.orderId)) continue;
         seenOrders.add(m.content.orderId);
       }
+      // Supply-chain cards: newest card per movement / dispute only (each state change re-posts the card).
+      const scId = m.type === CC_CARD ? (m.content?.kind === 'movement' ? `mv:${m.content.movementId}` : m.content?.kind === 'dispute' ? `dq:${m.content.disputeId}` : null) : null;
+      if (scId) {
+        if (seenOrders.has(scId)) continue;
+        seenOrders.add(scId);
+      }
       if ((m.type === 'RC:TxtMsg' || m.type === 'RC:StreamMsg') && !textOf(m).trim()) continue;
       out.push(m);
     }
@@ -351,14 +370,19 @@ export function ChatView({
         return { id: `${m.id}:v`, text: p.transcript, from: p.lang, kind: 'text' };
       }
       if (!needsTranslation || BOTS.has(m.senderId)) return null;
+      // Source = the message's own language (its script), not the counterpart's: an agent's English line is
+      // not "from Tamil", and a Claire auto-reply already in my language needs no translation.
+      const text = textOf(m);
+      const from = scriptLang(text, counterpartLang) ?? (names?.[m.senderId] ? 'auto' : counterpartLang);
+      if (from === myLang) return null;
       if (m.type === 'RC:TxtMsg') {
         const local = m.id.startsWith('local_') || m.id.startsWith('tmp_') || engine.mode !== 'nexconn';
-        return { id: m.id, text: textOf(m), from: counterpartLang, kind: local ? 'text' : 'message' };
+        return { id: m.id, text, from, kind: local ? 'text' : 'message' };
       }
-      if (m.type === 'RC:StreamMsg' && m.content?.complete) return { id: `${m.id}:s`, text: textOf(m), from: counterpartLang, kind: 'text' };
+      if (m.type === 'RC:StreamMsg' && m.content?.complete) return { id: `${m.id}:s`, text, from, kind: 'text' };
       return null;
     },
-    [myLang, needsTranslation, counterpartLang],
+    [myLang, needsTranslation, counterpartLang, names],
   );
 
   const runTranslations = useCallback(
@@ -519,7 +543,10 @@ export function ChatView({
       },
       openConversation: (id: string) => navigate(`/chat/${id}`),
       api,
-      refresh: () => void load(),
+      refresh: () => {
+        void load();
+        onRefreshRef.current?.();
+      },
       conversationId,
       ...cardExtras,
     }),
@@ -664,7 +691,7 @@ export function ChatView({
         <div
           ref={scroller}
           onScroll={onScroll}
-          className={clsx('scroll-thin absolute inset-0 overflow-y-auto overscroll-contain', compact ? 'px-3 py-3' : 'px-3 pt-3 pb-4')}
+          className={clsx('scroll-thin absolute inset-0 overflow-y-auto overscroll-contain', compact ? 'px-3 py-3' : 'px-3 pt-3 pb-4', !atBottom && '!pb-16')}
         >
           {loadingOlder && (
             <div className="flex justify-center py-2 text-meta">
@@ -764,7 +791,7 @@ export function ChatView({
             type="button"
             onClick={() => scrollToBottom()}
             className={clsx(
-              'absolute bottom-3 left-1/2 z-20 inline-flex min-h-[40px] min-w-[40px] -translate-x-1/2 items-center justify-center gap-1.5 rounded-full px-3 text-[13px] font-semibold shadow-[var(--shadow-float)]',
+              'absolute bottom-3 left-1/2 z-20 inline-flex min-h-[44px] min-w-[44px] -translate-x-1/2 items-center justify-center gap-1.5 rounded-full px-3 text-[13px] font-semibold shadow-[var(--shadow-float)]',
               newCount ? 'bg-primary text-white' : 'border border-line bg-surface text-ink-2',
             )}
           >

@@ -76,6 +76,9 @@ function Thumb({ shape, tone, size, className }: { shape: string; tone: Tone; si
   return <GarmentArt shape={shape} color={th.color} size={size} className={clsx('shrink-0 rounded-[12px]', className)} style={{ background: th.bg }} />;
 }
 
+/** True when a label has a word too long for a third-width tile at the normal size. */
+const longWord = (label: string) => label.split(/\s+/).some((w) => [...w].length > 11);
+
 export default function Home() {
   const s = HomeStrings.use();
   const navigate = useNavigate();
@@ -211,8 +214,9 @@ export default function Home() {
               <span className={clsx('flex size-11 items-center justify-center rounded-[14px]', tone)}>
                 <Icon size={22} aria-hidden />
               </span>
-              <span className="text-[13.5px] leading-snug font-semibold text-ink [overflow-wrap:anywhere]">{label}</span>
-              {sub && <span className="-mt-1 text-[11.5px] leading-snug text-meta [overflow-wrap:anywhere]">{sub}</span>}
+              {/* Word-safe wrapping: break between words, never inside one (long Tamil words get a smaller size). */}
+              <span className={clsx('leading-snug font-semibold break-words hyphens-auto text-ink', longWord(label) ? 'text-[12px]' : 'text-[13.5px]')}>{label}</span>
+              {sub && <span className="-mt-1 text-[11.5px] leading-snug break-words hyphens-auto text-meta">{sub}</span>}
             </button>
           ))}
         </div>

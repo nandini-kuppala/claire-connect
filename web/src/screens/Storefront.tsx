@@ -2,7 +2,8 @@
 // The owner sees their own store with the bottom nav, "Add products" (CatalogSheet) and quick price / stock edits.
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, BadgeCheck, Clock, Factory, ImagePlus, MapPin, MessageCircle, Pencil, Share2, ShieldCheck, Star } from '../icons';
+import { ArrowLeft, BadgeCheck, Clock, Factory, ImagePlus, Languages, MapPin, MessageCircle, Pencil, Share2, ShieldCheck, Star } from '../icons';
+import { scriptLang, translateItems } from '../chat/translate';
 import { api } from '../lib/api';
 import { roleText, useT } from '../i18n';
 import { AppShell } from '../components/AppShell';
@@ -57,6 +58,8 @@ export default function Storefront() {
   const [editing, setEditing] = useState<Listing | null>(null);
   const [catalogOpen, setCatalogOpen] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
+  const [aboutTr, setAboutTr] = useState<string | null>(null);
+  const [aboutOriginal, setAboutOriginal] = useState(false);
   const [opening, setOpening] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -81,6 +84,29 @@ export default function Storefront() {
   const isMine = !!myBiz && !!biz && myBiz.id === biz.id;
   const ownerView = isMine && !isPublic;
   const loggedIn = !!token;
+
+  // About text in the viewer's language (skipped when it is already in it, or on my own store).
+  const aboutText = biz?.about?.trim() ?? '';
+  const bizId = biz?.id;
+  useEffect(() => {
+    setAboutTr(null);
+    setAboutOriginal(false);
+    if (!aboutText || !bizId || isMine || !loggedIn) return;
+    const src = scriptLang(aboutText);
+    if (src === lang || (!src && lang === 'en')) return;
+    let live = true;
+    const key = `about:${bizId}`;
+    translateItems([{ id: key, text: aboutText, from: src ?? undefined, kind: 'text' }], lang)
+      .then((m) => {
+        const tr = m.get(key);
+        if (live && tr) setAboutTr(tr);
+      })
+      .catch(() => undefined);
+    return () => {
+      live = false;
+    };
+  }, [aboutText, bizId, lang, isMine, loggedIn]);
+
   const shareUrl = biz?.slug ? `${window.location.origin}/s/${biz.slug}` : window.location.href;
   const next = encodeURIComponent(biz ? `/store/${biz.id}` : window.location.pathname);
 
@@ -270,11 +296,21 @@ export default function Storefront() {
           </section>
         )}
 
-        {/* About */}
+        {/* About (translated for the viewer through the chat translation path) */}
         {biz.about && (
           <section className="mx-4 mt-5 rounded-[22px] border border-line bg-surface p-4">
             <h2 className="font-head text-[17px] font-semibold text-ink">{s('about')}</h2>
-            <p className={`mt-1.5 text-[15px] leading-relaxed text-ink-2 ${aboutOpen ? '' : 'line-clamp-3'}`}>{biz.about}</p>
+            <p className={`mt-1.5 text-[15px] leading-relaxed text-ink-2 ${aboutOpen ? '' : 'line-clamp-3'}`}>{aboutTr && !aboutOriginal ? aboutTr : biz.about}</p>
+            {aboutTr && (
+              <p className="mt-1 flex flex-wrap items-center gap-x-1.5 text-[12px] text-meta">
+                <Languages size={13} aria-hidden className="shrink-0" />
+                <span>{aboutOriginal ? t('original') : t('translated')}</span>
+                <span aria-hidden className="text-faint">·</span>
+                <button type="button" className="min-h-11 font-semibold text-primary" onClick={() => setAboutOriginal((v) => !v)}>
+                  {aboutOriginal ? t('show_translation') : t('show_original')}
+                </button>
+              </p>
+            )}
             {biz.about.length > 140 && (
               <button className="mt-1 min-h-10 text-[14px] font-semibold text-primary" onClick={() => setAboutOpen((v) => !v)}>
                 {aboutOpen ? s('less') : s('more')}

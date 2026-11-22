@@ -48,6 +48,7 @@ export const InboxStrings = defineStrings('inbox', {
     clear: 'Clear',
     retry: 'Try again',
     unread_n: '{n} unread',
+    new_offer: 'New offer',
   },
   ta: {
     title: 'செய்திகள்',
@@ -95,6 +96,7 @@ export const InboxStrings = defineStrings('inbox', {
     clear: 'அழி',
     retry: 'மீண்டும் முயற்சி',
     unread_n: '{n} படிக்காதவை',
+    new_offer: 'புதிய ஆஃபர்',
   },
   hi: {
     title: 'संदेश',
@@ -142,5 +144,6 @@ export const InboxStrings = defineStrings('inbox', {
     clear: 'हटाएं',
     retry: 'फिर कोशिश करें',
     unread_n: '{n} बिना पढ़े',
+    new_offer: 'नया ऑफ़र',
   },
 });

@@ -1,4 +1,7 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useSession } from '../store/session';
+import { OrderGoodsS } from '../screens/goods/OrderGoods.strings';
 import clsx from 'clsx';
 import {
   AlertTriangle,
@@ -69,6 +72,9 @@ function actionsFor(role: 'buyer' | 'seller' | 'viewer', p: OrderPayload): Actio
 }
 
 export function OrderCard({ payload, ctx }: CardProps<'order'>) {
+  const nav = useNavigate();
+  const goodsOn = useSession((st) => !!st.features?.supplyChain && st.user?.role !== 'staff');
+  const og = OrderGoodsS.use();
   const t = strings(ctx.lang);
   const dt = dealT(ctx.lang);
   const role: 'buyer' | 'seller' | 'viewer' =
@@ -144,14 +150,17 @@ export function OrderCard({ payload, ctx }: CardProps<'order'>) {
           <span className="flex size-9 shrink-0 items-center justify-center rounded-[12px] bg-primary-tint text-primary">
             <Package size={18} aria-hidden />
           </span>
-          <div className="min-w-0 flex-1">
-            <p className="text-[12px] leading-tight text-meta">
-              {t('order')}
-              {kindLabel ? ` · ${kindLabel}` : ''} · <span className="font-semibold text-ink-2 tabular-nums">{payload.code}</span>
-            </p>
-            <p className="mt-0.5 font-head text-[16px] leading-snug font-semibold text-ink">{payload.title}</p>
+          {/* Title and status pill wrap: a long pill (Tamil) drops under the title instead of squeezing it. */}
+          <div className="flex min-w-0 flex-1 flex-wrap items-start justify-between gap-x-2 gap-y-1">
+            <div className="min-w-[9rem] flex-1">
+              <p className="text-[12px] leading-tight text-meta">
+                {t('order')}
+                {kindLabel ? ` · ${kindLabel}` : ''} · <span className="font-semibold text-ink-2 tabular-nums">{payload.code}</span>
+              </p>
+              <p className="mt-0.5 font-head text-[16px] leading-snug font-semibold break-words text-ink">{payload.title}</p>
+            </div>
+            <OrderStatusPill status={payload.status} t={t} />
           </div>
-          <OrderStatusPill status={payload.status} t={t} />
         </div>
 
         <p className="mt-2 text-[13px] text-meta">
@@ -184,6 +193,12 @@ export function OrderCard({ payload, ctx }: CardProps<'order'>) {
               <div className="h-full rounded-full bg-primary" style={{ width: `${Math.min(100, (payload.qtyDone / payload.qty) * 100)}%` }} />
             </div>
           </div>
+        )}
+
+        {goodsOn && role !== 'viewer' && !cancelled && (
+          <button className="mt-3 inline-flex min-h-10 items-center gap-1.5 rounded-full border border-line-strong px-3.5 text-[13.5px] font-semibold text-ink hover:bg-sunken" onClick={() => nav(`/goods/order/${encodeURIComponent(payload.orderId)}`)}>
+            <Truck size={15} aria-hidden />{og('open_goods')}
+          </button>
         )}
 
         {!cancelled && (
@@ -310,7 +325,12 @@ export function OrderCard({ payload, ctx }: CardProps<'order'>) {
           </div>
         )}
 
-        {!primary && !sent && role !== 'viewer' && !cancelled && !finished && (
+        {!primary && !sent && role !== 'viewer' && payload.status === 'disputed' && (
+          <p className="mt-3 flex items-start gap-1.5 text-[13px] font-medium text-danger">
+            <AlertTriangle size={14} aria-hidden className="mt-0.5 shrink-0" /> {dt('dispute_open')}
+          </p>
+        )}
+        {!primary && !sent && role !== 'viewer' && !cancelled && !finished && payload.status !== 'disputed' && (
           <p className="mt-3 flex items-center gap-1.5 text-[13px] text-meta">
             <Clock size={14} aria-hidden /> {dt('waiting_for', { name: role === 'buyer' ? payload.sellerName : payload.buyerName })}
           </p>

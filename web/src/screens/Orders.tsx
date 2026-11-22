@@ -10,6 +10,11 @@ import { Button } from '../components/Button';
 import { CATEGORIES, catById } from '../../../shared/taxonomy';
 import { ErrorBar, errMsg, inr, listOf, normOrder, statusStyle, useMe, type Order } from '../desk/kit';
 import { OrdersS } from './Orders.strings';
+import { useSession } from '../store/session';
+import { OrderGoodsS } from './goods/OrderGoods.strings';
+import { qty as fmtQty, qtyNum, shortDate } from './goods/format';
+
+interface GoodsSum { ordered: number; received: number; on_the_way: number; returned: number; done: number; dim: string; kind: string; last_sent_on: string | null }
 
 type Tab = 'active' | 'completed';
 type Side = 'all' | 'buying' | 'selling';
@@ -55,6 +60,21 @@ export default function Orders() {
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>('active');
   const [side, setSide] = useState<Side>('all');
+  const og = OrderGoodsS.use();
+  const goodsOn = useSession((st) => !!st.features?.supplyChain);
+  const [goods, setGoods] = useState<Record<string, GoodsSum>>({});
+  useEffect(() => {
+    if (goodsOn) void api.get<{ orders: Record<string, GoodsSum> }>('/api/sc/orders/goods-summary').then((r) => setGoods(r.orders)).catch(() => undefined);
+  }, [goodsOn]);
+  // J8: "400 of 600 received · 200 on the way (sent 19 Nov)" for orders whose goods are recorded in Goods.
+  const goodsLine = (id: string) => {
+    const g = goods[id];
+    if (!g) return null;
+    const q = (n: number) => fmtQty(n, g.dim);
+    return [g.kind === 'job_work' ? og('summary_done', { got: qtyNum(g.done, g.dim), qty: q(g.ordered) }) : og('summary', { got: qtyNum(g.received, g.dim), qty: q(g.ordered) }),
+      g.on_the_way > 0 ? og('summary_way', { qty: q(g.on_the_way), date: shortDate(g.last_sent_on, lang) }) : null,
+      g.returned > 0 ? og('returned', { qty: q(g.returned) }) : null].filter(Boolean).join(' · ');
+  };
 
   const load = useCallback(async () => {
     setError(null);
@@ -173,6 +193,7 @@ export default function Orders() {
               kindText={o.kind === 'sample' ? s('sample') : o.kind === 'job_work' ? s('job') : null}
               stepText={(n) => s('progress', { n: n + 1, step: s(STEP_KEYS[n]) })}
               openLabel={s('open_chat')}
+              goodsText={goodsLine(o.id)}
               onOpen={o.conversationId ? () => nav(`/chat/${o.conversationId}`) : undefined}
             />
           ))}
@@ -193,9 +214,9 @@ export default function Orders() {
 }
 
 function OrderRow({
-  o, counterpart, statusText, qtyText, kindText, stepText, openLabel, onOpen,
+  o, counterpart, statusText, qtyText, kindText, stepText, openLabel, onOpen, goodsText,
 }: {
-  o: Order; counterpart: string; statusText: string; qtyText: string; kindText: string | null;
+  o: Order; counterpart: string; statusText: string; qtyText: string; kindText: string | null; goodsText?: string | null;
   stepText: (n: number) => string; openLabel: string; onOpen?: () => void;
 }) {
   const art = artFor(o);
@@ -223,6 +244,7 @@ function OrderRow({
               <span className="truncate tabular-nums">{o.code} · {qtyText}</span>
               {kindText && <span className="shrink-0 rounded-full bg-sunken px-2 text-[11px] font-semibold leading-5 text-ink-2">{kindText}</span>}
             </span>
+            {goodsText && <span className="mt-0.5 block text-[13px] font-semibold text-ink-2">{goodsText}</span>}
           </span>
           {onOpen && <ChevronRight size={18} className="mt-0.5 shrink-0 self-center text-faint" aria-hidden />}
         </span>

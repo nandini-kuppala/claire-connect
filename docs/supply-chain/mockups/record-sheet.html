@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Goods · Record sheet</title>
+<link rel="stylesheet" href="mockup.css">
+<style>
+  /* Record-sheet rows: plain icon (no tinted tile) + label + one-line hint + chevron. Buttons, so the whole row is the tap target. */
+  .sheet .lrow{width:100%;text-align:left;align-items:center;min-height:64px}
+  .sheet .lrow .t{font-size:16px}
+  .sheet .lrow .ic{color:var(--ink-2)}
+  .sheet .list{margin-top:0}
+  .sheet .sec-h{margin-top:18px;flex-wrap:wrap;gap:2px 12px}
+  .sheet-h{display:flex;align-items:center;gap:8px;padding:0 8px 0 16px}
+  .sheet-h h2{flex:1;font:700 20px/1.25 var(--head)}
+  .top2{display:flex;gap:8px;flex-wrap:wrap;margin:8px 16px 0}
+  .top2 .btn{flex:1 1 140px}
+</style>
+</head>
+<body>
+<!-- S3 · Record sheet, opened from Goods → Out with others. Viewer: Ravi (owner), Ravi Knit Fashions. -->
+<div class="frame">
+  <div class="app">
+    <header class="hdr">
+      <h1 data-ta="சரக்கு" data-hi="माल">Goods</h1>
+      <button class="iconbtn lbl"><svg class="i"><use href="icons.svg#search"/></svg><span data-ta="தேடு" data-hi="खोजें">Find</span></button>
+      <button class="iconbtn lbl"><svg class="i"><use href="icons.svg#chart"/></svg><span data-ta="அறிக்கைகள்" data-hi="रिपोर्ट">Reports</span></button>
+    </header>
+    <div class="chips">
+      <button class="chip danger"><svg class="i sm"><use href="icons.svg#clock"/></svg><span class="n">2</span> <span data-ta="தாமதம்" data-hi="देर">late</span></button>
+      <button class="chip danger"><svg class="i sm"><use href="icons.svg#scale"/></svg><span class="n">1</span> <span data-ta="வித்தியாசம்" data-hi="फ़र्क">dispute</span></button>
+    </div>
+    <div class="seg" role="tablist">
+      <button class="on" role="tab" data-ta="வெளியே உள்ளது" data-hi="दूसरों के पास">Out with others</button>
+      <button role="tab" data-ta="என் யூனிட்டில்" data-hi="मेरी यूनिट में">In my unit</button>
+      <button role="tab" data-ta="வர வேண்டியது" data-hi="आने वाला">Coming in</button>
+    </div>
+    <div class="list">
+      <div class="lrow"><span class="av" style="background:#1F2A44">RS</span><div class="main">
+        <div class="t">Raju Stitching Works</div>
+        <div class="stl"><span class="st late"><svg class="i"><use href="icons.svg#clock"/></svg><span data-ta="2 நாள் தாமதம்" data-hi="2 दिन देर">Late 2 days</span></span></div>
+        <div class="q"><span class="num">402</span> <span data-ta="பீஸ் போலோ கிட்" data-hi="पीस पोलो किट">pcs polo kits</span> · L, XL, XXL</div></div></div>
+      <div class="lrow"><span class="av" style="background:#4B5563">EJ</span><div class="main">
+        <div class="t">Elango Job Works</div>
+        <div class="stl"><span class="st late"><svg class="i"><use href="icons.svg#alert"/></svg><span data-ta="64 நாள் மீதம்" data-hi="64 दिन बचे">64 days left</span></span></div>
+        <div class="q"><span class="num">20</span> kg <span data-ta="மீதமான துணி" data-hi="बचा कपड़ा">leftover fabric</span></div></div></div>
+      <div class="lrow"><span class="av" style="background:#15803D">ND</span><div class="main">
+        <div class="t">Noyyal Dyeing</div>
+        <div class="stl"><span class="st due"><svg class="i"><use href="icons.svg#clock"/></svg><span data-ta="இன்று வர வேண்டும்" data-hi="आज आना है">Due today</span></span></div>
+        <div class="q"><span class="num">≈ 95</span> kg <span data-ta="கிரே SJ நேவி சாயத்தில் உள்ளது" data-hi="ग्रे SJ नेवी रंगाई में">grey SJ still being dyed navy</span></div></div></div>
+      <div class="lrow"><span class="av" style="background:#7C3AED">CC</span><div class="main">
+        <div class="t">Colour Craft Prints</div>
+        <div class="stl"><span class="st disp"><svg class="i"><use href="icons.svg#scale"/></svg><span data-ta="வித்தியாசம்" data-hi="फ़र्क">Disputed</span></span></div>
+        <div class="q"><span class="num">8</span> <span data-ta="பீஸ் வித்தியாசம்" data-hi="पीस पर फ़र्क">pcs disputed</span> · <span data-ta="நீங்கள் 1,992 · அவர்கள் 2,000" data-hi="आप 1,992 · वे 2,000">you 1,992 · they 2,000</span></div></div></div>
+    </div>
+    <div class="bottombar">
+      <button class="btn primary lg"><svg class="i"><use href="icons.svg#plus"/></svg><span data-ta="பதிவு செய்" data-hi="दर्ज करें">Record</span></button>
+      <button class="btn tint lg"><svg class="i"><use href="icons.svg#mic"/></svg><span data-ta="சொல்லுங்கள்" data-hi="बोलें">Say it</span></button>
+    </div>
+    <nav class="nav" data-active="goods" data-badgegoods="1"></nav>
+
+    <div class="scrim"></div>
+    <section class="sheet" role="dialog" aria-modal="true" aria-labelledby="rs-title">
+      <div class="grab"></div>
+      <div class="sheet-h">
+        <h2 id="rs-title" data-ta="என்ன நடந்தது?" data-hi="क्या हुआ?">What happened?</h2>
+        <button class="iconbtn lbl"><svg class="i"><use href="icons.svg#x"/></svg><span data-ta="மூடு" data-hi="बंद करें">Close</span></button>
+      </div>
+      <div class="top2">
+        <button class="btn tint lg"><svg class="i"><use href="icons.svg#mic"/></svg><span data-ta="சொல்லுங்க" data-hi="बोलकर बताएं">Say it</span></button>
+        <button class="btn secondary lg"><svg class="i"><use href="icons.svg#camera"/></svg><span data-ta="DC போட்டோ" data-hi="DC की फ़ोटो">Photo of DC</span></button>
+      </div>
+
+      <div class="sec-h"><h2 data-ta="சரக்கு வெளியே போனது" data-hi="माल बाहर गया">Goods went out</h2></div>
+      <div class="list">
+        <a class="lrow" href="record-send.html"><svg class="i lg ic"><use href="icons.svg#out"/></svg><div class="main">
+          <div class="t" data-ta="வேலைக்கு அனுப்பு" data-hi="काम के लिए भेजें">Send for work</div>
+          <div class="m" data-ta="டையிங், பிரிண்டிங், ஸ்டிச்சிங் · சரக்கு உங்களுடையதே" data-hi="रंगाई, छपाई, सिलाई · माल आपका ही रहेगा">Dyeing, printing, stitching · goods stay yours</div></div>
+          <svg class="i faint"><use href="icons.svg#chev-r"/></svg></a>
+        <button class="lrow"><svg class="i lg ic"><use href="icons.svg#tag"/></svg><div class="main">
+          <div class="t" data-ta="விற்பனை" data-hi="बेचें">Sell</div>
+          <div class="m" data-ta="சரக்கு வாங்குபவருக்கு சொந்தமாகிறது" data-hi="माल खरीदार का हो जाता है">Goods go to a buyer and become theirs</div></div>
+          <svg class="i faint"><use href="icons.svg#chev-r"/></svg></button>
+        <button class="lrow"><svg class="i lg ic"><use href="icons.svg#undo"/></svg><div class="main">
+          <div class="t" data-ta="சப்ளையருக்கு திருப்பி அனுப்பு" data-hi="सप्लायर को वापस करें">Return to supplier</div>
+          <div class="m" data-ta="தவறான அல்லது குறையான சரக்கை கடை / மில்லுக்கு" data-hi="गलत या खराब माल दुकान या मिल को वापस">Wrong or faulty goods back to the shop or mill</div></div>
+          <svg class="i faint"><use href="icons.svg#chev-r"/></svg></button>
+        <button class="lrow"><svg class="i lg ic"><use href="icons.svg#move"/></svg><div class="main">
+          <div class="t" data-ta="என் மற்ற இடத்துக்கு மாற்று" data-hi="अपनी दूसरी जगह भेजें">Move to my other place</div>
+          <div class="m" data-ta="Godown – Cutting floor இடையே" data-hi="Godown और Cutting floor के बीच">Between Godown and Cutting floor</div></div>
+          <svg class="i faint"><use href="icons.svg#chev-r"/></svg></button>
+        <button class="lrow"><svg class="i lg ic"><use href="icons.svg#package"/></svg><div class="main">
+          <div class="t" data-ta="சாம்பிள் கொடு" data-hi="सैंपल दें">Give a sample</div>
+          <div class="m" data-ta="வாங்குபவருக்கு · திரும்ப வருமா என்று சொல்லுங்க" data-hi="खरीदार को · बताएं कि वापस आएगा या नहीं">To a buyer · say if it comes back</div></div>
+          <svg class="i faint"><use href="icons.svg#chev-r"/></svg></button>
+      </div>
+
+      <div class="sec-h"><h2 data-ta="சரக்கு உள்ளே வந்தது" data-hi="माल अंदर आया">Goods came in</h2></div>
+      <div class="list">
+        <a class="lrow" href="record-receive.html"><svg class="i lg ic"><use href="icons.svg#in"/></svg><div class="main">
+          <div class="t" data-ta="வேலையிலிருந்து திரும்ப வந்தது" data-hi="काम से वापस आया">Got back from work</div>
+          <div class="m" data-ta="திறந்திருக்கும் வேலைக்கு · உங்களிடம் 4 உள்ளன" data-hi="चालू काम के सामने · आपके 4 काम चालू हैं">Against a job still open · you have 4</div></div>
+          <svg class="i faint"><use href="icons.svg#chev-r"/></svg></a>
+        <button class="lrow"><svg class="i lg ic"><use href="icons.svg#cart"/></svg><div class="main">
+          <div class="t" data-ta="வாங்கியது" data-hi="खरीदा">Bought</div>
+          <div class="m" data-ta="கடை அல்லது மில்லிலிருந்து துணி, நூல், டிரிம்ஸ்" data-hi="दुकान या मिल से कपड़ा, धागा या ट्रिम्स">Fabric, yarn or trims from a shop or mill</div></div>
+          <svg class="i faint"><use href="icons.svg#chev-r"/></svg></button>
+        <button class="lrow"><svg class="i lg ic"><use href="icons.svg#back"/></svg><div class="main">
+          <div class="t" data-ta="வாங்குபவர் திருப்பி அனுப்பியது" data-hi="खरीदार ने माल लौटाया">Buyer returned goods</div>
+          <div class="m" data-ta="விற்ற சரக்கு உங்கள் ஸ்டாக்கிற்கு திரும்புகிறது" data-hi="बेचा हुआ माल आपके स्टॉक में वापस">Goods you sold come back into your stock</div></div>
+          <svg class="i faint"><use href="icons.svg#chev-r"/></svg></button>
+      </div>
+
+      <div class="sec-h"><h2 data-ta="இங்கே செய்தது" data-hi="यहीं बनाया">Made here</h2><span class="hint" data-ta="உள்ளே செய்யும் வேலை: ஸ்டாக்கிலிருந்து எடு, வந்ததைச் சேர்" data-hi="अंदर का काम: स्टॉक से लें, जो बना वह जोड़ें">in-house work: take from stock, add what came out</span></div>
+      <div class="list">
+        <a class="lrow" href="record-made.html"><svg class="i lg ic"><use href="icons.svg#scissors"/></svg><div class="main">
+          <div class="t" data-ta="கட்டிங்" data-hi="कटिंग">Cut</div>
+          <div class="m" data-ta="துணி உள்ளே → கட் செட் வெளியே, கட் வேஸ்ட்டும்" data-hi="कपड़ा अंदर → कटे सेट बाहर, साथ में कटिंग वेस्ट">Fabric in → cut sets out, plus cut waste</div></div>
+          <svg class="i faint"><use href="icons.svg#chev-r"/></svg></a>
+        <button class="lrow"><svg class="i lg ic"><use href="icons.svg#packed"/></svg><div class="main">
+          <div class="t" data-ta="பேக்கிங்" data-hi="पैकिंग">Pack</div>
+          <div class="m" data-ta="கார்மென்ட் + பாலிபேக் உள்ளே → பேக் ஆன பீஸ் வெளியே" data-hi="कपड़े + पॉलीबैग अंदर → पैक पीस बाहर">Garments + polybags in → packed pcs out</div></div>
+          <svg class="i faint"><use href="icons.svg#chev-r"/></svg></button>
+        <button class="lrow"><svg class="i lg ic"><use href="icons.svg#qc"/></svg><div class="main">
+          <div class="t" data-ta="செக்கிங் (QC)" data-hi="चेकिंग (QC)">Check (QC)</div>
+          <div class="m" data-ta="பீஸை நல்லது, ரீவொர்க், ரிஜெக்ட் எனப் பிரி" data-hi="पीस को अच्छा, रीवर्क और रिजेक्ट में बाँटें">Sort pieces into good, rework and reject</div></div>
+          <svg class="i faint"><use href="icons.svg#chev-r"/></svg></button>
+        <button class="lrow"><svg class="i lg ic"><use href="icons.svg#layers"/></svg><div class="main">
+          <div class="t" data-ta="செட் ஆக்கு / பிரி" data-hi="सेट बनाएं / खोलें">Make sets / unpack</div>
+          <div class="m" data-ta="பாகங்களை செட்டாக சேர், அல்லது பேக்கைப் பிரித்து பீஸாக்கு" data-hi="हिस्सों से सेट बनाएं, या पैक खोलकर पीस करें">Join parts into sets, or open packs into pieces</div></div>
+          <svg class="i faint"><use href="icons.svg#chev-r"/></svg></button>
+      </div>
+
+      <div class="sec-h"><h2 data-ta="மற்றவை" data-hi="अन्य">Other</h2></div>
+      <div class="list">
+        <button class="lrow"><svg class="i lg ic"><use href="icons.svg#count"/></svg><div class="main">
+          <div class="t" data-ta="ஸ்டாக் எண்ணு" data-hi="स्टॉक गिनें">Count stock</div>
+          <div class="m" data-ta="Godown, Cutting floor-ல் உண்மையில் உள்ளதை பதிவு செய்" data-hi="Godown या Cutting floor में असल में जो है, वह दर्ज करें">Set what is really at Godown or Cutting floor</div></div>
+          <svg class="i faint"><use href="icons.svg#chev-r"/></svg></button>
+        <button class="lrow"><svg class="i lg ic"><use href="icons.svg#swap"/></svg><div class="main">
+          <div class="t" data-ta="கிரேடு மாற்று" data-hi="ग्रेड बदलें">Change grade</div>
+          <div class="m" data-ta="நல்லது → செகண்ட்ஸ் அல்லது ரிஜெக்ட், அல்லது மீண்டும் நல்லது" data-hi="अच्छा → सेकंड या रिजेक्ट, या फिर से अच्छा">Good to seconds or reject, or back to good</div></div>
+          <svg class="i faint"><use href="icons.svg#chev-r"/></svg></button>
+        <button class="lrow"><svg class="i lg ic"><use href="icons.svg#wallet"/></svg><div class="main">
+          <div class="t"><span data-ta="பணம் பதிவு செய்" data-hi="भुगतान दर्ज करें">Record a payment</span> <span class="tagp" data-ta="உரிமையாளர் மட்டும்" data-hi="सिर्फ़ मालिक">Owner only</span></div>
+          <div class="m" data-ta="கொடுத்தது அல்லது வாங்கியது · பதிவு மட்டும், பணம் போகாது" data-hi="दिया या लिया · सिर्फ़ रिकॉर्ड, पैसा नहीं जाता">Paid or received · a record only, no money moves</div></div>
+          <svg class="i faint"><use href="icons.svg#chev-r"/></svg></button>
+      </div>
+
+      <div class="list" style="margin-top:12px">
+        <button class="lrow" aria-expanded="false"><svg class="i lg ic"><use href="icons.svg#more"/></svg><div class="main">
+          <div class="t" data-ta="மேலும்" data-hi="और">More</div>
+          <div class="m" data-ta="வேலைக்கு வந்தது · உரிமையாளருக்கு திருப்பி அனுப்பு · இன்னொரு யூனிட்டுக்கு அனுப்பு · ஒரு யூனிட்டை இன்னொருவருக்கு அனுப்பச் சொல்" data-hi="काम के लिए आया · मालिक को वापस भेजें · दूसरी यूनिट को आगे भेजें · यूनिट से कहें कि दूसरी यूनिट को आगे भेजे">Received for work · Send back to owner · Forward to another unit · Tell a unit to send on to another</div></div>
+          <svg class="i faint"><use href="icons.svg#chev-d"/></svg></button>
+      </div>
+
+      <p class="anno"><b>Question:</b> what just happened to my goods? <b>Decision:</b> which form to open (or say it / snap the DC instead). Four groups: <b>Goods went out</b>, <b>Goods came in</b>, <b>Made here</b> (in-house work that changes the goods: take inputs from stock, add what came out, with the balance shown live; Cut opens S4b) and <b>Other</b>. Return to supplier and Buyer returned goods undo a buy or a sale. Rows are plain: icon, label, one-line hint, chevron (no tinted tiles). Ravi holds nobody else's goods, so <b>Received for work</b>, <b>Send back to owner</b>, <b>Forward to another unit</b> and <b>Tell a unit to send on to another</b> are folded under <b>More</b> for this business: still one tap away, and shown in the groups for job workers such as Lakshmi or Noyyal. <b>Record a payment</b> is owner-only; staff don't see it.</p>
+    </section>
+  </div>
+</div>
+<script src="mockup.js"></script>
+</body>
+</html>

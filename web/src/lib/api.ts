@@ -87,6 +87,7 @@ export const api = {
   get: <T = any>(path: string) => request<T>('GET', path),
   post: <T = any>(path: string, body?: unknown) => request<T>('POST', path, body ?? {}),
   patch: <T = any>(path: string, body?: unknown) => request<T>('PATCH', path, body ?? {}),
+  put: <T = any>(path: string, body?: unknown) => request<T>('PUT', path, body ?? {}),
   del: <T = any>(path: string) => request<T>('DELETE', path),
   upload: <T = any>(path: string, form: FormData) => request<T>('POST', path, form, true),
 };

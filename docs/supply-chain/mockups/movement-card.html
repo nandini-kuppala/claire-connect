@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chat · Movement card</title>
+<link rel="stylesheet" href="mockup.css">
+<style>
+  /* Movement card in chat (CC:Card type "movement"). One level only: no card inside it. */
+  .mv{flex-shrink:0;width:92%;max-width:400px;border:1px solid var(--line-strong);border-radius:18px;background:var(--surface);padding:12px 14px}
+  .mv.own{margin-left:auto}
+  .mv .hd{display:flex;gap:10px;align-items:flex-start}
+  .mv .hd .main{flex:1;min-width:0}
+  .mv .hd .t{font:650 15.5px/1.3 var(--head)}
+  .ic{flex:none;color:var(--ink-2)} /* plain icon, no tinted tile */
+  .mv.fold{display:flex;gap:10px;align-items:center;padding:10px 12px;min-height:56px;height:auto;text-align:left}
+  .mv.fold .ev{margin-top:6px}
+  .mv.fold .main{flex:1;min-width:0;font-weight:600;font-size:14.5px}
+  .mini td .meta{font-size:12px}
+  .tm{display:block;font-size:11.5px;color:var(--meta);margin-top:4px;text-align:right}
+  .day{align-self:center;font-size:12px;font-weight:600;color:var(--meta);background:var(--sunken);padding:3px 12px;border-radius:999px}
+  .terms{display:flex;gap:6px;align-items:flex-start;margin-top:8px;font-size:12.5px;color:var(--meta)}
+  .hdr .av{width:36px;height:36px;font-size:13px}
+</style>
+</head>
+<body>
+<!-- S6 · Movement card in chat. Viewer: Lakshmi (Lakshmi Garments, stitching unit), in her existing chat with Ravi Knit Fashions. -->
+<div class="frame">
+  <div class="app chat">
+    <header class="hdr">
+      <button class="iconbtn" aria-label="Back"><svg class="i"><use href="icons.svg#chev-l"/></svg></button>
+      <span class="av" style="background:#1F8C73">RK</span>
+      <h1 style="font-size:18px">Ravi Knit Fashions<span class="sub" data-ta="CLAIRE-ல் உள்ளார் · Veerapandi" data-hi="CLAIRE पर · Veerapandi">On CLAIRE · Veerapandi</span></h1>
+      <button class="iconbtn" aria-label="Call"><svg class="i"><use href="icons.svg#phone"/></svg></button>
+    </header>
+
+    <div class="log">
+      <span class="day" data-ta="நேற்று" data-hi="कल">Yesterday</span>
+      <button class="mv own fold">
+        <svg class="i lg ic"><use href="icons.svg#back"/></svg>
+        <span class="main"><span data-ta="திருப்பி அனுப்பியது 200 M + 6 ரீவொர்க் S · 20 நவ." data-hi="वापस भेजे 200 M + 6 रीवर्क S · 20 नव॰">Returned 200 M + 6 reworked S · 20 Nov</span><span style="display:block"></span>
+          <span class="ev conf"><svg class="i"><use href="icons.svg#check"/></svg><span data-ta="Ravi உறுதி செய்தார்" data-hi="Ravi ने पुष्टि की">Confirmed by Ravi</span></span></span>
+        <svg class="i faint"><use href="icons.svg#chev-r"/></svg>
+      </button>
+      <div class="bubble other"><span data-ta="200 வந்துச்சு, எல்லாம் சரி." data-hi="200 मिल गए, सब ठीक है।">Got the 200, all fine.</span><span class="tm">17:40</span></div>
+
+      <span class="day" data-ta="இன்று" data-hi="आज">Today</span>
+      <div class="bubble own"><span data-ta="180 ரெடி, S 80, M 100. வந்து எடுத்துக்கோங்க." data-hi="180 तैयार हैं, S 80 और M 100। आकर ले जाइए।">180 ready, S 80 and M 100. Come and collect.</span><span class="tm">09:15</span></div>
+      <div class="bubble other"><span data-ta="400 கிட் அனுப்பியிருக்கேன், S, M. சனிக்கிழமைக்குள் வேணும்." data-hi="400 किट भेजे हैं, S और M। शनिवार तक चाहिए।">400 kits sent, S and M. Need by Saturday.</span><span class="tm">10:44</span></div>
+
+      <div class="mv">
+        <div class="hd">
+          <svg class="i lg ic"><use href="icons.svg#truck"/></svg>
+          <div class="main">
+            <div class="t" data-ta="ஸ்டிச்சிங்கிற்கு அனுப்பியது · DC 0419 · 21 நவ." data-hi="सिलाई के लिए भेजा · DC 0419 · 21 नव॰">Sent for stitching · DC 0419 · 21 Nov</div>
+            <div class="meta" data-ta="Ravi Knit Fashions → உங்களுக்கு" data-hi="Ravi Knit Fashions → आपको">Ravi Knit Fashions → you</div>
+          </div>
+        </div>
+        <table class="mini">
+          <thead><tr><th data-ta="பொருள்" data-hi="माल">Item</th><th class="r" data-ta="அளவு" data-hi="मात्रा">Qty</th></tr></thead>
+          <tbody>
+            <tr><td><span data-ta="நேவி போலோ கிட்" data-hi="नेवी पोलो किट">Navy polo kits</span> RKF-P22<div class="meta"><span data-ta="லாட்" data-hi="लॉट">lot</span> N-0398 · S 200 · M 200</div></td><td class="r"><b class="num">400</b> <span data-ta="பீஸ்" data-hi="पीस">pcs</span></td></tr>
+            <tr><td data-ta="நூல்" data-hi="धागा">Thread</td><td class="r"><b class="num">12</b> <span data-ta="கோன்" data-hi="कोन">cones</span></td></tr>
+            <tr><td data-ta="பட்டன்" data-hi="बटन">Buttons</td><td class="r"><b class="num">1,224</b> <span data-ta="பீஸ்" data-hi="पीस">pcs</span></td></tr>
+            <tr><td data-ta="மெயின் லேபிள்" data-hi="मेन लेबल">Main labels</td><td class="r"><b class="num">400</b> <span data-ta="பீஸ்" data-hi="पीस">pcs</span></td></tr>
+          </tbody>
+        </table>
+        <div class="row-gap" style="margin-top:10px;justify-content:space-between">
+          <span class="meta" data-ta="திரும்ப வேண்டியது சனி 28 நவ." data-hi="वापसी शनि 28 नव॰">Expected back Sat 28 Nov</span>
+          <span class="st due"><svg class="i"><use href="icons.svg#clock"/></svg><span data-ta="சரிபார்த்து உறுதி செய்" data-hi="जाँचें और पुष्टि करें">Check and confirm</span></span>
+        </div>
+        <div class="meta" style="margin-top:6px" data-ta="ரேட் ₹14/பீஸ் (ஒப்புக்கொண்டது) · Ravi-யும் இதைப் பார்ப்பார் · உங்கள் ஸ்டாஃப் பார்க்க மாட்டார்கள்" data-hi="रेट ₹14/पीस (तय) · Ravi भी यह देखते हैं · आपका स्टाफ़ नहीं देखेगा">Rate ₹14/pc (agreed) · Ravi sees this too · your staff don't</div>
+        <div class="btns" style="margin-top:12px">
+          <button class="btn primary"><svg class="i"><use href="icons.svg#check"/></svg><span data-ta="எல்லாம் சரி" data-hi="सब सही है">All correct</span></button>
+          <button class="btn secondary" data-ta="எண்ணிக்கை வேறு" data-hi="गिनती अलग है">Different number</button>
+        </div>
+        <div class="terms"><svg class="i sm"><use href="icons.svg#info"/></svg><span data-ta="நிபந்தனை: எண்ணும் சரக்கு சரியாகப் பொருந்த வேண்டும்" data-hi="शर्त: गिनती वाला माल बिल्कुल मेल खाना चाहिए">Terms: counted goods must match exactly</span></div>
+        <span class="tm">10:52</span>
+      </div>
+
+      <p class="anno"><b>Question:</b> what exactly did Ravi send me, and do I agree? <b>Decision:</b> tap All correct (2 taps from the chat list) or mark a line different. The card reaches Lakshmi at 10:52, 10 min after Ravi saved it at 10:42 (undo window). Until she checks it, the card shows <b>Check and confirm</b> (her action, not one of the 3 evidence badges). The rate line is on the card: the job's client (Ravi) and performer (Lakshmi) both see it; staff of either side don't. Card icons are plain (no tinted tile), 24 px. Tapping the folded card opens the movement detail (S6 detail page).</p>
+    </div>
+
+    <div class="composer">
+      <button class="iconbtn" aria-label="Attach"><svg class="i"><use href="icons.svg#plus"/></svg></button>
+      <div class="input"><span class="faint" data-ta="மெசேஜ்" data-hi="मैसेज">Message</span></div>
+      <button class="micbtn" style="width:44px;height:44px" aria-label="Say it"><svg class="i"><use href="icons.svg#mic"/></svg></button>
+    </div>
+  </div>
+</div>
+<script src="mockup.js"></script>
+</body>
+</html>

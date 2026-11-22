@@ -23,6 +23,8 @@ export const features = {
   nexconn: Boolean(cfg.nexconn.appKey && cfg.nexconn.appSecret),
   llm: Boolean(cfg.openrouterKey),
   sarvam: Boolean(cfg.sarvamKey),
+  /** Supply-chain module (docs/supply-chain). Off unless SC_ENABLED=1; then on only for businesses with flags.sc. */
+  supplyChain: process.env.SC_ENABLED === '1',
 };
 
 /** Fixed chat identities used by the platform. */

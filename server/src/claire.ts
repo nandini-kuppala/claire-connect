@@ -12,6 +12,7 @@ import { CATEGORIES, catById, categoryName } from '../../shared/taxonomy.js';
 import { serverLocale } from './locales/index.js';
 import { CC_CARD, type CardPayload, type Chip } from '../../shared/cards.js';
 import { createTicket } from './desk.js';
+import { scClaireTurn, goodsChips } from './sc/claire/turn.js';
 
 type Out = { kind: 'text'; text: string } | CardPayload;
 
@@ -29,6 +30,8 @@ interface Slots {
   fabric?: string | null;
   gsm?: number | null;
   colours?: string[];
+  /** Garment for a job-work request ("T-shirts"), matched against the unit's listed garments. */
+  garment?: string | null;
 }
 
 interface Session {
@@ -74,7 +77,10 @@ export async function homeCard(user: UserRow): Promise<Out[]> {
     { id: 'home:human', label: t(lang, 'home_human') },
   ];
   const first = (user.name || biz?.owner_name || '').split(' ')[0];
-  return [{ kind: 'chips', text: t(lang, 'greet', { name: first }), hint: t(lang, 'greet_sub'), chips, layout: 'grid' }];
+  const goods = await goodsChips(user);
+  // Staff: goods only, no buying or selling.
+  if (user.role === 'staff') return [{ kind: 'chips', text: t(lang, 'greet', { name: (user.name || '').split(' ')[0] }), hint: undefined, chips: goods, layout: 'grid' }];
+  return [{ kind: 'chips', text: t(lang, 'greet', { name: first }), hint: t(lang, 'greet_sub'), chips: [...goods, ...chips], layout: 'grid' }];
 }
 
 export async function claireWelcome(user: UserRow) {
@@ -84,6 +90,13 @@ export async function claireWelcome(user: UserRow) {
 
 // ── Turn handling ─────────────────────────────────────────────────────────
 export async function claireTurn(user: UserRow, input: { text?: string; chipId?: string }) {
+  // Goods questions and records (supply-chain flag on): answered from the user's own records, else the flow below.
+  const goods = await scClaireTurn(user, input).catch((e) => { console.error('[claire] goods turn failed', e); return null; });
+  if (goods) return say(user, goods as Out[]);
+  if (user.role === 'staff') {
+    const msg = { en: 'I can help you with goods: what came in, what is out, what is late. Buying and selling are for the owner.', ta: 'சரக்கு பற்றி உதவ முடியும்: என்ன வந்தது, என்ன வெளியே உள்ளது, என்ன தாமதம். வாங்குவதும் விற்பதும் உரிமையாளருக்கு.', hi: 'मैं माल में मदद कर सकती हूँ: क्या आया, क्या बाहर है, क्या देर है। खरीद-बिक्री मालिक के लिए है।' } as Record<string, string>;
+    return say(user, [{ kind: 'text', text: msg[user.language] ?? msg.en }]);
+  }
   const s = await load(user.id);
   const lang = user.language;
   const biz = user.business_id ? await getBiz(user.business_id) : null;
@@ -120,6 +133,8 @@ export async function claireTurn(user: UserRow, input: { text?: string; chipId?:
     if (nlu.fabric) s.slots.fabric = nlu.fabric;
     if (nlu.gsm) s.slots.gsm = nlu.gsm;
     if (nlu.colours?.length) s.slots.colours = nlu.colours;
+    const garment = garmentOf(input.text);
+    if (garment) s.slots.garment = garment;
     // A rich one-sentence request skips the style question.
     if (learned && s.slots.qty && s.slots.budgetDone) s.slots.styleDone = true;
 
@@ -262,20 +277,22 @@ async function nextStep(user: UserRow, s: Session, reask: boolean): Promise<Out[
   const reqId = id('rq_');
   await insert('requirements', {
     id: reqId, buyer_business_id: user.business_id ?? 'unknown', type: cat.type, category: cat.id,
-    attrs: { fabric: sl.fabric ?? null, gsm: sl.gsm ?? null, colours: sl.colours ?? [] }, liked: sl.liked ?? [], qty: sl.qty, unit: cat.unit,
+    attrs: { fabric: sl.fabric ?? null, gsm: sl.gsm ?? null, colours: sl.colours ?? [], ...(isService && sl.garment ? { garment: sl.garment } : {}) }, liked: sl.liked ?? [], qty: sl.qty, unit: cat.unit,
     budget: sl.budget ?? null, deadline_days: sl.deadlineDays ?? null, city: sl.city ?? null, status: 'matched', created_at: now(),
   });
   const qtyText = `${sl.qty.toLocaleString('en-IN')} ${unitWord(lang, cat.unit)}`;
   const title = t(lang, 'results_title', { qty: qtyText, cat: catName(lang, cat.id), budget: sl.budget ? inr(sl.budget) : t(lang, 'no_limit'), city: sl.city || '—' });
   const need = {
     category: cat.id, qty: sl.qty, unit: cat.unit, budget: sl.budget ?? null, deadlineDays: sl.deadlineDays ?? null, city: sl.city ?? null,
-    attrs: { fabric: sl.fabric, gsm: sl.gsm, colours: sl.colours }, liked: sl.liked, excludeBusinessId: user.business_id ?? undefined,
+    attrs: { fabric: sl.fabric, gsm: sl.gsm, colours: sl.colours, garment: isService ? sl.garment ?? null : null }, liked: sl.liked, excludeBusinessId: user.business_id ?? undefined,
   };
 
   if (isService) {
     const split = await splitJob(need);
     const single = split.lines.length === 1;
-    const out: Out[] = [{ kind: 'summary', title: t(lang, 'summary_title'), lines: [title] }];
+    // Keep the buyer's deadline visible in the summary (single-unit titles do not carry it).
+    const summaryLines = sl.deadlineDays ? [title, t(lang, 'job_need_days', { days: sl.deadlineDays })] : [title];
+    const out: Out[] = [{ kind: 'summary', title: t(lang, 'summary_title'), lines: summaryLines }];
     if (!split.lines.length) out.push({ kind: 'text', text: t(lang, 'results_none') });
     else out.push({
       kind: 'job_split', requirementId: reqId,
@@ -295,6 +312,19 @@ async function nextStep(user: UserRow, s: Session, reask: boolean): Promise<Out[
     ];
   }
   return [{ kind: 'results', requirementId: reqId, title, singles: m.singles, combos: m.combos, mto: m.mto, band: m.band, note }];
+}
+
+const GARMENTS: [RegExp, string][] = [
+  [/t[\s-]?shirts?|\btees?\b|टी[\s-]?शर्ट|டி[\s-]?ஷர்ட்|டீ[\s-]?ஷர்ட்|பனியன்/i, 'T-shirts'],
+  [/\bpolos?\b|पोलो|போலோ/i, 'polos'],
+  [/track\s*pants?|ट्रैक\s*पैंट|ट्रैक\s*पेंट|டிராக்\s*பேண்ட்|ட்ராக்\s*பேண்ட்/i, 'track pants'],
+  [/\bshorts\b|शॉर्ट्स|ஷார்ட்ஸ்/i, 'shorts'],
+  [/leggings?|लेगिंग|லெகிங்ஸ்|லெக்கிங்ஸ்/i, 'leggings'],
+  [/hoodies?|हुडी|ஹூடி/i, 'hoodies'],
+];
+/** The garment named in a job-work request, in the words units use on their listings. */
+function garmentOf(text: string): string | null {
+  return GARMENTS.find(([re]) => re.test(text))?.[1] ?? null;
 }
 
 function tileColor(catId: string) {

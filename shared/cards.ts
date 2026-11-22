@@ -52,6 +52,8 @@ export interface MatchCard {
   rating?: number;
   onTimePct?: number;
   stock?: number;
+  /** Average price is above the buyer's budget (shown as an "above budget" flag). */
+  overBudget?: boolean;
 }
 
 export type CardPayload =
@@ -69,7 +71,21 @@ export type CardPayload =
   | { kind: 'resolved'; ticketCode: string; outcome: string }
   | { kind: 'profile'; name: string; business: string; sells: string[]; buys: string[]; city?: string; capacity?: string }
   | { kind: 'notice'; text: string; tone?: 'info' | 'success' | 'warn' }
-  | { kind: 'job_split'; requirementId: string; title: string; lines: MatchLine[]; total: number; avgPrice: number; readyDays: number };
+  | { kind: 'job_split'; requirementId: string; title: string; lines: MatchLine[]; total: number; avgPrice: number; readyDays: number }
+  /** Supply-chain movement (docs/supply-chain/04 §8.2). One payload for both businesses: the client works out its own
+   *  side from fromBusinessId / toBusinessId. Never carries prices. `text` is a short trilingual fallback line. */
+  | { kind: 'movement'; movementId: string; action: string; text: string; fromBusinessId: string; toBusinessId: string; fromName: string; toName: string;
+      date: string; dcNo?: string | null; processKey?: string | null; lines: { lineId: string; label: string; dim: string; sent: number; received?: number | null; final?: boolean }[];
+      state: 'sent' | 'confirmed' | 'within_tolerance' | 'disputed' | 'cancelled'; disputeId?: string | null }
+  | { kind: 'dispute'; disputeId: string; text: string; movementId?: string | null; lineLabel: string; dim: string; sentBy: string; receivedBy: string;
+      sent: number; received: number; difference: number; allowed: number; state: string; proposal?: { by: string; outcome: string } | null; outcome?: string | null }
+  /** Personal Claire's answer about goods (04 §9.2): rows are the records behind it, each tappable; `source` says
+   *  what it is based on and as of when. Text is already in the reader's language. */
+  | { kind: 'goods_answer'; title: string; rows: { label: string; value: string; sub?: string; href?: string; tone?: 'late' | 'ready' | 'held' | 'due' | null }[];
+      source: string; note?: string; chips?: Chip[] }
+  /** A record Claire drafted from what the user said; nothing is saved until Save. */
+  | { kind: 'record_draft'; draftId: string; header: string; readBack: string; partyName: string | null; lines: { label: string; qty: string }[];
+      notes: string[]; state: 'draft' | 'saved' | 'cancelled' | 'expired'; canSave: boolean; formHref: string; movementId?: string | null; chips?: Chip[] };
 
 export interface HintPayload {
   text: string;

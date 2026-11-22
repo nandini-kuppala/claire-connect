@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Job · J-0415 Lakshmi</title>
+<link rel="stylesheet" href="mockup.css">
+<style>
+/* Job detail only: two columns on desktop, one input line per conservation block, a disabled button that says why */
+.cline+.cline{margin-top:18px;padding-top:16px;border-top:1px solid var(--line)}
+.cline .h{font-weight:650;font-size:15px;margin-bottom:8px}
+.cline .h .meta{font-weight:500}
+.cline .sub{margin-top:6px;font-size:13px;color:var(--meta)}
+.dates{display:flex;flex-wrap:wrap;gap:4px 16px;margin-top:10px;font-size:14px;color:var(--ink-2)}
+.hist{list-style:none;font-size:14px}
+.hist li{display:flex;gap:10px;padding:8px 0;border-top:1px solid var(--line)}
+.hist li:first-child{border-top:0}
+.hist .d{flex:none;width:52px;color:var(--meta);font-variant-numeric:tabular-nums}
+.btn.blocked{flex-direction:column;gap:0;background:var(--sunken);border:1px dashed var(--line-strong);color:var(--meta);cursor:not-allowed}
+.btn.blocked .why{font-size:12px;font-weight:500}
+.bottombar .btn{flex:1 1 0;min-width:0}
+.app{padding-bottom:172px}
+@media (min-width:1024px){
+  .frame.wide .cols{display:grid;grid-template-columns:3fr 2fr;gap:20px;align-items:start}
+  .frame.wide .card{margin:16px 0 0}
+}
+</style>
+</head>
+<body>
+<!-- S7 · Job detail. Viewer: Ravi (owner), Ravi Knit Fashions. Job J-0415, Lakshmi Garments, stitching. -->
+<div class="frame wide">
+  <aside class="rail" data-active="goods"></aside>
+  <div class="app">
+    <header class="hdr">
+      <button class="iconbtn" aria-label="Back"><svg class="i"><use href="icons.svg#chev-l"/></svg></button>
+      <h1><span data-ta="J-0415 · தையல்" data-hi="J-0415 · सिलाई">J-0415 · Stitching</span>
+        <span class="sub">Lakshmi Garments · DC 0413</span></h1>
+      <button class="iconbtn lbl"><svg class="i"><use href="icons.svg#chats"/></svg><span data-ta="சாட்" data-hi="चैट">Chat</span></button>
+    </header>
+    <div class="wrap">
+      <div class="cols">
+        <div>
+          <div class="card">
+            <div class="row-gap">
+              <span class="st ready"><svg class="i"><use href="icons.svg#check"/></svg><span data-ta="எடுக்க தயார்" data-hi="लेने को तैयार">Ready to collect</span></span>
+              <span class="tagp" data-ta="R-11 நேவி போலோ" data-hi="R-11 नेवी पोलो">R-11 navy polo</span>
+            </div>
+            <h3 style="margin-top:10px" data-ta="Lakshmi Garments · தையல் ஜாப் வொர்க்" data-hi="Lakshmi Garments · सिलाई जॉब वर्क">Lakshmi Garments · Stitching job work</h3>
+            <div class="dates">
+              <span data-ta="அனுப்பியது 13 நவ." data-hi="भेजा 13 नव॰">Sent 13 Nov</span>
+              <span data-ta="சொன்னது திங்கள் 23 நவ." data-hi="वादा सोम 23 नव॰">Promised Mon 23 Nov</span>
+              <span data-ta="180 தயார் 21 நவ. முதல்" data-hi="180 तैयार 21 नव॰ से">180 ready since 21 Nov</span>
+            </div>
+          </div>
+
+          <div class="sec-h"><h2 data-ta="ஒவ்வொரு பீஸும் எங்கே" data-hi="हर पीस कहाँ है">Where every piece is</h2></div>
+          <div class="card">
+            <div class="cline">
+              <div class="h"><span data-ta="நேவி போலோ கிட்" data-hi="नेवी पोलो किट">Navy polo kits</span> <span class="meta" data-ta="S 300 · M 300 · லாட் D-4471" data-hi="S 300 · M 300 · लॉट D-4471">S 300 · M 300 · lot D-4471</span></div>
+              <div class="sbar" role="img" aria-label="600 kits: 420 back, 180 ready, 0 still to stitch"><span class="a" style="width:70%"></span><span class="b" style="width:30%"></span></div>
+              <div class="legend">
+                <span class="num" data-ta="600 கிட்:" data-hi="600 किट:">600 kits:</span>
+                <span><i style="background:var(--primary)"></i><b>420</b> <span data-ta="திரும்ப வந்தது (நல்லது)" data-hi="वापस आए (ठीक)">back (good)</span></span>
+                <span><i style="background:var(--accent)"></i><b>180</b> <span data-ta="Lakshmi-யிடம் தயார்" data-hi="Lakshmi के पास तैयार">ready at Lakshmi</span></span>
+                <span><i style="background:var(--line-strong)"></i><b>0</b> <span data-ta="தைக்க மீதம்" data-hi="सिलाई बाकी">still to stitch</span></span>
+              </div>
+            </div>
+            <div class="cline">
+              <div class="h"><span data-ta="பட்டன்" data-hi="बटन">Buttons</span> <span class="meta" data-ta="ஒரு பீஸுக்கு 3 + 2 %" data-hi="3 प्रति पीस + 2 %">3 per pc + 2 %</span></div>
+              <div class="sbar" role="img" aria-label="1,836 buttons: 1,260 on pieces back, 540 on pieces ready, 36 left over"><span class="a" style="width:68.6%"></span><span class="b" style="width:29.4%"></span><span class="d" style="width:2%"></span></div>
+              <div class="legend">
+                <span class="num" data-ta="1,836 கொடுத்தது:" data-hi="1,836 दिए:">1,836 issued:</span>
+                <span><i style="background:var(--primary)"></i><b>1,260</b> <span data-ta="திரும்பிய 420 பீஸில்" data-hi="वापस आए 420 पीस पर">on 420 pcs back</span></span>
+                <span><i style="background:var(--accent)"></i><b>540</b> <span data-ta="தயாரான 180 பீஸில்" data-hi="तैयार 180 पीस पर">on 180 pcs ready</span></span>
+                <span><i style="background:var(--line-strong)"></i><b>36</b> <span data-ta="மீதம்" data-hi="बचे">left over</span></span>
+              </div>
+              <div class="sub" data-ta="எல்லாம் வந்ததும்: 600 பீஸில் 1,800 · 36 மீதம் (வேலையை முடிக்கும்போது முடிவு செய்யுங்கள்)" data-hi="सब वापस आने पर: 600 पीस पर 1,800 · 36 बचे (जॉब बंद करते समय तय करें)">When all back: 1,800 on 600 pcs · 36 left over (decide at close)</div>
+            </div>
+            <div class="cline">
+              <div class="h"><span data-ta="நூல்" data-hi="धागा">Thread</span> <span class="meta" data-ta="நேவி · பீஸுக்கு 0.03 கோன், ஸ்டைல் கணக்கு" data-hi="नेवी · 0.03 कोन प्रति पीस, स्टाइल के हिसाब से">navy · 0.03 cone/pc, by the style</span></div>
+              <div class="sbar" role="img" aria-label="18 cones: about 13 on pieces back, about 5 on pieces ready"><span class="a" style="width:70%"></span><span class="b" style="width:30%"></span></div>
+              <div class="legend">
+                <span class="num" data-ta="18 கோன்:" data-hi="18 कोन:">18 cones:</span>
+                <span><i style="background:var(--primary)"></i><b>≈ 13</b> <span data-ta="திரும்பிய 420 பீஸில்" data-hi="वापस आए 420 पीस पर">on 420 pcs back</span></span>
+                <span><i style="background:var(--accent)"></i><b>≈ 5</b> <span data-ta="தயாரான 180 பீஸில்" data-hi="तैयार 180 पीस पर">on 180 pcs ready</span></span>
+              </div>
+              <div class="sub" data-ta="≈ என்பது ஸ்டைல் கணக்குப்படி. மீதமுள்ள நூலை முடிக்கும்போது எண்ணுங்கள்." data-hi="≈ स्टाइल के हिसाब से अंदाज़ा है। बचा धागा जॉब बंद करते समय गिनें।">≈ is worked out from the style. Count leftover thread at close.</div>
+            </div>
+            <div class="cline">
+              <div class="h"><span data-ta="மெயின் லேபிள்" data-hi="मेन लेबल">Main labels</span> <span class="meta" data-ta="ஒரு பீஸுக்கு 1" data-hi="1 प्रति पीस">1 per pc</span></div>
+              <div class="sbar" role="img" aria-label="600 labels: 420 on pieces back, 180 on pieces ready, 0 left over"><span class="a" style="width:70%"></span><span class="b" style="width:30%"></span></div>
+              <div class="legend">
+                <span class="num" data-ta="600 லேபிள்:" data-hi="600 लेबल:">600 labels:</span>
+                <span><i style="background:var(--primary)"></i><b>420</b> <span data-ta="திரும்பிய பீஸில்" data-hi="वापस आए पीस पर">on pcs back</span></span>
+                <span><i style="background:var(--accent)"></i><b>180</b> <span data-ta="தயாரான பீஸில்" data-hi="तैयार पीस पर">on pcs ready</span></span>
+                <span><i style="background:var(--line-strong)"></i><b>0</b> <span data-ta="மீதம்" data-hi="बचे">left over</span></span>
+              </div>
+            </div>
+          </div>
+
+          <div class="sec-h"><h2 data-ta="சைஸ் வாரியாக" data-hi="साइज़ के हिसाब से">By size</h2><span class="hint" data-ta="பீஸ்" data-hi="पीस">pcs</span></div>
+          <div class="card" style="padding:8px 14px 12px">
+            <table class="mini">
+              <thead><tr><th data-ta="சைஸ்" data-hi="साइज़">Size</th><th class="r" data-ta="அனுப்பியது" data-hi="भेजे">Sent</th><th class="r" data-ta="திரும்பியது (நல்லது)" data-hi="वापस (ठीक)">Back (good)</th><th class="r" data-ta="Lakshmi-யிடம் தயார்" data-hi="Lakshmi के पास तैयार">Ready at Lakshmi</th></tr></thead>
+              <tbody>
+                <tr><td>S</td><td class="r tnum">300</td><td class="r tnum">220</td><td class="r tnum">80</td></tr>
+                <tr><td>M</td><td class="r tnum">300</td><td class="r tnum">200</td><td class="r tnum">100</td></tr>
+                <tr><td><b data-ta="மொத்தம்" data-hi="कुल">Total</b></td><td class="r num">600</td><td class="r num">420</td><td class="r num">180</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="card">
+            <h3 class="row-gap"><svg class="i"><use href="icons.svg#undo"/></svg><span data-ta="திருத்த வேலை" data-hi="दोबारा काम">Rework</span></h3>
+            <p style="margin-top:6px" data-ta="18 நவ.: 220 S வந்ததில் 6 அதே நாள் திருத்த வேலைக்கு திருப்பி அனுப்பியது → 20 நவ.: திருத்திய 6 S சரியாக வந்தது" data-hi="18 नव॰: आए 220 S में से 6 उसी दिन दोबारा काम को लौटाए → 20 नव॰: दोबारा काम के 6 S ठीक होकर आए">18 Nov: of the 220 S back, 6 sent back for rework the same day → 20 Nov: the 6 reworked S came back OK</p>
+            <p class="meta" style="margin-top:2px" data-ta="நல்ல 420-ல் ஒரு முறை மட்டும் எண்ணப்பட்டது; பில்லிலும் ஒரு முறை." data-hi="420 ठीक में एक ही बार गिने; बिल में भी एक बार।">Counted once in the 420 good, and billed once.</p>
+          </div>
+        </div>
+
+        <div>
+          <div class="card">
+            <div class="row-gap" style="justify-content:space-between">
+              <h3 class="row-gap"><svg class="i"><use href="icons.svg#wallet"/></svg><span data-ta="பில்" data-hi="बिल">Bill</span></h3>
+              <span class="tagp"><svg class="i sm"><use href="icons.svg#user"/></svg><span data-ta="Lakshmi-யும் இந்த பில்லைப் பார்ப்பார் · ஸ்டாஃப் பார்க்க மாட்டார்கள்" data-hi="Lakshmi भी यह बिल देखेंगी · स्टाफ़ नहीं देखेगा">Lakshmi sees this bill too · staff don't</span></span>
+            </div>
+            <dl class="kv" style="margin-top:12px">
+              <dt data-ta="இதுவரை பில்" data-hi="अब तक का बिल">Billed so far</dt><dd class="tnum">420 × ₹14 = ₹5,880</dd>
+              <dt data-ta="முழு வேலை" data-hi="पूरा जॉब">Full job</dt><dd class="tnum">600 × ₹14 = ₹8,400</dd>
+              <dt data-ta="அட்வான்ஸ்" data-hi="एडवांस">Advance</dt><dd class="tnum" data-ta="₹3,000 (UPI, 13 நவ.)" data-hi="₹3,000 (UPI, 13 नव॰)">₹3,000 (UPI, 13 Nov)</dd>
+              <dt data-ta="இதுவரை பாக்கி" data-hi="अब तक बाकी">Balance so far</dt><dd class="num">₹2,880</dd>
+            </dl>
+            <p class="meta" style="margin-top:10px" data-ta="நல்ல பீஸுக்கு மட்டும் ₹14. பதிவு மட்டும்; பணம் இங்கே அனுப்பப்படாது." data-hi="सिर्फ़ ठीक पीस पर ₹14। सिर्फ़ रिकॉर्ड; पैसा यहाँ से नहीं जाता।">₹14 per good piece. Record only; no money moves here.</p>
+          </div>
+
+          <div class="card">
+            <h3 data-ta="நடந்தவை" data-hi="क्या हुआ">What happened</h3>
+            <ul class="hist" style="margin-top:6px">
+              <li><span class="d" data-ta="13 நவ." data-hi="13 नव॰">13 Nov</span><span data-ta="600 கிட் + நூல், பட்டன், லேபிள் அனுப்பியது · DC 0413" data-hi="600 किट + धागा, बटन, लेबल भेजे · DC 0413">Sent 600 kits + thread, buttons, labels · DC 0413</span></li>
+              <li><span class="d" data-ta="18 நவ." data-hi="18 नव॰">18 Nov</span><span data-ta="220 S திரும்பியது · அதில் 6 அதே நாள் திருத்த வேலைக்கு திருப்பி அனுப்பியது" data-hi="220 S वापस · उनमें से 6 उसी दिन दोबारा काम को लौटाए">220 S back · 6 of them sent back for rework the same day</span></li>
+              <li><span class="d" data-ta="20 நவ." data-hi="20 नव॰">20 Nov</span><span data-ta="200 M + திருத்திய 6 S திரும்பியது" data-hi="200 M + दोबारा काम के 6 S वापस">200 M + the 6 reworked S back</span></li>
+              <li><span class="d" data-ta="21 நவ." data-hi="21 नव॰">21 Nov</span><span data-ta="Lakshmi 180 தயார் என்று குறித்தார் (S 80 · M 100)" data-hi="Lakshmi ने 180 तैयार बताए (S 80 · M 100)">Lakshmi marked 180 ready (S 80 · M 100)</span></li>
+            </ul>
+          </div>
+
+          <div class="card only-desk">
+            <div class="btns">
+              <button class="btn primary lg"><svg class="i"><use href="icons.svg#truck"/></svg><span data-ta="180 எடுத்து வா" data-hi="180 ले आएँ">Collect 180</span></button>
+              <button class="btn blocked lg" disabled><span data-ta="வேலையை முடி" data-hi="जॉब बंद करें">Close job</span><span class="why" data-ta="180 பீஸ் இன்னும் Lakshmi-யிடம்" data-hi="180 पीस अभी Lakshmi के पास">180 pcs still at Lakshmi</span></button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <p class="anno"><b>Question:</b> for this job, where did every unit go? <b>Decision:</b> collect the 180, then close and pay. Promised Mon 23 Nov (agreed; longer than Lakshmi's usual 6 working days because of the job size), so not late. Each input line has its own bar (kits and trims are never added together). ≈ marks an estimate from the style. The bill block shows to both owners: Ravi (client) and Lakshmi (performer) see the same bill; staff of either side never see rates or bills. Close job stays disabled, with its reason in the button, until nothing is pending.</p>
+    </div>
+    <div class="bottombar">
+      <button class="btn primary lg"><svg class="i"><use href="icons.svg#truck"/></svg><span data-ta="180 எடுத்து வா" data-hi="180 ले आएँ">Collect 180</span></button>
+      <button class="btn blocked lg" disabled><span data-ta="வேலையை முடி" data-hi="जॉब बंद करें">Close job</span><span class="why" data-ta="180 பீஸ் இன்னும் Lakshmi-யிடம்" data-hi="180 पीस अभी Lakshmi के पास">180 pcs still at Lakshmi</span></button>
+    </div>
+    <nav class="nav" data-active="goods" data-badgegoods="1"></nav>
+  </div>
+</div>
+<script src="mockup.js"></script>
+</body>
+</html>

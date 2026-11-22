@@ -2,7 +2,9 @@
 import { useMemo, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import clsx from 'clsx';
-import { Check, ChevronDown, ChevronRight, Factory, Info, MessageCircle, Package, Star, Trophy, Truck, Users } from '../icons';
+import { Check, ChevronDown, ChevronRight, Factory, Info, MessageCircle, Package, Star, Trophy, Truck, Users, History } from '../icons';
+import { useGoodsHistory } from './goods/history';
+import { OrderGoodsS } from './goods/OrderGoods.strings';
 import { AppShell } from '../components/AppShell';
 import { Button } from '../components/Button';
 import { ClaireMark } from '../components/Avatar';
@@ -179,6 +181,19 @@ function Suppliers({ d, s, lang, act }: { d: Detail; s: RT; lang: string; act: D
   );
 }
 
+/** J15: "You: 4 jobs · usually 6 days · 7.1% loss", from my own Goods jobs with them (private to me). */
+function MyHistory({ businessId }: { businessId: string }) {
+  const h = useGoodsHistory(businessId);
+  const og = OrderGoodsS.use();
+  if (!h) return null;
+  return (
+    <p className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-sunken px-3 py-1 text-[13px] font-semibold text-ink-2">
+      <History size={15} aria-hidden className="text-meta" />
+      {[og('history', { n: h.jobs }), h.usual_days !== null ? og('history_days', { d: h.usual_days }) : null, h.loss_pct !== null ? og('history_loss', { x: h.loss_pct }) : null].filter(Boolean).join(' · ')}
+    </p>
+  );
+}
+
 function SupplierCard({ c, d, s, lang, act }: { c: RCard; d: Detail; s: RT; lang: string; act: DealActions }) {
   const nav = useNavigate();
   const line = c.lines[0];
@@ -213,6 +228,7 @@ function SupplierCard({ c, d, s, lang, act }: { c: RCard; d: Detail; s: RT; lang
             <span className="font-head text-[26px] leading-none font-bold text-ink tabular-nums">{inr(c.avgPrice)}</span>
             <span className="text-[14px] text-meta">{s('per_unit', { unit: per })}</span>
             {c.bestPrice && <Tag>{s('best_price')}</Tag>}
+            {c.overBudget && <Tag tone="neutral">{s('tag_above_budget')}</Tag>}
           </div>
           <p className="mt-1.5 flex flex-wrap items-center gap-x-1.5 text-[13px] text-ink-2">
             {sup.ratingAvg != null ? (
@@ -247,6 +263,7 @@ function SupplierCard({ c, d, s, lang, act }: { c: RCard; d: Detail; s: RT; lang
           {readyText(s, c.readyDays)}
         </span>
       </div>
+      <MyHistory businessId={line.businessId} />
 
       {c.badges.length > 0 && (
         <div className="mt-3">
@@ -322,6 +339,7 @@ function ComboCard({ c, d, s, act }: { c: RCard; d: Detail; s: RT; act: DealActi
       <div className="mt-3 flex flex-wrap items-baseline gap-x-3 gap-y-1">
         <span className="font-head text-[22px] font-bold text-ink tabular-nums">{s('avg_per', { price: inr(c.avgPrice), unit: per })}</span>
         {c.bestPrice && <Tag>{s('best_price')}</Tag>}
+        {c.overBudget && <Tag tone="neutral">{s('tag_above_budget')}</Tag>}
       </div>
       <p className="mt-1 text-[13px] text-meta">
         {s('total_about', { amt: inr(c.total) })} · {readyText(s, c.readyDays)}

@@ -1,6 +1,7 @@
 // Phone + demo OTP sign-in, the signed-in user's profile, and the Nexconn chat credentials.
 import { Router } from 'express';
 import { cfg, features } from '../config.js';
+import { scOn } from '../sc/flag.js';
 import { chat, chatMode } from '../chat.js';
 import { byId, findOne, insert, update } from '../db/index.js';
 import { getUser, publicBiz, type UserRow } from '../biz.js';
@@ -20,9 +21,9 @@ export function normalizePhone(raw: unknown): string {
 
 /** User as sent to the client: the stored row without internal fields. */
 export function publicUser(u: UserRow) {
-  const { chat_token: _token, ...rest } = u as UserRow & { _id?: string };
+  const { chat_token: _token, pin_hash: pinHash, ...rest } = u as UserRow & { _id?: string; pin_hash?: string | null };
   delete (rest as { _id?: string })._id;
-  return { ...rest, onboarded: u.onboarded ? 1 : 0 };
+  return { ...rest, onboarded: u.onboarded ? 1 : 0, has_pin: !!pinHash };
 }
 
 /** Returns the user's Nexconn token, issuing (and caching) one if needed. Null in local mode or on failure. */
@@ -93,7 +94,7 @@ router.get(
       chatInfo(user),
       user.business_id ? trustOf(user.business_id).catch(() => null) : Promise.resolve(null),
     ]);
-    res.json({ user: publicUser(user), business, trust, chat: chatCreds, features });
+    res.json({ user: publicUser(user), business, trust, chat: chatCreds, features: { ...features, supplyChain: features.supplyChain && !!user.business_id && scOn(await byId<any>('businesses', user.business_id)) } });
   }),
 );
 

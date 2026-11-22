@@ -10,13 +10,15 @@ export interface DealOfferLite {
   /** Sent by my business. */
   mine: boolean;
   createdAt?: number;
+  /** The offer this one counters. */
+  parentId?: string | null;
 }
 
 export interface DealInfo {
   title?: string;
   qty?: number;
   unit?: string;
-  /** First price the seller put on the table (shown as "listed"). */
+  /** The seller's listing price for this product (shown as "listed"). */
   listedPrice?: number;
   /** 'buyer' | 'seller' | null */
   side?: string | null;

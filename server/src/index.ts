@@ -3,6 +3,7 @@ import 'dotenv/config';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { staffGuard } from './staffGuard.js';
 import express, { type NextFunction, type Request, type Response, type Router } from 'express';
 import cors from 'cors';
 import multer from 'multer';
@@ -54,7 +55,8 @@ async function ensureBots() {
 async function main() {
   const app = express();
   app.disable('x-powered-by');
-  app.set('trust proxy', true);
+  // Trust only the proxy in front of us (Render: one hop), so req.ip can't be set by a client's own X-Forwarded-For.
+  app.set('trust proxy', Number(process.env.TRUST_PROXY_HOPS ?? 1));
   app.use(
     cors({
       origin: (origin, cb) => cb(null, !origin || origin === cfg.webUrl || LOCAL_ORIGIN.test(origin)),
@@ -62,6 +64,8 @@ async function main() {
     }),
   );
   app.use(express.json({ limit: '15mb' }));
+  // Staff logins reach only Goods, Claire and Goods conversations, on every route (04 §10.3b).
+  app.use('/api', staffGuard);
   app.use('/uploads', express.static(uploadsDir, { maxAge: '7d', fallthrough: false }));
 
   await connectDb();
@@ -71,6 +75,17 @@ async function main() {
     await seed();
   }
   await ensureBots();
+  if (features.supplyChain) {
+    const [{ ensureScIndexes }, { ensureTemplates }] = await Promise.all([import('./sc/indexes.js'), import('./sc/templates.js')]);
+    await ensureScIndexes();
+    await ensureTemplates();
+    // Public statement pages (/l/:token) and their form posts: no login, before the API and the SPA fallback.
+    app.use((await import('./sc/statement.js')).publicRouter);
+    app.use('/api', (await import('./sc/files.js')).default);
+    app.use('/api', (await import('./sc/routes.js')).default);
+    (await import('./sc/goodsChat.js')).startCardTicker();
+    console.log('[sc] supply-chain module on (per-business flag)');
+  }
 
   for (const r of [misc, auth, onboarding, claire, catalog, business, voice, dev, webhooks]) app.use('/api', r);
   for (const path of EXTERNAL_ROUTES) {

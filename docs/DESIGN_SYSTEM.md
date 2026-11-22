@@ -8,23 +8,34 @@ Reference layouts (structure to follow, NOT their colours — they use default b
 `docs/ui-refs/1.webp` login · `2.webp` home · `3.webp` results · `4.webp` compare · `5.webp` deal chat · `6.webp` inbox (Tamil).
 Open them with the Read tool and study the layout, hierarchy and spacing.
 
-## 1. Palette — "Tiruppur cotton" (tokens already in `web/src/index.css`, use Tailwind classes)
+## 1. Palette (the tokens `web/src/index.css` actually ships; use the Tailwind classes)
+*Updated 21 Nov 2026 (Phase 7): earlier versions of this table described a "Tiruppur cotton" palette (cream page, loom green) and `BUILD_CONTRACT.md` listed blue. Neither matches the app. This table is the shipped set; `index.css` wins over any doc.*
+
 | Role | Class | Hex |
 |---|---|---|
-| Page (unbleached cotton) | `bg-page` | #F4EFE6 |
-| Surface / cards | `bg-surface` | #FFFCF6 |
-| Sunken (inputs, chips at rest, skeletons) | `bg-sunken` | #EFE8DC |
-| Ink / ink-2 / meta / faint | `text-ink` `text-ink-2` `text-meta` `text-faint` | #1D2622 #3E4843 #6E6A60 #A39D90 |
-| Lines | `border-line` / `border-line-strong` | #E3DACB / #CFC4B1 |
-| Primary — loom green (actions, active, own bubble ink) | `bg-primary` `hover:bg-primary-hover` `bg-primary-tint` `bg-primary-soft` | #1E5A4C |
-| Accent — marigold (Claire AI, highlights, "recommended") | `bg-accent` `bg-accent-tint` `text-accent-ink` | #E9A23B / #FBEFD9 / #8A5A12 |
-| Clay — madder (prices to watch, offers, counter-offers, unread badges) | `text-clay` `bg-clay-tint` | #B9502F / #F7E4DB |
-| Success / danger / warning | `text-success bg-success-tint` · `text-danger bg-danger-tint` · `text-warning` | |
-| Plum (rare: trust breakdown only) | `text-plum bg-plum-tint` | |
-| Chat bubbles | own `bg-bubble-own` (pale green) · other `bg-surface border border-line` | |
+| Page / surface | `bg-page` / `bg-surface` | #FFFFFF / #FFFFFF |
+| Sunken (inputs, chips at rest, skeletons, segmented controls) | `bg-sunken` | #F3F4F6 |
+| Ink (logo navy) / meta / faint | `text-ink` `text-meta` `text-faint` (`text-ink-2` for secondary text) | #13203B / #667085 / #A2A8AE |
+| Lines | `border-line` / `border-line-strong` | #E7E9EC / #D3D7DC |
+| Primary: logo teal-green (actions, active tab, own bubble) | `bg-primary` `hover:bg-primary-hover` `active:bg-primary-press` `bg-primary-tint` `bg-primary-soft` | #1F8C73 / #19775F / #14614E / #E6F6F1 / #BFE7DA |
+| Accent: marigold (Claire highlights, "recommended", **late / waiting / on the way** in Goods) | `bg-accent` `bg-accent-tint` `text-accent-ink` | #E9A23B / #FDF4E3 / #8A5A12 |
+| Clay: madder (prices to watch, offers, counter-offers) | `text-clay` `bg-clay-tint` | #B9502F / #F7E4DB |
+| Success / danger / warning | `text-success bg-success-tint` · `text-danger bg-danger-tint` · `text-warning` | #2F7A47 / #E2F0E5 · #B43A2E / #F8E2DE · #A8650F |
+| Plum (Claire identity, trust breakdown) | `text-plum bg-plum-tint` | #6D4466 / #F1E8EF |
+| Chat bubbles | own `bg-bubble-own` · other `bg-bubble-other` | #DFF3EC · #F3F4F6 |
+| Brand teal / navy (logo only) | `text-brand` / `text-navy` | #3DB394 / #13203B |
+
+Fonts: Bricolage Grotesque (`font-head`) and Figtree (body), with Hind Madurai / Hind / Noto Sans (Bengali, Telugu, Kannada, Malayalam, Gujarati, Odia) fallbacks. Radii tokens 8 / 10 / 14 / 18 / 22 px; shadows `--shadow-card` and `--shadow-float` (floating layers only).
+
+### Goods (supply-chain) rules, checked by `scripts/sc-lint.mjs` where possible
+- **Every status is text + colour + icon**, never colour alone: on time (success, check), late / waiting / on the way (accent, clock), difference / dispute (danger, triangle), on hold (sunken, pause), check and confirm (accent, clock). Disputes use danger, never clay.
+- No lucide imports, no blue, no gradients, no emoji (lint-enforced).
+- Touch targets ≥ 44 px (status chips included); quantities in `font-head tabular-nums` with units from `formatQty`; ₹ with Indian grouping.
+- Toasts and confirmations float (`fixed`, `--shadow-float`) so lists never shift under the user's finger; a destructive or irreversible tap (Wrong entry) takes two taps.
+- Indic strings run 30–60 % longer: wrap, never truncate labels; Tamil at 375 px must fit. Put long secondary text under a title rather than beside a number.
 
 - **Flat colour only.** No `linear-gradient`, `radial-gradient`, `bg-gradient-*`, glassy blur, or glow shadows.
-- No `#fff` white cards (use `bg-surface`), no blue anywhere (no `blue-*`, `sky-*`, `indigo-*` Tailwind colours, no hex blues).
+- Use `bg-surface` for cards (it is white today; keep the token so it can change), no blue anywhere (no `blue-*`, `sky-*`, `indigo-*` Tailwind colours, no hex blues).
 - Depth comes from 1px `border-line` and the page/surface contrast. Shadow only for floating layers (`shadow-[var(--shadow-float)]` on sheets/toasts).
 - Text on primary/clay/success = white; text on accent = ink.
 

@@ -10,7 +10,7 @@ export interface Need {
   budget: number | null;
   deadlineDays: number | null;
   city: string | null;
-  attrs?: { fabric?: string | null; gsm?: number | null; colours?: string[] };
+  attrs?: { fabric?: string | null; gsm?: number | null; colours?: string[]; garment?: string | null };
   liked?: string[];
   excludeBusinessId?: string;
 }
@@ -107,10 +107,12 @@ function card(kind: MatchCard['kind'], lines: (MatchLine & { cand: Cand })[], ne
   const total = lines.reduce((a, l) => a + l.qty * l.unitPrice, 0);
   const qty = lines.reduce((a, l) => a + l.qty, 0);
   const first = lines[0].cand;
+  const avgPrice = Math.round((total / qty) * 10) / 10;
   return {
+    ...(need.budget && avgPrice > need.budget ? { overBudget: true } : {}),
     kind,
     lines: lines.map(({ cand: _c, ...l }) => l),
-    avgPrice: Math.round((total / qty) * 10) / 10,
+    avgPrice,
     total: Math.round(total),
     freight: freightFor(need.category, qty, need.unit, need.city),
     readyDays: Math.max(...lines.map((l) => l.readyDays)),
@@ -134,9 +136,11 @@ export async function match(need: Need) {
   const line = (c: Cand, qty: number) => ({ listingId: c.listingId, businessId: c.businessId, businessName: c.businessName, qty, unitPrice: c.price, readyDays: c.readyDays, cand: c });
 
   // Ready from one seller (stock now) vs made to order (needs production)
+  // Within budget first; the few just above it (≤ 5 %) come after and carry an "above budget" flag.
+  const over = (c: Cand) => (need.budget && c.price > need.budget ? 1 : 0);
   const singles = inBudget
     .filter((c) => c.stock >= need.qty && c.moq <= need.qty)
-    .sort((a, b) => b.score - a.score)
+    .sort((a, b) => over(a) - over(b) || b.score - a.score)
     .slice(0, 4)
     .map((c) => card('single', [line(c, need.qty)], need));
 
@@ -175,7 +179,7 @@ export async function match(need: Need) {
   }
   const bestSingle = singles[0]?.avgPrice ?? Infinity;
   const comboList = combos
-    .sort((x, y) => y.s - x.s)
+    .sort((x, y) => Number(!!x.c.overBudget) - Number(!!y.c.overBudget) || y.s - x.s)
     .map((x) => x.c)
     .filter((c) => singles.length < 2 || c.avgPrice < bestSingle * 0.97)
     .filter((c, i, arr) => arr.findIndex((o) => o.lines.map((l) => l.businessId).sort().join() === c.lines.map((l) => l.businessId).sort().join()) === i)
@@ -189,13 +193,23 @@ export async function match(need: Need) {
   return { singles: singles.length ? singles : above.filter((c) => c.kind === 'single'), combos: comboList, mto: mto.length ? mto : above.filter((c) => c.kind === 'mto'), band, aboveBudget: above.length > 0 };
 }
 
+const garmentKey = (g: string) => g.toLowerCase().replace(/[^a-z]/g, '').replace(/s$/, '');
+/** A unit fits when it lists the garment, or when either side does not say. */
+function garmentFits(want: string | null | undefined, garments: unknown): boolean {
+  if (!want || !Array.isArray(garments) || !garments.length) return true;
+  const w = garmentKey(want);
+  return garments.some((g) => garmentKey(String(g)) === w);
+}
+
 /** Job-work split: allocate a service quantity across units by free capacity within the deadline. */
 export async function splitJob(need: Need) {
   const days = need.deadlineDays ?? 10;
   const rows = await listingRows(need.category, need.excludeBusinessId);
   const scored = await Promise.all(rows.map(async (r) => ({ r, cap: r.capacity_per_day * Math.max(1, days - 1), trust: (await trustOf(r.business_id)).score })));
+  // Hard rules: never above the buyer's rate, and only units that do this garment (when both are known).
   const units = scored
-    .filter((u) => !need.budget || u.r.price <= need.budget * 1.08)
+    .filter((u) => !need.budget || u.r.price <= need.budget)
+    .filter((u) => garmentFits(need.attrs?.garment, u.r.attrs?.garments) && attrScore(need, u.r.attrs || {}) >= 0.75)
     .sort((a, b) => b.trust * 0.6 + (1 - a.r.price / 40) * 40 - (a.trust * 0.6 + (1 - b.r.price / 40) * 40));
   let left = need.qty;
   const lines: MatchLine[] = [];

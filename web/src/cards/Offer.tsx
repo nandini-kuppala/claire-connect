@@ -41,8 +41,8 @@ export function OfferCard({ message, payload, ctx }: CardProps<'offer'>) {
   const qtyText = `${num(payload.qty)} ${unitQty(payload.unit, payload.qty, ctx.lang)}`;
   const canAct = pending && !message.mine;
 
-  const respond = async (action: 'accept' | 'decline' | 'counter', unitPrice?: number) => {
-    await ctx.api.post(`/api/offers/${encodeURIComponent(payload.offerId)}/respond`, { action, unitPrice });
+  const respond = async (action: 'accept' | 'decline' | 'counter', unitPrice?: number, qty?: number) => {
+    await ctx.api.post(`/api/offers/${encodeURIComponent(payload.offerId)}/respond`, { action, unitPrice, ...(qty && qty !== payload.qty ? { qty } : {}) });
     setLocalStatus(action === 'accept' ? 'accepted' : action === 'decline' ? 'declined' : 'countered');
     setConfirming(false);
     ctx.refresh();
@@ -64,6 +64,8 @@ export function OfferCard({ message, payload, ctx }: CardProps<'offer'>) {
   const settled = SETTLED[status];
   if (!pending && settled) {
     const Icon = settled.icon;
+    // A countered offer shows the new price it was countered with, not only the old one.
+    const reply = status === 'countered' ? dealOf(ctx)?.offers.find((o) => o.parentId === payload.offerId) : undefined;
     return (
       <div className={clsx('flex w-fit max-w-[340px] items-center gap-2.5 rounded-[18px] border border-line bg-surface py-2 pr-3.5 pl-2', message.mine && 'ml-auto')}>
         <span className={clsx('flex size-8 shrink-0 items-center justify-center rounded-full', settled.tone)}>
@@ -72,11 +74,19 @@ export function OfferCard({ message, payload, ctx }: CardProps<'offer'>) {
         <p className="min-w-0 text-[13px] leading-snug text-ink-2">
           <span className="font-semibold text-ink">{t(settled.key)}</span>
           <span className="text-faint"> · </span>
-          <span className="font-head font-semibold text-ink tabular-nums">
+          <span className={clsx('font-head font-semibold tabular-nums', reply ? 'text-meta line-through' : 'text-ink')}>
             {inr(payload.unitPrice)}/{per}
           </span>
+          {reply && (
+            <>
+              <span aria-hidden className="text-faint"> → </span>
+              <span className="font-head font-semibold text-ink tabular-nums">
+                {inr(reply.unitPrice)}/{per}
+              </span>
+            </>
+          )}
           <span className="text-faint"> · </span>
-          {qtyText}
+          {reply && reply.qty !== payload.qty ? `${num(reply.qty)} ${unitQty(payload.unit, reply.qty, ctx.lang)}` : qtyText}
         </p>
       </div>
     );
@@ -190,7 +200,7 @@ export function OfferCard({ message, payload, ctx }: CardProps<'offer'>) {
           theirPrice={payload.unitPrice}
           counterUp={dealOf(ctx)?.side === 'seller'}
           initial={{ qty: payload.qty, dispatchDays: payload.dispatchDays, advancePct: payload.advancePct, creditDays: payload.creditDays }}
-          onSubmit={(v) => respond('counter', v.unitPrice)}
+          onSubmit={(v) => respond('counter', v.unitPrice, v.qty)}
         />
       )}
     </div>

@@ -52,6 +52,8 @@ export interface Features {
   nexconn?: boolean;
   llm?: boolean;
   sarvam?: boolean;
+  /** Supply-chain module enabled for this business (docs/supply-chain, behind a flag). */
+  supplyChain?: boolean;
   [k: string]: unknown;
 }
 

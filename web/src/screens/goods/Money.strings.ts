@@ -1,0 +1,55 @@
+// Strings for slice 8a: reports, bills and dues, record payment, performance. Tamil and Hindi are "to verify".
+import { defineStrings } from '../../lib/localStrings';
+
+export const MoneyS = defineStrings('goods_money', {
+  en: {
+    reports: 'Reports', bills: 'Bills and dues', performance: 'How units are doing', gst: 'GST: goods out for a long time',
+    record_only: 'Record only. Nothing is paid through the app.', download: 'Download CSV',
+    they_owe: 'They owe you', i_owe: 'You owe them', settled: 'All settled', net_they: 'Net: they owe you {amt}', net_me: 'Net: you owe them {amt}',
+    oldest: 'Oldest unpaid: {n} days', unpriced: '{n} jobs have no rate yet', no_bills: 'No bills yet. Bills come from the rates on your jobs, sales and purchases.',
+    billed: 'Billed', paid: 'You paid', received: 'You received', setoff: 'Set off', items: 'What was billed', payments: 'Payments',
+    record_payment: 'Record payment', dir_paid: 'I paid them', dir_received: 'They paid me', dir_setoff: 'Set off one bill against the other',
+    setoff_hint: 'You both do work for each other. This cancels {amt} on each side without any money changing hands.',
+    amount: 'Amount (₹)', mode: 'How', m_cash: 'Cash', m_upi: 'UPI', m_neft: 'Bank transfer', m_cheque: 'Cheque', m_adjustment: 'Adjustment', ref: 'Reference (optional)', date: 'Date',
+    saved: 'Payment recorded.', void: 'Wrong entry', void_sure: 'Tap again to mark wrong', voided: 'Marked as a wrong entry.', no_rate: 'no rate', leftover_kept: 'leftover kept', returned_line: 'returned',
+    perf_hint: 'Judged against fixed yardsticks: the promised days (or the usual for the process), the usual loss and the best unit. Days they were held up by you are not counted.',
+    jobs: '{n} jobs', not_enough: 'Not enough history yet ({n} of 3 jobs)', days: '{d} days (promised {p})', excluded: '{n} days not counted: {why}',
+    loss: 'Loss {x}% (usual {norm}%, best unit {best}%)', rejects: 'Rejects {x}%', disputes: '{n} differences', no_perf: 'Nothing to show yet. This fills in as jobs close.',
+    gst_hint: 'Inputs sent for job work should come back within a year (machines and tools: three years). These are close.', gst_line: '{label} with {name}: {days} days, due back by {due}',
+    held_for_dues: 'held for dues', paused: 'paused',
+  },
+  ta: {
+    reports: 'அறிக்கைகள்', bills: 'பில்களும் பாக்கியும்', performance: 'யூனிட்கள் எப்படி', gst: 'GST: நெடுநாள் வெளியில் உள்ள சரக்கு',
+    record_only: 'பதிவு மட்டும். ஆப் மூலம் பணம் செலுத்தப்படாது.', download: 'CSV பதிவிறக்கு',
+    they_owe: 'அவர்கள் உங்களுக்குத் தர வேண்டியது', i_owe: 'நீங்கள் அவர்களுக்குத் தர வேண்டியது', settled: 'எல்லாம் தீர்ந்தது', net_they: 'நிகரம்: அவர்கள் தர வேண்டியது {amt}', net_me: 'நிகரம்: நீங்கள் தர வேண்டியது {amt}',
+    oldest: 'பழைய பாக்கி: {n} நாள்', unpriced: '{n} வேலைகளுக்கு இன்னும் ரேட் இல்லை', no_bills: 'இன்னும் பில் இல்லை. வேலை, விற்பனை, வாங்குதலின் ரேட்டிலிருந்து பில் வரும்.',
+    billed: 'பில்', paid: 'நீங்கள் கொடுத்தது', received: 'நீங்கள் பெற்றது', setoff: 'கழித்தது', items: 'பில் விவரம்', payments: 'பணம்',
+    record_payment: 'பணத்தைப் பதி', dir_paid: 'நான் கொடுத்தேன்', dir_received: 'அவர்கள் கொடுத்தார்கள்', dir_setoff: 'ஒரு பில்லை மற்றொன்றில் கழி',
+    setoff_hint: 'நீங்கள் இருவரும் ஒருவருக்கொருவர் வேலை செய்கிறீர்கள். பணம் கைமாறாமல் இருபக்கமும் {amt} கழியும்.',
+    amount: 'தொகை (₹)', mode: 'எப்படி', m_cash: 'ரொக்கம்', m_upi: 'UPI', m_neft: 'வங்கி', m_cheque: 'காசோலை', m_adjustment: 'சரிக்கட்டல்', ref: 'குறிப்பு (விருப்பம்)', date: 'தேதி',
+    saved: 'பணம் பதிந்தது.', void: 'தவறான பதிவு', void_sure: 'உறுதிசெய்ய மீண்டும் தட்டவும்', voided: 'தவறான பதிவாகக் குறித்தது.', no_rate: 'ரேட் இல்லை', leftover_kept: 'மீதி வைத்துக்கொண்டது', returned_line: 'திருப்பியது',
+    perf_hint: 'நிலையான அளவுகோல்களுடன் ஒப்பீடு: சொன்ன நாட்கள் (இல்லையெனில் வழக்கமானது), வழக்கமான சேதம், சிறந்த யூனிட். உங்களால் நின்ற நாட்கள் கணக்கில் இல்லை.',
+    jobs: '{n} வேலைகள்', not_enough: 'இன்னும் போதிய வரலாறு இல்லை (3-ல் {n})', days: '{d} நாள் (சொன்னது {p})', excluded: '{n} நாள் கணக்கில் இல்லை: {why}',
+    loss: 'சேதம் {x}% (வழக்கம் {norm}%, சிறந்தது {best}%)', rejects: 'ரிஜெக்ட் {x}%', disputes: '{n} வேறுபாடுகள்', no_perf: 'இன்னும் எதுவும் இல்லை. வேலைகள் முடிய முடிய நிரம்பும்.',
+    gst_hint: 'ஜாப் வொர்க்கிற்கு அனுப்பியது ஒரு வருடத்திற்குள் திரும்ப வேண்டும் (இயந்திரம், கருவிகளுக்கு மூன்று). இவை நெருங்குகின்றன.', gst_line: '{name}-இடம் {label}: {days} நாள், {due}-க்குள் திரும்ப வேண்டும்',
+    held_for_dues: 'பாக்கிக்காக நிறுத்தியது', paused: 'நிறுத்தியது',
+  },
+  hi: {
+    reports: 'रिपोर्ट', bills: 'बिल और बकाया', performance: 'यूनिट कैसे चल रहे हैं', gst: 'GST: लंबे समय से बाहर माल',
+    record_only: 'सिर्फ़ दर्ज करने के लिए। ऐप से कोई भुगतान नहीं होता।', download: 'CSV डाउनलोड',
+    they_owe: 'उन्हें आपको देना है', i_owe: 'आपको उन्हें देना है', settled: 'सब चुकता', net_they: 'कुल: उन्हें आपको {amt} देना है', net_me: 'कुल: आपको उन्हें {amt} देना है',
+    oldest: 'सबसे पुराना बकाया: {n} दिन', unpriced: '{n} काम पर अभी रेट नहीं', no_bills: 'अभी कोई बिल नहीं। बिल काम, बिक्री और खरीद के रेट से बनते हैं।',
+    billed: 'बिल', paid: 'आपने दिया', received: 'आपको मिला', setoff: 'घटाया', items: 'बिल का ब्योरा', payments: 'भुगतान',
+    record_payment: 'भुगतान दर्ज करें', dir_paid: 'मैंने दिया', dir_received: 'उन्होंने दिया', dir_setoff: 'एक बिल को दूसरे से घटाएँ',
+    setoff_hint: 'आप दोनों एक-दूसरे का काम करते हैं। बिना पैसे के लेन-देन के दोनों तरफ़ {amt} घट जाएगा।',
+    amount: 'रकम (₹)', mode: 'कैसे', m_cash: 'नकद', m_upi: 'UPI', m_neft: 'बैंक ट्रांसफ़र', m_cheque: 'चेक', m_adjustment: 'समायोजन', ref: 'संदर्भ (वैकल्पिक)', date: 'तारीख',
+    saved: 'भुगतान दर्ज हुआ।', void: 'गलत एंट्री', void_sure: 'पक्का करने के लिए फिर टैप करें', voided: 'गलत एंट्री के रूप में चिह्नित।', no_rate: 'रेट नहीं', leftover_kept: 'बचा माल रखा', returned_line: 'वापस किया',
+    perf_hint: 'तय पैमानों से तुलना: वादा किए दिन (या प्रक्रिया के सामान्य दिन), सामान्य नुकसान और सबसे अच्छा यूनिट। आपकी वजह से रुके दिन नहीं गिने जाते।',
+    jobs: '{n} काम', not_enough: 'अभी पर्याप्त इतिहास नहीं (3 में से {n})', days: '{d} दिन (वादा {p})', excluded: '{n} दिन नहीं गिने: {why}',
+    loss: 'नुकसान {x}% (सामान्य {norm}%, सबसे अच्छा {best}%)', rejects: 'रिजेक्ट {x}%', disputes: '{n} अंतर', no_perf: 'अभी कुछ नहीं। काम बंद होते-होते भरेगा।',
+    gst_hint: 'जॉब वर्क के लिए भेजा माल एक साल में लौटना चाहिए (मशीन और औज़ार के लिए तीन)। ये करीब हैं।', gst_line: '{name} के पास {label}: {days} दिन, {due} तक लौटना है',
+    held_for_dues: 'बकाये के लिए रोका', paused: 'रोका',
+  },
+});
+
+export const inr = (paise: number) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: paise % 100 ? 2 : 0 }).format(paise / 100);

@@ -1,11 +1,12 @@
 // Router, auth guards and the single chat connection for the signed-in user.
-import { useEffect, type ReactNode } from 'react';
+import { lazy, Suspense, useEffect, type ReactNode } from 'react';
 import { Navigate, Route, Routes, useLocation, useParams } from 'react-router-dom';
 import { Loader2 } from './icons';
 import { useSession, isAgent, isOnboarded } from './store/session';
 import { engine } from './chat/engine';
 import { useLocaleVersion } from './locales';
 import { AppShell } from './components/AppShell';
+import { PinGate } from './components/PinGate';
 import Login from './screens/Login';
 import Language from './screens/Language';
 import Inbox from './screens/Inbox';
@@ -22,6 +23,30 @@ import Results from './screens/Results';
 import Compare from './screens/Compare';
 import IconGallery from './icons/Gallery';
 import { CallLayer } from './call/CallLayer';
+
+// Supply-chain screens are lazy routes: they add nothing to the first load (docs/supply-chain/04 §6.3).
+const Goods = lazy(() => import('./screens/goods/Goods'));
+const GoodsSetup = lazy(() => import('./screens/goods/GoodsSetup'));
+const SendForm = lazy(() => import('./screens/goods/SendForm'));
+const GotBackForm = lazy(() => import('./screens/goods/GotBackForm'));
+const PartyLedger = lazy(() => import('./screens/goods/PartyLedger'));
+const MovementScreen = lazy(() => import('./screens/goods/MovementScreen'));
+const DisputeScreen = lazy(() => import('./screens/goods/DisputeScreen'));
+const ReceiveFirstForm = lazy(() => import('./screens/goods/ReceiveFirstForm'));
+const WorkScreen = lazy(() => import('./screens/goods/WorkScreen'));
+const JobScreen = lazy(() => import('./screens/goods/JobScreen'));
+const MadeForm = lazy(() => import('./screens/goods/MadeForm'));
+const TradeForm = lazy(() => import('./screens/goods/TradeForm'));
+const AdjustScreen = lazy(() => import('./screens/goods/AdjustScreen'));
+const ReportsScreen = lazy(() => import('./screens/goods/ReportsScreen'));
+const BillScreen = lazy(() => import('./screens/goods/BillScreen'));
+const OrderGoodsScreen = lazy(() => import('./screens/goods/OrderGoodsScreen'));
+
+/** The Goods routes exist only for businesses with the supply-chain flag; others go Home. */
+function RequireGoods({ children }: { children: ReactNode }) {
+  const on = useSession((s) => s.features?.supplyChain === true);
+  return on ? <>{children}</> : <Navigate to="/" replace />;
+}
 
 function Splash() {
   return (
@@ -49,6 +74,9 @@ function ChatConnection() {
   return null;
 }
 
+/** Pages a staff login never sees: home (marketplace), orders, store, Trade Desk, onboarding. */
+const STAFF_AWAY = /^\/(?:$|goods\/reports|orders|store|s\/|desk|onboarding|catalog|requirements)/;
+
 function RequireAuth({ children, allowUnonboarded = false, agentOk = true }: { children: ReactNode; allowUnonboarded?: boolean; agentOk?: boolean }) {
   const token = useSession((s) => s.token);
   const user = useSession((s) => s.user);
@@ -58,7 +86,9 @@ function RequireAuth({ children, allowUnonboarded = false, agentOk = true }: { c
   if (!user) return ready ? <Navigate to="/login" replace /> : <Splash />;
   if (!agentOk && isAgent(user)) return <Navigate to="/desk" replace />;
   if (!allowUnonboarded && !isAgent(user) && !isOnboarded(user)) return <Navigate to="/onboarding" replace />;
-  return <>{children}</>;
+  // Staff use Goods, Claire and Goods conversations only (04 §10.3b); the server refuses the rest anyway.
+  if (user.role === 'staff' && STAFF_AWAY.test(location.pathname)) return <Navigate to="/goods?tab=coming" replace />;
+  return <PinGate>{children}</PinGate>;
 }
 
 /** /chat/claire is the Claire screen; any other id is a deal / support conversation. */
@@ -165,6 +195,230 @@ export default function App() {
               <AppShell>
                 <Orders />
               </AppShell>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/goods"
+          element={
+            <RequireAuth agentOk={false}>
+              <RequireGoods>
+                <AppShell variant="wide">
+                  <Suspense fallback={<Splash />}>
+                    <Goods />
+                  </Suspense>
+                </AppShell>
+              </RequireGoods>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/goods/setup"
+          element={
+            <RequireAuth agentOk={false}>
+              <RequireGoods>
+                <AppShell>
+                  <Suspense fallback={<Splash />}>
+                    <GoodsSetup />
+                  </Suspense>
+                </AppShell>
+              </RequireGoods>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/goods/record/send"
+          element={
+            <RequireAuth agentOk={false}>
+              <RequireGoods>
+                <AppShell nav={false}>
+                  <Suspense fallback={<Splash />}>
+                    <SendForm />
+                  </Suspense>
+                </AppShell>
+              </RequireGoods>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/goods/job/:id"
+          element={
+            <RequireAuth agentOk={false}>
+              <RequireGoods>
+                <AppShell variant="wide">
+                  <Suspense fallback={<Splash />}>
+                    <JobScreen />
+                  </Suspense>
+                </AppShell>
+              </RequireGoods>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/goods/record/made"
+          element={
+            <RequireAuth agentOk={false}>
+              <RequireGoods>
+                <AppShell nav={false}>
+                  <Suspense fallback={<Splash />}>
+                    <MadeForm />
+                  </Suspense>
+                </AppShell>
+              </RequireGoods>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/goods/record/t/:kind"
+          element={
+            <RequireAuth agentOk={false}>
+              <RequireGoods>
+                <AppShell nav={false}>
+                  <Suspense fallback={<Splash />}>
+                    <TradeForm />
+                  </Suspense>
+                </AppShell>
+              </RequireGoods>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/goods/reports"
+          element={
+            <RequireAuth agentOk={false}>
+              <RequireGoods>
+                <AppShell variant="wide">
+                  <Suspense fallback={<Splash />}>
+                    <ReportsScreen />
+                  </Suspense>
+                </AppShell>
+              </RequireGoods>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/goods/reports/bills/:k/:id"
+          element={
+            <RequireAuth agentOk={false}>
+              <RequireGoods>
+                <AppShell variant="wide">
+                  <Suspense fallback={<Splash />}>
+                    <BillScreen />
+                  </Suspense>
+                </AppShell>
+              </RequireGoods>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/goods/order/:id"
+          element={
+            <RequireAuth agentOk={false}>
+              <RequireGoods>
+                <AppShell variant="wide">
+                  <Suspense fallback={<Splash />}>
+                    <OrderGoodsScreen />
+                  </Suspense>
+                </AppShell>
+              </RequireGoods>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/goods/adjust"
+          element={
+            <RequireAuth agentOk={false}>
+              <RequireGoods>
+                <AppShell variant="wide">
+                  <Suspense fallback={<Splash />}>
+                    <AdjustScreen />
+                  </Suspense>
+                </AppShell>
+              </RequireGoods>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/goods/job/:id/return"
+          element={
+            <RequireAuth agentOk={false}>
+              <RequireGoods>
+                <AppShell nav={false}>
+                  <Suspense fallback={<Splash />}>
+                    <GotBackForm />
+                  </Suspense>
+                </AppShell>
+              </RequireGoods>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/goods/party/:k/:id"
+          element={
+            <RequireAuth agentOk={false}>
+              <RequireGoods>
+                <AppShell variant="wide">
+                  <Suspense fallback={<Splash />}>
+                    <PartyLedger />
+                  </Suspense>
+                </AppShell>
+              </RequireGoods>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/goods/movement/:id"
+          element={
+            <RequireAuth agentOk={false}>
+              <RequireGoods>
+                <AppShell nav={false}>
+                  <Suspense fallback={<Splash />}>
+                    <MovementScreen />
+                  </Suspense>
+                </AppShell>
+              </RequireGoods>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/goods/dispute/:id"
+          element={
+            <RequireAuth agentOk={false}>
+              <RequireGoods>
+                <AppShell >
+                  <Suspense fallback={<Splash />}>
+                    <DisputeScreen />
+                  </Suspense>
+                </AppShell>
+              </RequireGoods>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/goods/record/receive-first"
+          element={
+            <RequireAuth agentOk={false}>
+              <RequireGoods>
+                <AppShell nav={false}>
+                  <Suspense fallback={<Splash />}>
+                    <ReceiveFirstForm />
+                  </Suspense>
+                </AppShell>
+              </RequireGoods>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/goods/work/:id"
+          element={
+            <RequireAuth agentOk={false}>
+              <RequireGoods>
+                <AppShell variant="wide">
+                  <Suspense fallback={<Splash />}>
+                    <WorkScreen />
+                  </Suspense>
+                </AppShell>
+              </RequireGoods>
             </RequireAuth>
           }
         />

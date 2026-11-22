@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Record · Send for work</title>
+<link rel="stylesheet" href="mockup.css">
+<style>
+  /* Form screens have no bottom nav: the action bar sits at the bottom edge and wraps when labels are long. */
+  .bottombar.form{bottom:0;flex-wrap:wrap}
+  .bottombar.form .btn{flex:1 1 150px}
+  .app{padding-bottom:150px}
+  /* "usual" meta must wrap in Tamil, never push the value off-screen */
+  .input .usual{white-space:normal;text-align:right;line-height:1.3;max-width:55%}
+  .input .val{flex:1;min-width:0;font-size:16px;font-weight:600}
+  .fmeta{margin-top:4px;font-size:12.5px;color:var(--meta)}
+  .gridwrap{overflow-x:auto;margin:10px -6px 0}
+  .grid tbody th,.grid tfoot th{text-align:left;font-size:13px;color:var(--ink-2);padding-right:6px;white-space:nowrap}
+  .input.qty{width:136px;flex:none;min-height:44px;padding:0 10px}
+  .input.qty input{text-align:right;font-family:var(--head);font-weight:700;font-variant-numeric:tabular-nums}
+  .card .lrow{padding:12px 0;align-items:center}
+  .card .list{margin:8px 0 0;border:0;border-radius:0;border-top:1px solid var(--line)}
+  .unitchips .chip{min-height:44px}
+  .linehead{display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap}
+  .linehead .t{flex:1;min-width:0;font-weight:650;font-size:15.5px}
+</style>
+</head>
+<body>
+<!-- S4 · Record form: Send for work, filled with DATA.md "Send for work (today)". Viewer: Ravi (owner). -->
+<div class="frame">
+  <div class="app">
+    <header class="hdr">
+      <button class="iconbtn" aria-label="Back"><svg class="i"><use href="icons.svg#chev-l"/></svg></button>
+      <h1><span data-ta="வேலைக்கு அனுப்பு" data-hi="काम के लिए भेजें">Send for work</span><span class="sub" data-ta="Cutting floor-லிருந்து · இன்று, 21 நவ." data-hi="Cutting floor से · आज, 21 नव॰">from Cutting floor · today, 21 Nov</span></h1>
+    </header>
+
+    <div class="field">
+      <label data-ta="யாருக்கு" data-hi="किसे">To</label>
+      <div class="input">
+        <span class="av" style="background:#0D9488;width:32px;height:32px;font-size:12px">LG</span>
+        <span class="val">Lakshmi Garments</span>
+        <button class="btn ghost sm" data-ta="மாற்று" data-hi="बदलें">Change</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label data-ta="வேலை" data-hi="काम">Work</label>
+      <div class="input"><span class="val" data-ta="ஸ்டிச்சிங்" data-hi="सिलाई">Stitching</span><span class="usual" data-ta="வழக்கம்" data-hi="हमेशा वाला">usual</span><svg class="i sm faint"><use href="icons.svg#chev-d"/></svg></div>
+    </div>
+
+    <div class="sec-h"><h2 data-ta="என்ன அனுப்புகிறீர்கள்" data-hi="क्या भेज रहे हैं">What</h2></div>
+    <div class="card">
+      <div class="linehead">
+        <div class="t"><span data-ta="நேவி போலோ கிட்" data-hi="नेवी पोलो किट">Navy polo kits</span> · RKF-P22</div>
+        <span class="tagp"><span data-ta="லாட்" data-hi="लॉट">Lot</span>&nbsp;N-0398</span>
+      </div>
+      <div class="fmeta" data-ta="400 செட் 20 நவ. கட் செய்தது · Cutting floor-ல் ஸ்டாக்கில் உள்ளது" data-hi="400 सेट 20 नव॰ को कटे · Cutting floor पर स्टॉक में">400 sets cut 20 Nov · in stock at Cutting floor</div>
+      <div class="row-gap" style="margin-top:10px">
+        <div class="unitchips">
+          <button class="chip sel"><svg class="i sm"><use href="icons.svg#check"/></svg><span data-ta="பீஸ்" data-hi="पीस">pcs</span></button>
+          <button class="chip" data-ta="டஜன்" data-hi="दर्जन">dozen</button>
+        </div>
+        <button class="btn ghost sm" data-ta="ஸ்டாக்கிலிருந்து நிரப்பு" data-hi="स्टॉक से भरें">Fill from stock</button>
+      </div>
+      <div class="gridwrap">
+        <table class="grid">
+          <thead><tr><th data-ta="நிறம்" data-hi="रंग">Colour</th><th>S</th><th>M</th><th>L</th><th>XL</th><th>XXL</th><th data-ta="மொத்தம்" data-hi="कुल">Total</th></tr></thead>
+          <tbody><tr><th data-ta="நேவி" data-hi="नेवी">Navy</th>
+            <td><input inputmode="numeric" value="200" aria-label="Navy S"></td>
+            <td><input inputmode="numeric" value="200" aria-label="Navy M"></td>
+            <td><input inputmode="numeric" placeholder="0" aria-label="Navy L"></td>
+            <td><input inputmode="numeric" placeholder="0" aria-label="Navy XL"></td>
+            <td><input inputmode="numeric" placeholder="0" aria-label="Navy XXL"></td>
+            <td class="tot">400</td></tr></tbody>
+          <tfoot><tr><th data-ta="மொத்தம்" data-hi="कुल">Total</th><td class="tot">200</td><td class="tot">200</td><td class="tot faint">0</td><td class="tot faint">0</td><td class="tot faint">0</td><td class="tot">400</td></tr></tfoot>
+        </table>
+      </div>
+      <div class="fmeta"><span class="num" style="color:var(--ink)">400</span> <span data-ta="பீஸ் · S, M மட்டும்" data-hi="पीस · सिर्फ़ S, M">pcs · S and M only</span></div>
+
+      <div class="row-gap" style="margin-top:16px;justify-content:space-between">
+        <span class="flabel" style="margin:0"><span data-ta="இந்த பீஸுக்கான டிரிம்ஸ் · RKF-P22 ஸ்டைலிலிருந்து" data-hi="इन पीस के ट्रिम्स · RKF-P22 स्टाइल से">Trims for these pieces · from style RKF-P22</span></span>
+        <button class="btn ghost sm" data-ta="நீக்கு" data-hi="हटाएं">Remove</button>
+      </div>
+      <div class="list">
+        <div class="lrow"><div class="main"><div class="t" data-ta="நூல்" data-hi="धागा">Thread</div><div class="m" data-ta="ஸ்டைல்படி 400 பீஸுக்கு · இதற்குப் பின் மீதம்: 10 கோன்" data-hi="स्टाइल के हिसाब से 400 पीस के लिए · इसके बाद बचेंगे: 10 कोन">for 400 pcs, as per the style · left after this: 10 cones</div></div>
+          <label class="input qty"><input inputmode="numeric" value="12" aria-label="Thread cones"><span data-ta="கோன்" data-hi="कोन">cones</span></label></div>
+        <div class="lrow"><div class="main"><div class="t" data-ta="பட்டன்" data-hi="बटन">Buttons</div><div class="m" data-ta="பீஸுக்கு 3 + 2 % கூடுதல் = 1,224 (8.5 கிராஸ்) · இதற்குப் பின் மீதம் பட்டன்: 30" data-hi="हर पीस पर 3 + 2 % ज़्यादा = 1,224 (8.5 ग्रोस) · इसके बाद बचे बटन: 30">3 per piece + 2 % spare = 1,224 (8.5 gross) · buttons left after this: 30</div></div>
+          <label class="input qty"><input inputmode="numeric" value="1224" aria-label="Buttons pieces"><span data-ta="பீஸ்" data-hi="पीस">pcs</span></label></div>
+        <div class="lrow"><div class="main"><div class="t" data-ta="மெயின் லேபிள்" data-hi="मेन लेबल">Main labels</div><div class="m" data-ta="பீஸுக்கு 1 · இதற்குப் பின் மீதம்: 800" data-hi="हर पीस पर 1 · इसके बाद बचेंगे: 800">1 per piece · left after this: 800</div></div>
+          <label class="input qty"><input inputmode="numeric" value="400" aria-label="Labels pieces"><span data-ta="பீஸ்" data-hi="पीस">pcs</span></label></div>
+      </div>
+    </div>
+    <div class="field"><button class="btn secondary block"><svg class="i"><use href="icons.svg#plus"/></svg><span data-ta="இன்னொரு வரி சேர்" data-hi="एक और लाइन जोड़ें">Add another line</span></button></div>
+
+    <div class="field">
+      <label data-ta="திரும்ப வரும் தேதி" data-hi="वापसी की तारीख">Expected back</label>
+      <div class="input"><span class="val" data-ta="சனி 28 நவ." data-hi="शनि 28 नव॰">Sat 28 Nov</span><span class="usual" data-ta="Lakshmi-யில் வழக்கமாக 6 நாள்" data-hi="Lakshmi के यहाँ आम तौर पर 6 दिन">usual 6 days at Lakshmi</span></div>
+      <div class="fmeta" data-ta="இன்றிலிருந்து 6 வேலை நாள் · ஞாயிறு விடுமுறை" data-hi="आज से 6 काम के दिन · रविवार छुट्टी">6 working days from today · Sundays off</div>
+    </div>
+
+    <div class="field">
+      <label><span data-ta="ரேட்" data-hi="रेट">Rate</span> · <span class="meta" data-ta="Lakshmi இந்த ரேட்டைப் பார்ப்பார் · உங்கள் ஸ்டாஃப் பார்க்க மாட்டார்கள்" data-hi="Lakshmi यह रेट देखेंगी · आपका स्टाफ़ नहीं देखेगा">Lakshmi sees this rate · your staff don't</span></label>
+      <div class="input"><span class="val tnum" data-ta="₹14 / பீஸ்" data-hi="₹14 / पीस">₹14 / pc</span><span class="st ok"><svg class="i"><use href="icons.svg#check"/></svg><span data-ta="ஒப்புக்கொண்டது" data-hi="तय">Agreed</span></span><span class="usual" data-ta="உங்கள் வழக்கமான ரேட்" data-hi="आपका हमेशा वाला रेट">your usual</span></div>
+    </div>
+
+    <div class="field">
+      <label data-ta="DC எண்" data-hi="DC नंबर">DC no.</label>
+      <div class="row-gap" style="flex-wrap:nowrap">
+        <div class="input" style="flex:1"><input inputmode="numeric" value="0419" aria-label="DC number"></div>
+        <button class="btn secondary" style="flex:none"><svg class="i"><use href="icons.svg#camera"/></svg><span data-ta="போட்டோ" data-hi="फ़ोटो">Photo</span></button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label data-ta="குறிப்பு" data-hi="नोट">Note</label>
+      <div class="input"><span class="faint" data-ta="விருப்பம் இருந்தால்" data-hi="चाहें तो">Optional</span></div>
+    </div>
+
+    <p class="anno"><b>Question:</b> what am I sending, to whom, and when does it come back? <b>Decision:</b> save, or save and send another line to another unit. Grey "usual" text marks every value the app filled in (party's last process, usual rate, usual turnaround). Rate rule: the job's client (Ravi) and performer (Lakshmi) both see the job rate; staff of either side never do. "Agreed" means Lakshmi accepted ₹14/pc for this job. Trims were added with "Add trims for these pieces" from the style's trims list. After Save: toast with Undo for 10 min; Lakshmi sees the card after that.</p>
+
+    <div class="bottombar form">
+      <button class="btn primary lg"><svg class="i"><use href="icons.svg#check"/></svg><span data-ta="சேமி" data-hi="सेव करें">Save</span></button>
+      <button class="btn secondary lg"><span data-ta="சேமித்து, இன்னொரு யூனிட்டுக்கு அனுப்பு" data-hi="सेव करें, दूसरी यूनिट को भेजें">Save and send to another unit</span></button>
+    </div>
+  </div>
+</div>
+<script src="mockup.js"></script>
+</body>
+</html>
