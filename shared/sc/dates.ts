@@ -17,10 +17,26 @@ export interface Calendar {
 
 export const DEFAULT_CALENDAR: Calendar = { offWeekdays: [0] };
 
-export const isWorkingDay = (d: string, cal: Calendar = DEFAULT_CALENDAR) => !cal.offWeekdays.includes(weekday(d)) && !cal.closed?.has(d);
+/** A business's stored closed days (Q: weekly off days and holidays) as a Calendar. */
+export function calendarFrom(stored: { off_weekdays?: number[] | null; holidays?: string[] | null } | null | undefined): Calendar {
+  if (!stored) return DEFAULT_CALENDAR;
+  const off = (stored.off_weekdays ?? DEFAULT_CALENDAR.offWeekdays).filter((d) => Number.isInteger(d) && d >= 0 && d <= 6);
+  return { offWeekdays: off.length >= 7 ? DEFAULT_CALENDAR.offWeekdays : off, closed: new Set(stored.holidays ?? []) };
+}
+
+// The server sets a provider that returns the calendar of the business making the request (AsyncLocalStorage), so
+// every working-day sum that doesn't pass a calendar uses that business's closed days. Without one (the web, tests),
+// the default calendar applies.
+let provider: (() => Calendar | undefined) | null = null;
+export function setCalendarProvider(fn: (() => Calendar | undefined) | null) {
+  provider = fn;
+}
+export const currentCalendar = (): Calendar => provider?.() ?? DEFAULT_CALENDAR;
+
+export const isWorkingDay = (d: string, cal: Calendar = currentCalendar()) => !cal.offWeekdays.includes(weekday(d)) && !cal.closed?.has(d);
 
 /** Adds n working days, counting from the day after `start` (6 working days from Sat 21 Nov 2026 = Sat 28 Nov). */
-export function addWorkingDays(start: string, n: number, cal: Calendar = DEFAULT_CALENDAR): string {
+export function addWorkingDays(start: string, n: number, cal: Calendar = currentCalendar()): string {
   let ms = toMs(start);
   let left = Math.max(0, Math.ceil(n));
   while (left > 0) {
@@ -31,7 +47,7 @@ export function addWorkingDays(start: string, n: number, cal: Calendar = DEFAULT
 }
 
 /** Working days strictly after `from` up to and including `to` (0 if `to` ≤ `from`). */
-export function workingDaysBetween(from: string, to: string, cal: Calendar = DEFAULT_CALENDAR): number {
+export function workingDaysBetween(from: string, to: string, cal: Calendar = currentCalendar()): number {
   let n = 0;
   for (let ms = toMs(from) + DAY; ms <= toMs(to); ms += DAY) if (isWorkingDay(fromMs(ms), cal)) n++;
   return n;

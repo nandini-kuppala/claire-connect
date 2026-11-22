@@ -75,8 +75,46 @@ async function listingRows(category: string, excludeBusinessId?: string) {
   ]).toArray() as Promise<any[]>;
 }
 
+// ── Declared work (S18) and real Goods history: rank job-work units that do this process higher ──
+/** Marketplace job-work category → the S18 work key and the Goods process keys that count as doing it. */
+const SERVICE_WORK: Record<string, { work: string; processes: string[] }> = {
+  'service.stitching': { work: 'stitching', processes: ['stitching'] },
+  'service.printing': { work: 'printing', processes: ['printing_panels', 'printing_fabric'] },
+  'service.dyeing': { work: 'dyeing', processes: ['dyeing'] },
+  'service.embroidery': { work: 'embroidery', processes: ['embroidery'] },
+  'service.cutting': { work: 'cutting', processes: ['cutting'] },
+  'service.knitting': { work: 'knitting', processes: ['knitting'] },
+  'service.checking': { work: 'checking_packing', processes: ['checking', 'packing'] },
+};
+/** Finished jobs at which the history signal is full. */
+const HISTORY_FULL = 5;
+
+/**
+ * 0..1 per business: 0.4 when it declared this process in `businesses.sc_work.processes`, plus up to 0.6 for jobs of this
+ * process it actually finished for other businesses on Goods. Only ever used to order results; it never changes a price
+ * and never removes anyone.
+ */
+export async function workFit(category: string, businessIds: string[]): Promise<Map<string, number>> {
+  const out = new Map<string, number>();
+  const spec = SERVICE_WORK[category];
+  const ids = [...new Set(businessIds)];
+  if (!spec || !ids.length) return out;
+  const [declared, done] = await Promise.all([
+    col('businesses').find({ _id: { $in: ids }, 'sc_work.processes': spec.work } as any, { projection: { _id: 1 } }).toArray(),
+    col('sc_jobs').aggregate([
+      { $match: { 'performer_party.k': 'b', 'performer_party.id': { $in: ids }, process_key: { $in: spec.processes }, status: { $in: ['completed', 'closed'] }, in_house: { $ne: true } } },
+      { $match: { $expr: { $ne: ['$client_party.id', '$performer_party.id'] } } },
+      { $group: { _id: '$performer_party.id', n: { $sum: 1 } } },
+    ]).toArray(),
+  ]);
+  for (const b of declared) out.set(b._id as unknown as string, 0.4);
+  for (const d of done) out.set(d._id as string, (out.get(d._id as string) ?? 0) + 0.6 * Math.min(1, Number(d.n) / HISTORY_FULL));
+  return out;
+}
+
 async function candidates(need: Need): Promise<Cand[]> {
   const rows = await listingRows(need.category, need.excludeBusinessId);
+  const fit = await workFit(need.category, rows.map((r) => r.business_id)).catch(() => new Map<string, number>());
   const workDays = need.deadlineDays ? Math.max(1, Math.floor((need.deadlineDays - transitDays(need.city)) * 6 / 7)) : 21;
   const trusts = new Map(await Promise.all([...new Set(rows.map((r) => r.business_id))].map(async (b) => [b, await trustOf(b)] as const)));
   return rows.map((r) => {
@@ -92,7 +130,8 @@ async function candidates(need: Need): Promise<Cand[]> {
     const leadFit = !need.deadlineDays || readyDays + transitDays(need.city) <= need.deadlineDays ? 1 : 0.3;
     const resp = 1 - Math.min(1, (r.reply_minutes ?? 60) / 120);
     const liked = need.liked?.includes(r.id) ? 0.08 : 0;
-    const score = (0.3 * priceFit + 0.25 * (t.score / 100) + 0.15 * coverage + 0.1 * leadFit + 0.1 * resp + 0.05) * attrScore(need, attrs) + liked;
+    const work = 0.06 * (fit.get(r.business_id) ?? 0); // declared work + Goods history (job-work categories only)
+    const score = (0.3 * priceFit + 0.25 * (t.score / 100) + 0.15 * coverage + 0.1 * leadFit + 0.1 * resp + 0.05) * attrScore(need, attrs) + liked + work;
     return {
       listingId: r.id, businessId: r.business_id, businessName: r.business_name, price: r.price, moq: r.moq, available, readyDays,
       trust: t.score, ratingAvg: t.ratingAvg, onTimePct: t.onTimePct, reply: r.reply_minutes, attrs, art: r.art, stock: r.stock_qty,
@@ -205,12 +244,16 @@ function garmentFits(want: string | null | undefined, garments: unknown): boolea
 export async function splitJob(need: Need) {
   const days = need.deadlineDays ?? 10;
   const rows = await listingRows(need.category, need.excludeBusinessId);
-  const scored = await Promise.all(rows.map(async (r) => ({ r, cap: r.capacity_per_day * Math.max(1, days - 1), trust: (await trustOf(r.business_id)).score })));
+  const fit = await workFit(need.category, rows.map((r) => r.business_id)).catch(() => new Map<string, number>());
+  const scored = await Promise.all(rows.map(async (r) => ({ r, cap: r.capacity_per_day * Math.max(1, days - 1), trust: (await trustOf(r.business_id)).score, fit: fit.get(r.business_id) ?? 0 })));
+  // Units that declared this process (S18) and have finished such jobs on Goods come first among equals: up to 18 points
+  // on the 0–100 trust + price scale. Order only; prices are untouched.
+  const rank = (u: (typeof scored)[number]) => u.trust * 0.6 + (1 - u.r.price / 40) * 40 + 18 * u.fit;
   // Hard rules: never above the buyer's rate, and only units that do this garment (when both are known).
   const units = scored
     .filter((u) => !need.budget || u.r.price <= need.budget)
     .filter((u) => garmentFits(need.attrs?.garment, u.r.attrs?.garments) && attrScore(need, u.r.attrs || {}) >= 0.75)
-    .sort((a, b) => b.trust * 0.6 + (1 - a.r.price / 40) * 40 - (a.trust * 0.6 + (1 - b.r.price / 40) * 40));
+    .sort((a, b) => rank(b) - rank(a));
   let left = need.qty;
   const lines: MatchLine[] = [];
   for (const u of units) {

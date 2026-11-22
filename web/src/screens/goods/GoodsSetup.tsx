@@ -5,13 +5,15 @@ import clsx from 'clsx';
 import { api, ApiError, errorText } from '../../lib/api';
 import { Button } from '../../components/Button';
 import { Sheet } from '../../components/Sheet';
-import { AlertTriangle, ArrowLeft, Check, Plus } from '../../icons';
+import { AlertTriangle, ArrowLeft, Check, Plus, X } from '../../icons';
 import { SetupS } from './Setup.strings';
 import { SpecPicker } from './SpecPicker';
 import { WorkS } from './Work.strings';
 import { JobS } from './Job.strings';
 import { LinkS } from './Link.strings';
 import { StaffS } from './Staff.strings';
+import { Money3S } from './Money.strings';
+import { shortDate } from './format';
 import { useSession } from '../../store/session';
 import type { Contact, Place, ResolvedSpec, Spec } from './types';
 import type { Style } from './GridSheet';
@@ -50,6 +52,69 @@ function ErrLine({ text }: { text?: string | null }) {
 }
 
 const inputCls = 'min-h-12 w-full rounded-[16px] border border-line-strong bg-surface px-3.5 text-[16px] outline-none focus:border-primary';
+
+/** Closed days (Q): weekly off days and holidays, left out of late days, oldest unpaid and how units are doing. */
+function ClosedDays({ owner, lang }: { owner: boolean; lang: string }) {
+  const m3 = Money3S.use();
+  const [off, setOff] = useState<number[] | null>(null);
+  const [holidays, setHolidays] = useState<string[]>([]);
+  const [day, setDay] = useState('');
+  const [dirty, setDirty] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  useEffect(() => {
+    void api.get<{ calendar: { off_weekdays: number[]; holidays: string[] } }>('/api/sc/calendar').then((r) => { setOff(r.calendar.off_weekdays); setHolidays(r.calendar.holidays); }).catch((e) => setErr(errorText(e)));
+  }, []);
+  // Weekday names from the browser in the user's language (22 Nov 2026 is a Sunday).
+  const wd = (i: number) => {
+    try { return new Intl.DateTimeFormat(lang === 'en' ? 'en-IN' : `${lang}-IN`, { weekday: 'short', timeZone: 'UTC' }).format(new Date(Date.UTC(2026, 10, 22 + i))); } catch { return String(i); }
+  };
+  const change = (o: number[], h: string[]) => { setOff(o); setHolidays(h); setDirty(true); setSaved(false); };
+  const save = async () => {
+    setErr(null);
+    try {
+      const r = await api.put<{ calendar: { off_weekdays: number[]; holidays: string[] } }>('/api/sc/calendar', { off_weekdays: off ?? [], holidays });
+      setOff(r.calendar.off_weekdays); setHolidays(r.calendar.holidays); setDirty(false); setSaved(true);
+    } catch (e) { setErr(errorText(e)); }
+  };
+  if (!off) return null;
+  return (
+    <Section title={m3('closed_title')} hint={m3('closed_hint')}>
+      <p className="mb-1.5 text-[13px] font-semibold text-ink-2">{m3('weekly_off')}</p>
+      <div className="flex flex-wrap gap-1.5" role="group" aria-label={m3('weekly_off')}>
+        {[0, 1, 2, 3, 4, 5, 6].map((i) => {
+          const on = off.includes(i);
+          return (
+            <button key={i} aria-pressed={on} disabled={!owner || (!on && off.length >= 6)} onClick={() => change(on ? off.filter((x) => x !== i) : [...off, i], holidays)}
+              className={clsx('inline-flex min-h-11 min-w-11 items-center justify-center gap-1 rounded-full border px-3 text-[14px] font-semibold disabled:opacity-60', on ? 'border-primary bg-primary text-white' : 'border-line-strong bg-surface text-ink')}>
+              {on && <Check size={14} aria-hidden />}{wd(i)}
+            </button>
+          );
+        })}
+      </div>
+      <p className="mb-1.5 mt-4 text-[13px] font-semibold text-ink-2">{m3('holidays')}</p>
+      {holidays.length === 0 ? <p className="text-[14px] text-meta">{m3('no_holidays')}</p> : (
+        <ul className="flex flex-wrap gap-1.5">
+          {holidays.map((h) => (
+            <li key={h} className="inline-flex min-h-11 items-center gap-1 rounded-full border border-line-strong bg-surface pl-3 pr-1 text-[14px] text-ink">
+              {shortDate(h, lang)} {h.slice(0, 4)}
+              {owner && <button className="flex size-9 items-center justify-center rounded-full text-ink-2 hover:bg-sunken" aria-label={`${m3('remove')} ${h}`} onClick={() => change(off, holidays.filter((x) => x !== h))}><X size={16} aria-hidden /></button>}
+            </li>
+          ))}
+        </ul>
+      )}
+      {owner && (
+        <div className="mt-3 flex flex-wrap items-end gap-2">
+          <input type="date" className={clsx(inputCls, 'w-44')} value={day} onChange={(e) => setDay(e.target.value)} aria-label={m3('holidays')} />
+          <Button size="sm" variant="tint" icon={Plus} disabled={!day || holidays.includes(day)} onClick={() => { change(off, [...holidays, day].sort()); setDay(''); }}>{m3('add_holiday')}</Button>
+          <Button size="sm" disabled={!dirty} onClick={() => void save()}>{m3('save')}</Button>
+        </div>
+      )}
+      {saved && <p role="status" className="mt-2 flex items-center gap-1.5 text-[13.5px] font-semibold text-success"><Check size={15} aria-hidden />{m3('cal_saved')}</p>}
+      <ErrLine text={err} />
+    </Section>
+  );
+}
 
 export default function GoodsSetup() {
   const s = SetupS.use();
@@ -180,6 +245,8 @@ export default function GoodsSetup() {
           </ul>
         )}
       </Section>
+
+      <ClosedDays owner={owner} lang={lang} />
 
       {caps && (
         <Section title={s('caps')} hint={s('caps_hint')}>

@@ -204,8 +204,8 @@ export default function Login() {
   );
 
   return (
-    <div className="min-h-dvh bg-page" lang={lang}>
-      <div className="mx-auto flex min-h-dvh w-full max-w-[480px] flex-col px-4 pt-[calc(16px+var(--safe-top))] pb-[calc(28px+var(--safe-bottom))] min-[481px]:shadow-[0_0_0_1px_var(--color-line)]">
+    <div className="min-h-dvh bg-page min-[481px]:bg-backdrop" lang={lang}>
+      <div className="mx-auto flex min-h-dvh w-full max-w-[480px] flex-col bg-surface px-4 pt-[calc(16px+var(--safe-top))] pb-[calc(28px+var(--safe-bottom))] min-[481px]:shadow-[0_0_0_1px_var(--color-line),0_16px_48px_rgba(16,24,40,0.07)]">
         {/* Brand row */}
         <div className="flex min-h-[48px] items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">

@@ -3,7 +3,11 @@
 # recorded by the participant who would record it, then check every participant's own slice and that nobody sees
 # another's records. LOCAL dev server only (SC_ENABLED=1, MONGODB_DB=nexconn_sc_dev). Re-runnable: each run uses its
 # own lot and style codes, so the quantities below are exact for that run while demo data accumulates.
-import json, urllib.request, uuid, sys, subprocess, random, string
+import json, urllib.request, uuid, sys, subprocess, random, string, os, re
+# The database the dev server uses (for demo-cli and the ledger check). The nightly reset (server sc:demo-reset) passes
+# its own MONGODB_DB; dev/test databases only.
+DB = os.environ.get('MONGODB_DB') or 'nexconn_sc_dev'
+if not re.fullmatch(r'[A-Za-z0-9_]+_(dev|test_[A-Za-z0-9_]+)', DB): print(f'Refusing: MONGODB_DB is "{DB}"'); sys.exit(2)
 B = 'http://localhost:8787'  # local dev server only; never production
 RUN = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(4))
 
@@ -51,7 +55,7 @@ BB = {k: ensure(*v) for k, v in {
     'K1': ('9000002005', 'Vel', 'Vel Garments (demo)', 'Stitching unit'),
 }.items()}
 for sc, group in (('A', A), ('B', BB)):
-    r = subprocess.run(['bash', '-lc', 'cd /Users/dev/Desktop/claire/server && source ~/.nvm/nvm.sh >/dev/null && nvm use 24 >/dev/null && MONGODB_DB=nexconn_sc_dev npx tsx src/sc/demo-cli.ts ' + sc + ' ' + ' '.join(x['phone'] for x in group.values())], capture_output=True, text=True)
+    r = subprocess.run(['bash', '-lc', 'cd /Users/dev/Desktop/claire/server && source ~/.nvm/nvm.sh >/dev/null && nvm use 24 >/dev/null && MONGODB_DB=' + DB + ' npx tsx src/sc/demo-cli.ts ' + sc + ' ' + ' '.join(x['phone'] for x in group.values())], capture_output=True, text=True)
     print(r.stdout.strip() or r.stderr.strip()[-300:])
 print(f'run {RUN}')
 
@@ -207,6 +211,6 @@ check("C (cutting) can't see any stitching job", not any(sees(C, f'/api/sc/jobs/
 check("Sakthi can't see Ganga's or Vel's job", not sees(N1, f"/api/sc/jobs/{jobsB['N2']}/detail") and not sees(N1, f"/api/sc/jobs/{jobsB['K1']}/detail"))
 check("nobody in scenario B can see scenario A's records", not sees(M, f'/api/sc/movements/{m_s1}') and not sees(C, f'/api/sc/jobs/{j1}/detail'))
 
-v = subprocess.run(['bash', '-lc', 'cd /Users/dev/Desktop/claire/server && source ~/.nvm/nvm.sh >/dev/null && nvm use 24 >/dev/null && MONGODB_DB=nexconn_sc_dev npx tsx src/sc/verify.ts | tail -1'], capture_output=True, text=True).stdout.strip()
+v = subprocess.run(['bash', '-lc', 'cd /Users/dev/Desktop/claire/server && source ~/.nvm/nvm.sh >/dev/null && nvm use 24 >/dev/null && MONGODB_DB=' + DB + ' npx tsx src/sc/verify.ts | tail -1'], capture_output=True, text=True).stdout.strip()
 check('ledger check after both scenarios: 0 problems', v.endswith('0 problem(s)'), v)
 print('ALL PASS' if ok else 'SOME FAILED'); sys.exit(0 if ok else 1)

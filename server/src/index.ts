@@ -103,6 +103,11 @@ async function main() {
   // Production: serve the built web app (web/dist) from the same origin, with SPA fallback.
   const webDist = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../web/dist');
   if (fs.existsSync(path.join(webDist, 'index.html'))) {
+    // The service worker script must always be revalidated, so a new build's worker is picked up on the next visit.
+    app.get('/sw.js', (_req, res) => {
+      res.set({ 'Cache-Control': 'no-cache', 'Content-Type': 'text/javascript; charset=utf-8' });
+      res.sendFile(path.join(webDist, 'sw.js'), (err) => { if (err && !res.headersSent) res.status(404).end(); });
+    });
     app.use(express.static(webDist, { maxAge: '1h', index: false }));
     app.get(/^\/(?!api\/|uploads\/).*/, (_req, res) => res.sendFile(path.join(webDist, 'index.html')));
     console.log('[web] serving built app from web/dist');

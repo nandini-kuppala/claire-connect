@@ -7,7 +7,7 @@ import { migrateOpenings } from './orders.js';
 
 const apply = process.argv.includes('--apply');
 const dbName = (process.env.MONGODB_DB || 'nexconn').trim();
-if (!/_dev|_test_/.test(dbName)) {
+if (!/^[a-z0-9_]+_(dev|test_[a-z0-9_]+)$/i.test(dbName)) {
   console.error(`Refusing: MONGODB_DB is "${dbName}". Use a dev/test database (e.g. nexconn_sc_dev).`);
   process.exit(2);
 }

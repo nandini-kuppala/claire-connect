@@ -3,7 +3,7 @@
 import type { Response } from 'express';
 import { features, BOT } from './config.js';
 import { nexconn } from './nexconn.js';
-import { insert, find, findOne } from './db/index.js';
+import { col, insert, find, findOne } from './db/index.js';
 import { id, now } from './util.js';
 
 export const chatMode = () => (features.nexconn ? 'nexconn' : 'local') as 'nexconn' | 'local';
@@ -81,6 +81,39 @@ export async function localHistory(userId: string, channelType: string, targetId
     }));
 }
 
+// ── Group archive (Nexconn mode) ───────────────────────────────────────────
+// Nexconn shows a group member only the messages sent after they joined, unless the console setting
+// "Enable pre-join history access by new member" (Chat > Chat settings > Group Channels) is on, and the Platform
+// Chat API has no group history query. So the server keeps its own copy of group messages, from three sources:
+// its own sends (chat.group), the client notify path (deal inbound) and the `message:send` webhook. A Trade Desk
+// agent who joins late reads the part before they joined from here (B10). Ids are Nexconn message ids where known,
+// so the same message arriving by two paths is stored once.
+export interface ArchivedMessage { id: string; channelId: string; senderId: string; type: string; content: any; directed: string[] | null; sentAt: number }
+let archiveIndexed = false;
+
+export async function archiveGroupMessage(m: ArchivedMessage) {
+  if (!features.nexconn || !m.id || !m.channelId) return;
+  try {
+    if (!archiveIndexed) {
+      archiveIndexed = true;
+      await col('chat_archive').createIndex({ channel_id: 1, sent_at: -1 });
+    }
+    await col('chat_archive').updateOne(
+      { _id: m.id } as any,
+      { $setOnInsert: { id: m.id, channel_id: m.channelId, sender_id: m.senderId, type: m.type, content: m.content, directed: m.directed?.length ? m.directed : null, sent_at: m.sentAt || now() } },
+      { upsert: true },
+    );
+  } catch (err) {
+    console.warn('[chat] archive failed', m.channelId, (err as Error).message);
+  }
+}
+
+/** Messages everyone in the group could see (targeted ones are left out), oldest first, sent before `before`. */
+export async function archivedHistory(channelId: string, before = Date.now(), limit = 100): Promise<ArchivedMessage[]> {
+  const rows = await find('chat_archive', { channel_id: channelId, sent_at: { $lt: before }, directed: null }, { sort: { sent_at: -1 }, limit });
+  return rows.reverse().map((r) => ({ id: r.id, channelId: r.channel_id, senderId: r.sender_id, type: r.type, content: r.content, directed: null, sentAt: r.sent_at }));
+}
+
 export function pushEvent(userIds: string[], event: string, data: unknown) {
   for (const u of userIds) push(u, event, data);
 }
@@ -107,7 +140,9 @@ export const chat = {
       await localSendGroup(groupId, from, type, content, opts.onlyTo);
       return;
     }
-    await nexconn.sendGroup({ from, groupId, type, content, toUserIds: opts.onlyTo, pushContent: opts.push });
+    const r: any = await nexconn.sendGroup({ from, groupId, type, content, toUserIds: opts.onlyTo, pushContent: opts.push });
+    const messageId = r?.result?.messageId ?? r?.result?.messageUID ?? r?.messageId ?? r?.messageUID ?? r?.result?.[0]?.messageId ?? id('srv_', 14);
+    void archiveGroupMessage({ id: String(messageId), channelId: groupId, senderId: from, type, content, directed: opts.onlyTo ?? null, sentAt: now() });
   },
 
   /** "CLAIRE Updates" system notices (order, payment, dispatch). */

@@ -25,3 +25,13 @@ demo-video/sample.json
 .vscode/
 .idea/
 *.log
+# v2 (3-minute hackathon cut) working files; third-party photos are not redistributed
+demo-video/v2/raw/
+demo-video/v2/scenes/
+demo-video/v2/clips/
+demo-video/v2/preview/
+demo-video/v2/voice_tmp/
+demo-video/v2/x*.png
+demo-video/v2/bgm.wav
+demo-video/v2/assets/
+demo-video/v2/renders/*.mp4

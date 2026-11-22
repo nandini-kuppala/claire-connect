@@ -13,6 +13,7 @@ import { serverLocale } from './locales/index.js';
 import { CC_CARD, type CardPayload, type Chip } from '../../shared/cards.js';
 import { createTicket } from './desk.js';
 import { scClaireTurn, goodsChips } from './sc/claire/turn.js';
+import { withCalendar } from './sc/calendar.js';
 
 type Out = { kind: 'text'; text: string } | CardPayload;
 
@@ -91,7 +92,9 @@ export async function claireWelcome(user: UserRow) {
 // ── Turn handling ─────────────────────────────────────────────────────────
 export async function claireTurn(user: UserRow, input: { text?: string; chipId?: string }) {
   // Goods questions and records (supply-chain flag on): answered from the user's own records, else the flow below.
-  const goods = await scClaireTurn(user, input).catch((e) => { console.error('[claire] goods turn failed', e); return null; });
+  // Inside the business's closed days, so late days and turnaround match the Goods screens (not under /api/sc).
+  const goodsTurn = () => scClaireTurn(user, input);
+  const goods = await (user.business_id ? withCalendar(user.business_id, goodsTurn) : goodsTurn()).catch((e) => { console.error('[claire] goods turn failed', e); return null; });
   if (goods) return say(user, goods as Out[]);
   if (user.role === 'staff') {
     const msg = { en: 'I can help you with goods: what came in, what is out, what is late. Buying and selling are for the owner.', ta: 'சரக்கு பற்றி உதவ முடியும்: என்ன வந்தது, என்ன வெளியே உள்ளது, என்ன தாமதம். வாங்குவதும் விற்பதும் உரிமையாளருக்கு.', hi: 'मैं माल में मदद कर सकती हूँ: क्या आया, क्या बाहर है, क्या देर है। खरीद-बिक्री मालिक के लिए है।' } as Record<string, string>;

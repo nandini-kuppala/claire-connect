@@ -203,7 +203,11 @@ export function normOrder(o: any): Order {
   };
 }
 
+/** A chat message from before the agent joined, from the server's archive (B10). */
+export interface EarlierMessage { id: string; senderId: string; senderName: string; side: 'buyer' | 'seller' | 'claire' | 'other'; language: string | null; type: string; text: string; sentAt: number }
 export interface Ticket {
+  /** Messages from before the agent joined (present only on the ticket detail, in Nexconn mode). */
+  earlier?: EarlierMessage[];
   id: string; code: string; type: string; typeLabel: string; slaOverdue: boolean; autoTranslate: boolean; priority: 'P1' | 'P2' | 'P3' | string; status: string; languages: string[]; businessIds: string[];
   parties: { id: string; name: string; role?: string; language?: string; accent?: string; city?: string }[]; orderId: string | null; conversationId: string | null; channelId: string | null;
   trigger: string | null; description: string | null; summary: string | null; nextStep: string | null; suggestedReplies: string[];
@@ -222,19 +226,21 @@ export function normTicket(t: any, lang = 'en'): Ticket {
   const partiesRaw = t.parties ?? t.businesses ?? [];
   const replies = pick(t, 'suggestedReplies', 'suggested_replies', 'whispers') ?? [];
   return {
-    id: t.id, code: t.code ?? t.id, type: t.type ?? 'help', typeLabel: pick(t, 'typeLabel', 'type_label') ?? String(t.type ?? 'help').replace(/_/g, ' '),
+    id: t.id, code: t.code ?? t.id, type: t.type ?? 'help', typeLabel: t.typeLabels?.[lang] ?? pick(t, 'typeLabel', 'type_label') ?? String(t.type ?? 'help').replace(/_/g, ' '),
     slaOverdue: !!pick(t, 'slaOverdue', 'sla_breached'), autoTranslate: !!pick(t, 'autoTranslate', 'auto_translate'), priority: t.priority ?? 'P3', status: t.status ?? 'new',
     languages: pick(t, 'languages', 'language_needed', 'languageNeeded') ?? [], businessIds: pick(t, 'businessIds', 'business_ids') ?? [],
     parties: (Array.isArray(partiesRaw) ? partiesRaw : []).map((p: any) => ({ id: p.id, name: p.name ?? '', role: p.side ?? p.role, language: p.language, accent: p.accent, city: p.city })),
     orderId: pick(t, 'orderId', 'order_id') ?? null, conversationId: pick(t, 'conversationId', 'conversation_id') ?? null,
     channelId: pick(t, 'channelId', 'channel_id') ?? t.conversation?.channel_id ?? t.conversation?.channelId ?? null,
     trigger: t.trigger ?? null, description: t.description ?? null,
-    summary: summaryText(pick(t, 'aiSummary', 'ai_summary', 'summary'), lang), nextStep: summaryText(pick(t, 'suggestedNextStep', 'suggested_next_step', 'nextStep'), lang),
+    summary: summaryText(pick(t, 'aiSummary', 'ai_summary', 'summary'), lang), nextStep: t.nextSteps?.[lang] ?? summaryText(pick(t, 'suggestedNextStep', 'suggested_next_step', 'nextStep'), lang),
     suggestedReplies: (Array.isArray(replies) ? replies : []).map((r: any) => (typeof r === 'string' ? r : r?.text ?? r?.label ?? '')).filter(Boolean),
     agentId: pick(t, 'agentId', 'assigned_agent_id', 'assignedAgentId', 'agent_user_id') ?? null,
     agentName: pick(t, 'agentName', 'agent_name') ?? t.agent?.name ?? null,
     slaDueAt: toMs(pick(t, 'slaDueAt', 'sla_due_at')), createdAt: toMs(pick(t, 'createdAt', 'created_at')),
     firstResponseAt: toMs(pick(t, 'firstResponseAt', 'first_response_at')), resolvedAt: toMs(pick(t, 'resolvedAt', 'resolved_at')),
+    // Only set when present, so a queue row merged over the detail does not wipe it.
+    ...(Array.isArray(t.earlier) ? { earlier: t.earlier as EarlierMessage[] } : {}),
   };
 }
 

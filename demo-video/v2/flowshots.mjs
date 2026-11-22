@@ -1,0 +1,10 @@
+import { chromium } from 'playwright';
+const [,, code, outp, w = '390', h = '1500'] = process.argv;
+const tok = (await (await fetch('http://localhost:8787/api/auth/verify', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ phone: '9000001005', otp: '123456' }) })).json()).token;
+const b = await chromium.launch(); const ctx = await b.newContext({ viewport: { width: +w, height: +h }, deviceScaleFactor: 1, isMobile: +w < 600, hasTouch: +w < 600 });
+await ctx.addInitScript((t) => localStorage.setItem('cc_token', t), tok);
+const p = await ctx.newPage(); await p.goto('http://localhost:5173/goods/run/style/' + code); await p.waitForTimeout(4000);
+await p.screenshot({ path: outp + '-1.png' });
+await p.getByRole('tab', { name: 'Stages' }).click(); await p.waitForTimeout(800); await p.screenshot({ path: outp + '-2.png' });
+await p.getByRole('tab', { name: 'Buyers' }).click(); await p.waitForTimeout(800); await p.screenshot({ path: outp + '-3.png' });
+await b.close();

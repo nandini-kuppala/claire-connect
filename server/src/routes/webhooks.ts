@@ -5,10 +5,12 @@ import { Router } from 'express';
 import { BOT, cfg } from '../config.js';
 import { bump, byId, claim } from '../db/index.js';
 import { claireTurn } from '../claire.js';
+import { archiveGroupMessage } from '../chat.js';
 import type { UserRow } from '../biz.js';
 
 const router = Router();
 const DIRECT = 1; // Nexconn channelType for one-to-one chats
+const GROUP = 3; // Nexconn channelType for group chats
 /** Give the client notify path a head start so it (with its richer context) normally wins the claim. */
 const WEBHOOK_GRACE_MS = 1500;
 
@@ -32,6 +34,19 @@ interface MessageEvent {
   channelType: number;
   messageId: string;
   os?: string;
+  time?: number;
+  groupUserIds?: string[];
+}
+
+/** Group messages go to the server's archive, so a Trade Desk agent who joins later can read what came before (B10). */
+function archive(m: MessageEvent) {
+  // Server API sends are archived when the server sends them (chat.group).
+  if (m.channelType !== GROUP || m.os === 'Server' || !m.messageId) return;
+  let content: unknown = m.content;
+  try {
+    content = typeof m.content === 'string' ? JSON.parse(m.content) : m.content;
+  } catch { /* keep the raw string */ }
+  void archiveGroupMessage({ id: m.messageId, channelId: m.channelId, senderId: m.userId, type: m.messageType, content, directed: m.groupUserIds?.length ? m.groupUserIds : null, sentAt: Number(m.time) || Date.now() });
 }
 
 function inputFrom(m: MessageEvent): { text?: string; chipId?: string } | null {
@@ -49,6 +64,7 @@ function inputFrom(m: MessageEvent): { text?: string; chipId?: string } | null {
 
 async function handleMessage(m: MessageEvent) {
   void bump('messages');
+  archive(m);
   if (m.channelType !== DIRECT || m.channelId !== BOT.claire || !m.userId?.startsWith('u_') || m.os === 'Server') return;
   const input = inputFrom(m);
   if (!input) return;

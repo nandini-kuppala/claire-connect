@@ -155,4 +155,6 @@ export async function processDueCards(limit = 20) {
 export function startCardTicker() {
   setInterval(() => void processDueCards().catch((e) => console.warn('[sc] ticker', e.message)), 30_000).unref();
   void processDueCards().catch(() => undefined);
+  // Due reminders (once a day per party) and orders paid in full through Record payment, then delivered.
+  void import('./dues.js').then((m) => m.startDuesTicker()).catch((e) => console.warn('[sc] dues ticker', (e as Error).message));
 }

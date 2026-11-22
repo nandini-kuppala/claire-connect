@@ -1,6 +1,6 @@
 // CLAIRE Trade Desk: tickets, dispatch to human agents, join / resolve, SLA watch (spec §J9, §10).
 import { col, find, byId, insert, update } from './db/index.js';
-import { chat } from './chat.js';
+import { chat, archivedHistory } from './chat.js';
 import { BOT, features } from './config.js';
 import { triage, translate } from './ai.js';
 import { trustOf, invalidateTrust } from './trust.js';
@@ -8,7 +8,7 @@ import { id, now, inr, HttpError } from './util.js';
 import { balanceAmount } from './money.js';
 import { LANGS, catById } from '../../shared/taxonomy.js';
 import { serverLocale } from './locales/index.js';
-import { CC_CARD, CC_HINT, type CardPayload, type HintPayload } from '../../shared/cards.js';
+import { CC_CARD, CC_HINT, CC_REPLY, CC_VOICE, type CardPayload, type HintPayload } from '../../shared/cards.js';
 
 // ── Types ─────────────────────────────────────────────────────────────────
 export type Priority = 'P1' | 'P2' | 'P3';
@@ -41,6 +41,8 @@ export interface TicketDoc {
   conversation_id: string | null;
   ai_summary: { en: string; local: string; lang: string; source: 'ai' | 'facts' };
   suggested_next_step: string;
+  /** The facts-based next step as a key, so the desk can show it in the agent's language (absent on older tickets). */
+  next_step_key?: NextStepKey | null;
   assigned_agent_id: string | null;
   auto_translate: boolean;
   sla_due_at: number;
@@ -77,10 +79,8 @@ const DEFAULT_PRIORITY: Record<string, Priority> = {
 const MULTI_PARTY = new Set(['dispute', 'quality_dispute', 'short_delivery', 'late_delivery', 'payment_followup', 'concierge']);
 /** Newer ticket types are handled by agents who already carry the broader skill. */
 const SKILL_ALIAS: Record<string, string> = { short_delivery: 'quality_dispute', late_delivery: 'dispute' };
-const TYPE_LABEL: Record<string, string> = {
-  help: 'Help request', dispute: 'Dispute', quality_dispute: 'Quality dispute', short_delivery: 'Short delivery', late_delivery: 'Late delivery', payment_followup: 'Payment follow-up', concierge: 'Large order concierge',
-  seller_nudge: 'Seller nudge', onboarding_assist: 'Onboarding help', verification_visit: 'Unit verification',
-};
+/** Ticket type label (desk namespace `type_<type>`), English unless a language is given. */
+const typeLabel = (type: string, lang = 'en') => rtMaybe(lang, `type_${type}`) ?? type.replace(/_/g, ' ');
 
 // ── Small shared helpers (also used by deals.ts) ─────────────────────────
 /** Atomic counter stored in the `kv` collection (`seq_<name>`). */
@@ -152,24 +152,108 @@ const REQ_TEXT: Record<string, Record<string, string>> = {
     assigned: 'Trade Desk ticket {code}: {agent} (speaks {langs}) will join you shortly.',
     queued: 'Trade Desk ticket {code} is open. A person will reply within {min} min.',
     resolved: 'Trade Desk ticket {code} resolved: {outcome}',
+    type_help: 'Help request',
+    type_dispute: 'Dispute',
+    type_quality_dispute: 'Quality dispute',
+    type_short_delivery: 'Short delivery',
+    type_late_delivery: 'Late delivery',
+    type_payment_followup: 'Payment follow-up',
+    type_concierge: 'Large order concierge',
+    type_seller_nudge: 'Seller nudge',
+    type_onboarding_assist: 'Onboarding help',
+    type_verification_visit: 'Unit verification',
+    next_label: 'Next step',
+    next_quality_dispute: 'Ask the buyer for photos and the count of faulty pieces, then call the seller with the LR / packing details and agree on replacement, partial refund or recount.',
+    next_short_delivery: 'Ask the buyer how many pieces and bundles arrived against the invoice, check the seller\'s packing list and LR weight, then agree on sending the missing pieces, a partial refund or a recount.',
+    next_late_delivery: 'Check the promised dispatch days against the order dates, call the seller for a firm dispatch / delivery date and the LR, and update the buyer.',
+    next_payment_due: 'Call the buyer about the pending balance of {amount} (due {date}); agree a payment date and record it on the order.',
+    next_payment_amount: 'Call the buyer about the pending balance of {amount}; agree a payment date and record it on the order.',
+    next_payment_followup: 'Call the buyer about the pending payment and agree a payment date.',
+    next_dispute: 'Read the chat, call both sides and calm things down; check payment and dispatch records before taking a side.',
+    next_help: 'Call the user in their language and finish what they were trying to do.',
+    next_concierge: 'Call the buyer to confirm specs, a sample and payment terms for this large order; introduce a backup seller.',
+    next_onboarding_assist: 'Call and help them finish their profile and first listings.',
+    next_verification_visit: 'Schedule a unit visit, record photos and mark the unit visited.',
+    next_seller_nudge: 'Call the seller and ask them to reply to the waiting enquiry (or switch on Claire auto-reply).',
   },
   hi: {
     assigned: 'ट्रेड डेस्क टिकट {code}: {agent} ({langs} बोलती/बोलते हैं) जल्द ही जुड़ेंगे।',
     queued: 'ट्रेड डेस्क टिकट {code} खुल गया है। {min} मिनट में कोई जवाब देगा।',
     resolved: 'ट्रेड डेस्क टिकट {code} हल हो गया: {outcome}',
+    type_help: 'मदद का अनुरोध',
+    type_dispute: 'विवाद',
+    type_quality_dispute: 'क्वालिटी विवाद',
+    type_short_delivery: 'कम माल पहुँचा',
+    type_late_delivery: 'डिलीवरी में देरी',
+    type_payment_followup: 'भुगतान फ़ॉलो-अप',
+    type_concierge: 'बड़ा ऑर्डर सहायता',
+    type_seller_nudge: 'विक्रेता को याद दिलाना',
+    type_onboarding_assist: 'प्रोफ़ाइल बनाने में मदद',
+    type_verification_visit: 'यूनिट सत्यापन',
+    next_label: 'अगला कदम',
+    next_quality_dispute: 'खरीदार से फ़ोटो और खराब पीस की गिनती लें, फिर LR / पैकिंग विवरण के साथ विक्रेता को कॉल करें और बदलने, आंशिक रिफ़ंड या दोबारा गिनती पर सहमति बनाएं।',
+    next_short_delivery: 'खरीदार से पूछें कि बिल के मुकाबले कितने पीस और बंडल पहुँचे, विक्रेता की पैकिंग लिस्ट और LR वज़न जाँचें, फिर बाकी पीस भेजने, आंशिक रिफ़ंड या दोबारा गिनती पर सहमति बनाएं।',
+    next_late_delivery: 'ऑर्डर की तारीखों से वादा किए गए डिस्पैच दिन मिलाएं, विक्रेता को कॉल करके पक्की डिस्पैच / डिलीवरी तारीख और LR लें, और खरीदार को बताएं।',
+    next_payment_due: 'बकाया {amount} (देय {date}) के बारे में खरीदार को कॉल करें; भुगतान की तारीख तय करें और ऑर्डर पर दर्ज करें।',
+    next_payment_amount: 'बकाया {amount} के बारे में खरीदार को कॉल करें; भुगतान की तारीख तय करें और ऑर्डर पर दर्ज करें।',
+    next_payment_followup: 'बकाया भुगतान के बारे में खरीदार को कॉल करें और भुगतान की तारीख तय करें।',
+    next_dispute: 'चैट पढ़ें, दोनों पक्षों को कॉल करके बात शांत करें; किसी का पक्ष लेने से पहले भुगतान और डिस्पैच रिकॉर्ड जाँचें।',
+    next_help: 'उपयोगकर्ता को उनकी भाषा में कॉल करें और जो वे करना चाह रहे थे उसे पूरा करवाएं।',
+    next_concierge: 'इस बड़े ऑर्डर के लिए खरीदार को कॉल करके स्पेक्स, सैंपल और भुगतान शर्तें पक्की करें; एक बैकअप विक्रेता से मिलवाएं।',
+    next_onboarding_assist: 'कॉल करें और उनकी प्रोफ़ाइल और पहली लिस्टिंग पूरी करने में मदद करें।',
+    next_verification_visit: 'यूनिट विज़िट तय करें, फ़ोटो लें और यूनिट को विज़िट किया हुआ मार्क करें।',
+    next_seller_nudge: 'विक्रेता को कॉल करें और रुकी हुई पूछताछ का जवाब देने को कहें (या Claire ऑटो-रिप्लाई चालू करवाएं)।',
   },
   ta: {
     assigned: 'டிரேட் டெஸ்க் டிக்கெட் {code}: {agent} ({langs} பேசுவார்) விரைவில் சேருவார்.',
     queued: 'டிரேட் டெஸ்க் டிக்கெட் {code} திறக்கப்பட்டது. {min} நிமிடத்தில் ஒருவர் பதில் அளிப்பார்.',
     resolved: 'டிரேட் டெஸ்க் டிக்கெட் {code} தீர்க்கப்பட்டது: {outcome}',
+    type_help: 'உதவி கோரிக்கை',
+    type_dispute: 'தகராறு',
+    type_quality_dispute: 'தரம் குறித்த தகராறு',
+    type_short_delivery: 'குறைவான டெலிவரி',
+    type_late_delivery: 'தாமதமான டெலிவரி',
+    type_payment_followup: 'பணம் தொடர்பான பின்தொடர்வு',
+    type_concierge: 'பெரிய ஆர்டர் உதவி',
+    type_seller_nudge: 'விற்பனையாளருக்கு நினைவூட்டல்',
+    type_onboarding_assist: 'பதிவு செய்ய உதவி',
+    type_verification_visit: 'யூனிட் சரிபார்ப்பு',
+    next_label: 'அடுத்த படி',
+    next_quality_dispute: 'வாங்குபவரிடம் புகைப்படங்களும் குறையுள்ள பீஸ்களின் எண்ணிக்கையும் கேளுங்கள்; பிறகு LR / பேக்கிங் விவரங்களுடன் விற்பனையாளரை அழைத்து மாற்றுப் பொருள், பகுதி பணத்திருப்பம் அல்லது மறு எண்ணிக்கைக்கு ஒப்புக்கொள்ளச் செய்யுங்கள்.',
+    next_short_delivery: 'பில்லுக்கு எதிராக எத்தனை பீஸ்களும் பண்டல்களும் வந்தன என்று வாங்குபவரிடம் கேளுங்கள்; விற்பனையாளரின் பேக்கிங் பட்டியலையும் LR எடையையும் சரிபாருங்கள்; பிறகு மீதி பீஸ்களை அனுப்புவது, பகுதி பணத்திருப்பம் அல்லது மறு எண்ணிக்கைக்கு ஒப்புக்கொள்ளச் செய்யுங்கள்.',
+    next_late_delivery: 'ஆர்டர் தேதிகளுடன் வாக்களித்த அனுப்பும் நாட்களை ஒப்பிடுங்கள்; விற்பனையாளரை அழைத்து உறுதியான அனுப்பும் / டெலிவரி தேதியையும் LR-ஐயும் பெறுங்கள்; வாங்குபவருக்குத் தெரிவியுங்கள்.',
+    next_payment_due: 'நிலுவையில் உள்ள {amount} (கெடு {date}) பற்றி வாங்குபவரை அழையுங்கள்; பணம் செலுத்தும் தேதியை ஒப்புக்கொண்டு ஆர்டரில் பதிவு செய்யுங்கள்.',
+    next_payment_amount: 'நிலுவையில் உள்ள {amount} பற்றி வாங்குபவரை அழையுங்கள்; பணம் செலுத்தும் தேதியை ஒப்புக்கொண்டு ஆர்டரில் பதிவு செய்யுங்கள்.',
+    next_payment_followup: 'நிலுவைப் பணம் பற்றி வாங்குபவரை அழைத்து பணம் செலுத்தும் தேதியை ஒப்புக்கொள்ளச் செய்யுங்கள்.',
+    next_dispute: 'சாட்டைப் படியுங்கள், இரு தரப்பையும் அழைத்து அமைதிப்படுத்துங்கள்; ஒரு பக்கம் சாயும் முன் பணம் மற்றும் அனுப்புதல் பதிவுகளைச் சரிபாருங்கள்.',
+    next_help: 'பயனரை அவர் மொழியில் அழைத்து, அவர் செய்ய முயன்றதை முடிக்க உதவுங்கள்.',
+    next_concierge: 'இந்தப் பெரிய ஆர்டருக்கான விவரங்கள், மாதிரி மற்றும் பணம் செலுத்தும் நிபந்தனைகளை உறுதிசெய்ய வாங்குபவரை அழையுங்கள்; ஒரு மாற்று விற்பனையாளரை அறிமுகப்படுத்துங்கள்.',
+    next_onboarding_assist: 'அழைத்து அவர்களின் சுயவிவரத்தையும் முதல் பட்டியல்களையும் முடிக்க உதவுங்கள்.',
+    next_verification_visit: 'யூனிட் வருகையை நிர்ணயித்து, புகைப்படங்களைப் பதிவுசெய்து, யூனிட்டை பார்வையிட்டதாகக் குறியுங்கள்.',
+    next_seller_nudge: 'விற்பனையாளரை அழைத்து காத்திருக்கும் விசாரணைக்குப் பதில் அளிக்கச் சொல்லுங்கள் (அல்லது Claire தானியங்கி பதிலை இயக்கச் சொல்லுங்கள்).',
   },
 };
-const rt = (lang: string, key: string, vars: Record<string, string | number>) => {
-  // Namespace "desk"; te/kn/ml/bn/or/mr/gu come from src/locales/<lang>.json.
+/** Namespace "desk"; te/kn/ml/bn/or/mr/gu come from src/locales/<lang>.json. Null when the key does not exist. */
+function rtMaybe(lang: string, key: string, vars: Record<string, string | number> = {}): string | null {
   let s = REQ_TEXT[lang]?.[key] ?? serverLocale(lang, 'desk', key) ?? REQ_TEXT.en[key];
+  if (s == null) return null;
   for (const [k, v] of Object.entries(vars)) s = s.replaceAll(`{${k}}`, String(v));
   return s;
-};
+}
+const rt = (lang: string, key: string, vars: Record<string, string | number>) => rtMaybe(lang, key, vars) ?? key;
+
+/** The facts-based next step as a translatable key (+ values), stored on the ticket so the desk can show it in the agent's language. */
+interface NextStepKey { key: string; vars: Record<string, string> }
+function nextStepKey(type: string, order: any): NextStepKey {
+  if (type === 'payment_followup') {
+    if (!order) return { key: 'next_payment_followup', vars: {} };
+    const amount = inr(balanceOf(order));
+    return order.balance_due_at ? { key: 'next_payment_due', vars: { amount, date: fmtDate(order.balance_due_at) } } : { key: 'next_payment_amount', vars: { amount } };
+  }
+  return { key: REQ_TEXT.en[`next_${type}`] ? `next_${type}` : 'next_help', vars: {} };
+}
+/** Every app language → text, for the desk console to pick the agent's language. */
+const allLangs = (fn: (lang: string) => string) => Object.fromEntries(LANGS.map((l) => [l.code, fn(l.code)]));
 
 // ── Facts brief (deterministic fallback for the AI triage) ──────────────────
 async function ticketContext(t: TicketDoc) {
@@ -195,7 +279,7 @@ const balanceOf = (order: any) => balanceAmount(order);
 
 async function factsBrief(t: TicketDoc) {
   const { parties, order } = await ticketContext(t);
-  const label = TYPE_LABEL[t.type] ?? t.type;
+  const label = typeLabel(t.type);
   const who = parties.map((p) => `${p.name} (${p.role === 'user' ? '' : p.role + ', '}${p.city}, trust ${p.trust})`).join(' and ');
   const parts = [`${label} (${t.priority}) via ${t.trigger.replace(/_/g, ' ')}${who ? ` — ${who}` : ''}.`];
   if (order) {
@@ -205,22 +289,8 @@ async function factsBrief(t: TicketDoc) {
     parts.push(line + '.');
   }
   if (t.description) parts.push(`Reported: "${t.description.slice(0, 240).trim().replace(/[.!?]+$/, '')}".`);
-  const bal = order ? inr(balanceOf(order)) : '';
-  const next: Record<string, string> = {
-    quality_dispute: 'Ask the buyer for photos and the count of faulty pieces, then call the seller with the LR / packing details and agree on replacement, partial refund or recount.',
-    short_delivery: 'Ask the buyer how many pieces and bundles arrived against the invoice, check the seller\'s packing list and LR weight, then agree on sending the missing pieces, a partial refund or a recount.',
-    late_delivery: 'Check the promised dispatch days against the order dates, call the seller for a firm dispatch / delivery date and the LR, and update the buyer.',
-    payment_followup: order
-      ? `Call the buyer about the pending balance of ${bal}${order.balance_due_at ? ` (due ${fmtDate(order.balance_due_at)})` : ''}; agree a payment date and record it on the order.`
-      : 'Call the buyer about the pending payment and agree a payment date.',
-    dispute: 'Read the chat, call both sides and calm things down; check payment and dispatch records before taking a side.',
-    help: 'Call the user in their language and finish what they were trying to do.',
-    concierge: 'Call the buyer to confirm specs, a sample and payment terms for this large order; introduce a backup seller.',
-    onboarding_assist: 'Call and help them finish their profile and first listings.',
-    verification_visit: 'Schedule a unit visit, record photos and mark the unit visited.',
-    seller_nudge: 'Call the seller and ask them to reply to the waiting enquiry (or switch on Claire auto-reply).',
-  };
-  return { summary: parts.join(' '), next: next[t.type] ?? next.help, parties, order };
+  const nextKey = nextStepKey(t.type, order);
+  return { summary: parts.join(' '), next: rt('en', nextKey.key, nextKey.vars), nextKey, parties, order };
 }
 
 /** AI brief in the agent's language; falls back to the facts brief. */
@@ -310,6 +380,7 @@ export async function createTicket(opts: CreateTicketOpts): Promise<TicketDoc> {
   const brief = await factsBrief(t);
   t.ai_summary = { en: brief.summary, local: brief.summary, lang: 'en', source: 'facts' };
   t.suggested_next_step = brief.next;
+  t.next_step_key = brief.nextKey;
   await insert('tickets', t);
 
   let agentId: string | null = null;
@@ -396,9 +467,9 @@ export async function dispatch(ticketId: string, opts: { exclude?: string[] } = 
   const card: CardPayload = {
     kind: 'notice',
     tone: t.priority === 'P3' ? 'info' : 'warn',
-    text: `New ${t.priority} ticket ${t.code} · ${TYPE_LABEL[t.type] ?? t.type}${names ? ` · ${names}` : ''}. First reply due in ${SLA_MIN[t.priority]} min.${translateNote}\n${t.ai_summary?.en ?? ''}`,
+    text: `New ${t.priority} ticket ${t.code} · ${typeLabel(t.type)}${names ? ` · ${names}` : ''}. First reply due in ${SLA_MIN[t.priority]} min.${translateNote}\n${t.ai_summary?.en ?? ''}`,
   };
-  await safe('agent notify', chat.direct(BOT.desk, [chosen.user_id], CC_CARD, card, { push: `${t.code} · ${TYPE_LABEL[t.type] ?? t.type}` }));
+  await safe('agent notify', chat.direct(BOT.desk, [chosen.user_id], CC_CARD, card, { push: `${t.code} · ${typeLabel(t.type)}` }));
   return chosen.user_id;
 }
 
@@ -428,7 +499,7 @@ async function checkSla() {
     const agentId = await dispatch(t.id, { exclude: t.assigned_agent_id ? [t.assigned_agent_id] : [] });
     const to = [...new Set([...supervisors, ...(agentId ? [agentId] : [])])];
     if (to.length) {
-      await safe('sla alert', chat.direct(BOT.desk, to, CC_CARD, { kind: 'notice', tone: 'warn', text: `SLA breached on ${t.code} (${t.priority}, ${TYPE_LABEL[t.type] ?? t.type}). Please respond now.` } satisfies CardPayload));
+      await safe('sla alert', chat.direct(BOT.desk, to, CC_CARD, { kind: 'notice', tone: 'warn', text: `SLA breached on ${t.code} (${t.priority}, ${typeLabel(t.type)}). Please respond now.` } satisfies CardPayload));
     }
   }
 }
@@ -485,9 +556,12 @@ export async function joinTicket(ticketId: string, agentUserId: string) {
       summary = ai.summary_local || ai.summary_en;
       next = ai.next_step;
       await update('tickets', t.id, { ai_summary: { en: ai.summary_en, local: summary, lang: agentLang, source: 'ai' }, suggested_next_step: next });
-    } else summary = t.ai_summary?.en || (await factsBrief(t)).summary;
+    } else {
+      summary = t.ai_summary?.en || (await factsBrief(t)).summary;
+      next = factsNextStep(t, agentLang) ?? next; // the model is unavailable: at least the next step in the agent's language
+    }
   }
-  const hint: HintPayload = { text: `${t.code} · ${summary}\nNext step: ${next}` };
+  const hint: HintPayload = { text: `${t.code} · ${summary}\n${rt(agentLang, 'next_label', {})}: ${next}` };
   await safe('agent hint', chat.group(conv!.channel_id, BOT.claire, CC_HINT, hint, { onlyTo: [agentUserId] }));
 
   return { ticket: await byId<TicketDoc>('tickets', t.id), conversation: await byId('conversations', conv!.id) };
@@ -507,8 +581,13 @@ export async function resolveTicket(ticketId: string, agentUserId: string, input
   if (t.order_id) {
     const order = await byId('orders', t.order_id);
     if (order?.status === 'disputed') {
-      await update('orders', order.id, { status: order.status_before_dispute ?? 'delivered', status_before_dispute: null, updated_at: at });
+      const restored = { status: order.status_before_dispute ?? 'delivered', status_before_dispute: null, updated_at: at };
+      await update('orders', order.id, restored);
       await insert('order_events', { id: id('ev_'), order_id: order.id, type: 'dispute_resolved', payload: { ticket: t.code, outcome, upheld: !!input.upheld }, actor_user_id: agentUserId, at });
+      // The chat shows only the newest card per order: re-post it so the dispute line goes away.
+      // Imported lazily because deals.ts imports this module.
+      const { postOrderCard } = await import('./deals.js');
+      await safe('order card after resolve', postOrderCard({ ...order, ...restored } as any));
     }
   }
 
@@ -541,17 +620,65 @@ async function outcomeIn(outcome: string, lang: string) {
 }
 
 // ── Views for the console ─────────────────────────────────────────────────
+/** The facts-based next step in `lang`, or null when the ticket's next step came from the model (or cannot be keyed). */
+function factsNextStep(t: TicketDoc, lang: string): string | null {
+  const k = t.next_step_key ?? (t.type !== 'payment_followup' ? nextStepKey(t.type, null) : null);
+  if (!k || t.suggested_next_step !== rt('en', k.key, k.vars)) return null;
+  return rt(lang, k.key, k.vars);
+}
+
 export async function ticketRow(t: TicketDoc, names?: Map<string, any>) {
   const { _id, ...rest } = t as any;
   const bizMap = names ?? new Map((await find('businesses', { _id: { $in: t.business_ids } }, { projection: { name: 1, city: 1, language: 1, accent: 1 } })).map((b) => [b._id, b]));
   const agent = t.assigned_agent_id ? await byId('users', t.assigned_agent_id) : null;
   return {
     ...rest,
-    typeLabel: TYPE_LABEL[t.type] ?? t.type,
+    typeLabel: typeLabel(t.type),
+    // The console picks the agent's language from these (desk namespace; English fallback).
+    typeLabels: allLangs((l) => typeLabel(t.type, l)),
+    ...(factsNextStep(t, 'en') ? { nextSteps: allLangs((l) => factsNextStep(t, l)!) } : {}),
     parties: t.business_ids.map((b) => bizMap.get(b)).filter(Boolean).map((b: any) => ({ id: b._id, name: b.name, city: b.city, language: b.language, accent: b.accent })),
     agent: agent ? { id: agent.id, name: agent.name } : null,
     slaOverdue: !t.first_response_at && t.status !== 'resolved' && t.sla_due_at < now(),
   };
+}
+
+/** One archived message as a line the console can show (null for message types it does not show). */
+function earlierLine(m: { type: string; content: any }): string | null {
+  const c = m.content ?? {};
+  if (typeof c === 'string') return c;
+  if (m.type === 'RC:TxtMsg') return c.content ?? c.text ?? null;
+  if (m.type === CC_VOICE) return c.transcript ? `[voice] ${c.transcript}` : '[voice]';
+  if (m.type === CC_REPLY) return c.label ?? c.text ?? null;
+  if (m.type === 'RC:ImgMsg') return '[photo]';
+  if (m.type === CC_CARD) {
+    const units = c.qty != null ? ` · ${Number(c.qty).toLocaleString('en-IN')} ${c.unit ?? ''}`.trimEnd() : '';
+    const price = c.unitPrice != null ? ` × ${inr(c.unitPrice)}` : '';
+    if (c.kind === 'offer') return `[offer · ${c.status ?? ''}] ${c.title ?? ''}${units}${price}`;
+    if (c.kind === 'order') return `[order ${c.code ?? ''} · ${String(c.status ?? '').replace(/_/g, ' ')}] ${c.title ?? ''}${units}${price}`;
+    if (c.kind === 'notice' || c.kind === 'resolved') return c.text ?? c.outcome ?? null;
+    return c.kind ? `[${String(c.kind).replace(/_/g, ' ')}]` : null;
+  }
+  return null;
+}
+
+/**
+ * B10: Nexconn shows a late-joining group member nothing from before they joined (unless the console setting
+ * "Enable pre-join history access by new member" is on; set NEXCONN_PREJOIN_HISTORY=1 then, and this returns nothing).
+ * The console shows these from the server's archive above the live chat.
+ */
+async function earlierMessages(t: TicketDoc, conversation: any) {
+  if (!features.nexconn || process.env.NEXCONN_PREJOIN_HISTORY === '1' || !conversation || !t.joined_at) return undefined;
+  const rows = await archivedHistory(conversation.channel_id, t.joined_at, 100);
+  const lines = rows.map((m) => ({ m, text: earlierLine(m) })).filter((x) => x.text);
+  if (!lines.length) return [];
+  const users = await find('users', { _id: { $in: [...new Set(lines.map((x) => x.m.senderId))] } }, { projection: { name: 1, business_id: 1, language: 1 } });
+  const byUser = new Map(users.map((u) => [u._id as string, u]));
+  return lines.map(({ m, text }) => {
+    const u = byUser.get(m.senderId);
+    const side = u?.business_id === conversation.buyer_business_id ? 'buyer' : u?.business_id === conversation.seller_business_id ? 'seller' : BOT_NAMES[m.senderId] ? 'claire' : 'other';
+    return { id: m.id, senderId: m.senderId, senderName: BOT_NAMES[m.senderId] ?? u?.name ?? m.senderId, side, language: u?.language ?? null, type: m.type, text: String(text).slice(0, 2000), sentAt: m.sentAt };
+  });
 }
 
 export async function ticketDetail(ticketId: string) {
@@ -583,7 +710,7 @@ export async function ticketDetail(ticketId: string) {
   const strip = (x: any) => (x ? (({ _id, ...r }) => r)(x) : null);
   const agentDoc = agent ? await byId<AgentDoc>('agents', agent.id) : null;
   return {
-    ticket: await ticketRow(t, new Map(businesses.map((b) => [b._id, b]))),
+    ticket: { ...(await ticketRow(t, new Map(businesses.map((b) => [b._id, b])))), earlier: await earlierMessages(t, conversation).catch(() => undefined) },
     parties,
     order: strip(order),
     orderEvents: orderEvents.map(strip),

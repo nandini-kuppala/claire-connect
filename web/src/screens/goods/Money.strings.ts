@@ -53,3 +53,52 @@ export const MoneyS = defineStrings('goods_money', {
 });
 
 export const inr = (paise: number) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: paise % 100 ? 2 : 0 }).format(paise / 100);
+
+// Money follow-ups: Record payment on an order (D1), due reminders, Share bill, closed days (Q), a receipt's own rate (W).
+export const Money3S = defineStrings('goods_money3', {
+  en: {
+    order_paid_of: 'Paid {paid} of {total}', order_due: '{amt} due', order_fully_paid: 'Fully paid', order_pay_hint: 'Shows in Bills for both of you. Record only: nothing is paid through the app.',
+    order_i_paid: 'I paid {name}', order_they_paid: '{name} paid me',
+    due_title: 'Payments past their credit days', due_they: '{name} owes you {amt} · {days} days (credit {credit} days)', due_me: 'You owe {name} {amt} · {days} days (credit {credit} days)',
+    snooze: 'Snooze 7 days', snoozed_until: 'Reminders snoozed until {date}', unsnooze: 'Remind again', reminder_sent: 'Reminder sent today',
+    credit_days: 'Credit days', credit_value: 'Credit: {n} days', change: 'Change', save: 'Save',
+    overdue_they: 'Overdue: {amt} unpaid for {days} days', overdue_me: 'Overdue: you owe {amt} for {days} days',
+    share_bill: 'Share bill', share_whatsapp: 'Send on WhatsApp', share_print: 'Print or save as PDF', share_hint: 'The message has the totals and the latest lines. The printed bill has everything.',
+    wa_head: 'Bill from {me} to {them} · {date}', wa_billed_you: 'Billed to you: {amt}', wa_billed_us: 'Billed by you: {amt}', wa_paid_you: 'Paid by you: {amt}', wa_paid_us: 'Paid by us: {amt}', wa_setoff: 'Set off: {amt}',
+    wa_due_you: 'Balance you owe us: {amt}', wa_due_us: 'Balance we owe you: {amt}', wa_settled: 'All settled.', wa_lines: 'Lines:', wa_more: '+ {n} more', wa_foot: 'Recorded on CLAIRE Connect. Record only.',
+    print_title: 'Bill', print_from: 'From', print_to: 'To', print_date: 'Date', print_item: 'Item', print_qty: 'Qty', print_rate: 'Rate', print_amount: 'Amount', print_payments: 'Payments', print_by_you: 'billed by you', print_paid_you: 'Paid by you', print_paid_us: 'Paid by us',
+    receipt_rate: 'rate for this lot',
+    closed_title: 'Closed days', closed_hint: 'Weekly off days and holidays are not counted in late days, oldest unpaid and how units are doing.', weekly_off: 'Weekly off', holidays: 'Holidays', add_holiday: 'Add', no_holidays: 'No holidays added.', remove: 'Remove', cal_saved: 'Closed days saved.',
+    lot_rate: 'Rate for this lot (₹ per piece, optional)', lot_rate_hint: 'Only if it differs from the job rate. Bills use it for these pieces.',
+  },
+  ta: {
+    order_paid_of: '{total}-ல் {paid} செலுத்தியது', order_due: '{amt} பாக்கி', order_fully_paid: 'முழுதும் செலுத்தியது', order_pay_hint: 'இருவரின் பில்களிலும் தெரியும். பதிவு மட்டும்: ஆப் மூலம் பணம் செலுத்தப்படாது.',
+    order_i_paid: 'நான் {name}-க்குக் கொடுத்தேன்', order_they_paid: '{name} எனக்குக் கொடுத்தார்கள்',
+    due_title: 'கடன் நாட்களைத் தாண்டிய பாக்கி', due_they: '{name} உங்களுக்கு {amt} · {days} நாள் (கடன் {credit} நாள்)', due_me: 'நீங்கள் {name}-க்கு {amt} · {days} நாள் (கடன் {credit} நாள்)',
+    snooze: '7 நாள் தள்ளிவை', snoozed_until: '{date} வரை நினைவூட்டல் நிறுத்தம்', unsnooze: 'மீண்டும் நினைவூட்டு', reminder_sent: 'இன்று நினைவூட்டல் அனுப்பியது',
+    credit_days: 'கடன் நாட்கள்', credit_value: 'கடன்: {n} நாள்', change: 'மாற்று', save: 'சேமி',
+    overdue_they: 'தாமதம்: {amt} {days} நாளாகச் செலுத்தவில்லை', overdue_me: 'தாமதம்: நீங்கள் {amt} {days} நாளாகத் தர வேண்டும்',
+    share_bill: 'பில்லைப் பகிர்', share_whatsapp: 'WhatsApp-ல் அனுப்பு', share_print: 'அச்சிடு அல்லது PDF ஆகச் சேமி', share_hint: 'செய்தியில் மொத்தமும் சமீபத்திய வரிகளும். அச்சிட்ட பில்லில் எல்லாம்.',
+    wa_head: '{me} → {them} பில் · {date}', wa_billed_you: 'உங்களுக்கு பில்: {amt}', wa_billed_us: 'நீங்கள் போட்ட பில்: {amt}', wa_paid_you: 'நீங்கள் கொடுத்தது: {amt}', wa_paid_us: 'நாங்கள் கொடுத்தது: {amt}', wa_setoff: 'கழித்தது: {amt}',
+    wa_due_you: 'நீங்கள் எங்களுக்குத் தர வேண்டியது: {amt}', wa_due_us: 'நாங்கள் உங்களுக்குத் தர வேண்டியது: {amt}', wa_settled: 'எல்லாம் தீர்ந்தது.', wa_lines: 'வரிகள்:', wa_more: '+ இன்னும் {n}', wa_foot: 'CLAIRE Connect-ல் பதிந்தது. பதிவு மட்டும்.',
+    print_title: 'பில்', print_from: 'அனுப்புநர்', print_to: 'பெறுநர்', print_date: 'தேதி', print_item: 'விவரம்', print_qty: 'அளவு', print_rate: 'ரேட்', print_amount: 'தொகை', print_payments: 'பணம்', print_by_you: 'நீங்கள் போட்ட பில்', print_paid_you: 'நீங்கள் கொடுத்தது', print_paid_us: 'நாங்கள் கொடுத்தது',
+    receipt_rate: 'இந்த லாட்டின் ரேட்',
+    closed_title: 'விடுமுறை நாட்கள்', closed_hint: 'வார விடுமுறையும் பண்டிகை விடுமுறையும் தாமத நாள், பழைய பாக்கி, யூனிட் செயல்பாட்டில் கணக்கில் இல்லை.', weekly_off: 'வார விடுமுறை', holidays: 'விடுமுறைகள்', add_holiday: 'சேர்', no_holidays: 'விடுமுறை எதுவும் சேர்க்கவில்லை.', remove: 'நீக்கு', cal_saved: 'விடுமுறை நாட்கள் சேமிக்கப்பட்டன.',
+    lot_rate: 'இந்த லாட்டின் ரேட் (ஒரு பீஸுக்கு ₹, விருப்பம்)', lot_rate_hint: 'வேலையின் ரேட்டிலிருந்து வேறுபட்டால் மட்டும். இந்தப் பீஸ்களுக்கு பில் இதைப் பயன்படுத்தும்.',
+  },
+  hi: {
+    order_paid_of: '{total} में से {paid} चुकाया', order_due: '{amt} बाकी', order_fully_paid: 'पूरा चुकाया', order_pay_hint: 'आप दोनों के बिल में दिखेगा। सिर्फ़ दर्ज करने के लिए: ऐप से कोई भुगतान नहीं होता।',
+    order_i_paid: 'मैंने {name} को दिया', order_they_paid: '{name} ने मुझे दिया',
+    due_title: 'उधार के दिन पार कर चुके भुगतान', due_they: '{name} को आपको {amt} देना है · {days} दिन (उधार {credit} दिन)', due_me: 'आपको {name} को {amt} देना है · {days} दिन (उधार {credit} दिन)',
+    snooze: '7 दिन टालें', snoozed_until: '{date} तक याद दिलाना बंद', unsnooze: 'फिर याद दिलाएँ', reminder_sent: 'आज याद दिलाया गया',
+    credit_days: 'उधार के दिन', credit_value: 'उधार: {n} दिन', change: 'बदलें', save: 'सहेजें',
+    overdue_they: 'देर: {amt} {days} दिन से बकाया', overdue_me: 'देर: आपको {days} दिन से {amt} देना है',
+    share_bill: 'बिल भेजें', share_whatsapp: 'WhatsApp पर भेजें', share_print: 'प्रिंट करें या PDF सहेजें', share_hint: 'संदेश में कुल रकम और हाल की लाइनें हैं। प्रिंट किए बिल में सब कुछ है।',
+    wa_head: '{me} की ओर से {them} को बिल · {date}', wa_billed_you: 'आपके नाम बिल: {amt}', wa_billed_us: 'आपका बिल: {amt}', wa_paid_you: 'आपने दिया: {amt}', wa_paid_us: 'हमने दिया: {amt}', wa_setoff: 'घटाया: {amt}',
+    wa_due_you: 'आपको हमें देना है: {amt}', wa_due_us: 'हमें आपको देना है: {amt}', wa_settled: 'सब चुकता।', wa_lines: 'लाइनें:', wa_more: '+ {n} और', wa_foot: 'CLAIRE Connect पर दर्ज। सिर्फ़ रिकॉर्ड।',
+    print_title: 'बिल', print_from: 'भेजने वाला', print_to: 'पाने वाला', print_date: 'तारीख', print_item: 'ब्योरा', print_qty: 'मात्रा', print_rate: 'रेट', print_amount: 'रकम', print_payments: 'भुगतान', print_by_you: 'आपका बिल', print_paid_you: 'आपने दिया', print_paid_us: 'हमने दिया',
+    receipt_rate: 'इस लॉट का रेट',
+    closed_title: 'बंद के दिन', closed_hint: 'साप्ताहिक छुट्टी और त्योहार की छुट्टियाँ देरी के दिनों, पुराने बकाये और यूनिट के प्रदर्शन में नहीं गिनी जातीं।', weekly_off: 'साप्ताहिक छुट्टी', holidays: 'छुट्टियाँ', add_holiday: 'जोड़ें', no_holidays: 'कोई छुट्टी नहीं जोड़ी।', remove: 'हटाएँ', cal_saved: 'बंद के दिन सहेजे गए।',
+    lot_rate: 'इस लॉट का रेट (₹ प्रति पीस, वैकल्पिक)', lot_rate_hint: 'सिर्फ़ तब जब काम के रेट से अलग हो। इन पीस के बिल में यही लगेगा।',
+  },
+});

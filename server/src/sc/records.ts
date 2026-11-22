@@ -181,6 +181,7 @@ const returnBody = z.object({
   last: z.boolean().optional(),
   client_id: z.string().min(8).max(40),
   dc_no: z.string().trim().max(30).optional(),
+  rate_paise: z.number().int().min(0).max(100_000_000).optional(), // W: owner only; this receipt's pieces at this rate
 });
 
 export async function gotBack(ctx: Ctx, raw: unknown, jobId: string): Promise<Reply> {
@@ -189,6 +190,16 @@ export async function gotBack(ctx: Ctx, raw: unknown, jobId: string): Promise<Re
     const job = await col('sc_jobs').findOne({ _id: jobId, 'client_party.k': 'b', 'client_party.id': ctx.businessId } as any);
     if (!job) throw new HttpError(404, 'Not found');
     if (['closed', 'cancelled'].includes(job.status)) throw new HttpError(409, 'This job is already closed.');
+    // W: a receipt rate applies only to the owner, on a job billed per piece and not at an order's price. Otherwise it
+    // is dropped (and said so in the reply) rather than refusing the receipt: the goods must still be recorded.
+    let rateIgnored = false;
+    if (b.rate_paise !== undefined) {
+      const agreed: any = await col('sc_prices').findOne({ 'record.kind': 'job', 'record.id': job._id } as any, { sort: { created_at: -1 }, projection: { basis: 1 } });
+      if (ctx.role !== 'owner' || job.order_id || (agreed && !['per_output_piece', 'per_good_output_piece'].includes(agreed.basis))) {
+        b.rate_paise = undefined;
+        rateIgnored = true;
+      }
+    }
     const businessDate = b.business_date ?? todayIST();
     const client = me(ctx);
     const owner = job.owner_party as PartyRef;
@@ -263,11 +274,13 @@ export async function gotBack(ctx: Ctx, raw: unknown, jobId: string): Promise<Re
         await col('sc_jobs').updateOne({ _id: job.parent_job_id, status: { $nin: ['closed', 'cancelled'] } } as any, { $set: { status: 'in_progress' } }, { session });
       }
       if (discrepancies.length) await col('sc_discrepancies').insertMany(discrepancies, { session });
+      // W: this receipt's own rate (private to the owner's books like any price; Bills uses it for these pieces).
+      if (b.rate_paise !== undefined) await col('sc_prices').insertOne({ _id: newId('pr'), business_id: ctx.businessId, record: { kind: 'receipt', id: movementId }, job_id: job._id, basis: 'per_output_piece', value_paise: b.rate_paise, unit: 'pcs', created_by: ctx.userId, created_at: now } as any, { session });
     });
     if (result.duplicate) return reply(200, { duplicate: true });
     if (onPlatform) await enqueueCard('movement', movementId, 'sent', movement.visible_at);
     if (job.order_id) void import('./orders.js').then((o) => o.orderCoverage(job.order_id)).catch((e) => console.warn('[sc] order coverage', (e as Error).message));
-    return reply(201, { movement, undo_until: movement.visible_at });
+    return reply(201, { movement, undo_until: movement.visible_at, ...(rateIgnored ? { rate_ignored: true } : {}) });
 }
 
 router.post(
