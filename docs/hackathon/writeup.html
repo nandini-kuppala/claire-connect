@@ -4,10 +4,10 @@
 <meta charset="utf-8">
 <title>CLAIRE Connect · Project write-up</title>
 <style>
-  @page { size: A4; margin: 16mm 16mm 16mm 16mm; }
+  @page { size: A4; margin: 13mm 14mm 13mm 14mm; }
   :root { --ink:#16202a; --ink2:#47515c; --meta:#6b7480; --line:#e3e7ea; --primary:#1f8c73; --tint:#e6f6f1; --accent:#b7791f; }
   * { box-sizing: border-box; }
-  body { margin:0; font-family: -apple-system, "Helvetica Neue", Helvetica, Arial, sans-serif; color:var(--ink); font-size:10.4pt; line-height:1.5; }
+  body { margin:0; font-family: -apple-system, "Helvetica Neue", Helvetica, Arial, sans-serif; color:var(--ink); font-size:10pt; line-height:1.45; }
   h1 { font-size:24pt; margin:0; letter-spacing:-0.3px; }
   h1 span { color:var(--primary); }
   h2 { font-size:13pt; margin:18px 0 6px; padding-top:6px; border-top:1px solid var(--line); }
@@ -27,10 +27,10 @@
   th { font-size:8.4pt; color:var(--meta); text-transform:uppercase; letter-spacing:.3px; font-weight:600; }
   td:first-child { font-weight:600; white-space:nowrap; }
   .shots { display:flex; gap:14px; justify-content:center; align-items:flex-start; margin:8px 0 4px; break-inside:avoid; }
-  .shots figure { margin:0; width:44mm; }
+  .shots figure { margin:0; width:38mm; }
   .shots img { width:100%; border:1px solid var(--line); border-radius:8px; }
   figcaption { font-size:8.4pt; color:var(--meta); margin-top:3px; }
-  .wide { break-inside:avoid; text-align:center; } .wide img { width:82%; border:1px solid var(--line); border-radius:8px; }
+  .wide { break-inside:avoid; text-align:center; } .wide img { width:62%; border:1px solid var(--line); border-radius:8px; }
   .note { border-left:3px solid var(--primary); background:#f6faf8; padding:7px 10px; margin:8px 0; }
   .brk { break-before: page; }
   .two { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
@@ -39,113 +39,86 @@
 <body>
 
 <h1>CLAIRE <span>Connect</span></h1>
-<div class="sub">A multilingual, chat-first trade app for India's knitwear supply chain, built on the Nexconn Chat SDK.<br>Team <b>Coders</b> · Track: <b>Marketplace &amp; Support</b> · Nexconn Build Challenge 2026</div>
+<div class="sub">One chat app for India's knitwear trade, in everyone's own language. Built on the Nexconn Chat SDK.<br>Team <b>Coders</b> · Track: <b>Marketplace &amp; Support</b> · Nexconn Build Challenge 2026</div>
 
 <div class="meta">
   <div><b>Nexconn App Key</b><span class="key">m7ua80gbmcvhm</span></div>
   <div><b>Live app</b><span>claire-connect.onrender.com</span></div>
   <div><b>Source</b><span>github.com/nandini-kuppala/claire-connect</span></div>
-  <div><b>Try it (demo logins)</b><span style="word-break:normal">Amit · Lakshmi · Murali (Goods)</span></div>
+  <div><b>Try it (demo logins)</b><span style="word-break:normal">Amit · Lakshmi · Murali · Meena</span></div>
 </div>
 
-<h2>The problem</h2>
-<p>Tiruppur in Tamil Nadu makes about 90 % of India's cotton knitwear exports, across roughly 20,000 small units (TEA via Upstox, 2026). Most units do one or two steps (knitting, dyeing, cutting, stitching, packing) and outsource the rest, so one order can pass through about eight businesses. Between them, the trade runs on phone calls, WhatsApp groups and paper delivery challans.</p>
+<h2>Why we built it</h2>
+<p>One of our team's families runs a garment unit in Tiruppur. It buys fabric, cuts in-house, sends the pieces out to stitching units, packs in-house, and sells to shops across India. Every step of that runs on phone calls, WhatsApp photos and memory. Buyers in the north speak Hindi; the stitching units speak Tamil. When 400 pieces go to a stitcher and 398 come back, nobody can prove which number is right. We built CLAIRE Connect so that a small business like this can find buyers, close deals across languages, and track every piece of an order, all from one chat app they already know how to use.</p>
+
+<h2>The problem it solves</h2>
+<p>Tiruppur is India's knitwear capital: a record ₹46,000 crore of exports in FY26, with a target of ₹1 lakh crore by 2030 (Tiruppur Exporters' Association, via Business Standard), and an estimated ₹35,000 crore sold inside India. About 95 % of its units are small businesses. Yet the trade still works the way it did decades ago:</p>
 <ul>
-  <li><b>Language:</b> buyers in the north and east speak Hindi or Bengali, while most makers speak Tamil. Negotiations go through middlemen or get lost in translation.</li>
-  <li><b>No shared record:</b> when 500 kg of fabric goes to a dyer and 488 kg comes back, it is one person's word against another's. Nobody can see where an order really is.</li>
-  <li><b>No one to call:</b> when a delivery is short or a payment is late, there is no neutral person who speaks both languages.</li>
+  <li><b>Trade fairs and middlemen.</b> Buyers travel to Tiruppur to see the goods. Those who cannot, buy through local wholesalers and resellers, paying more at every step.</li>
+  <li><b>Unsold stock.</b> Makers over-produce and sit on stock: in one festival season, about 70 % of garments sold came from old stock (TEMA, via DT Next).</li>
+  <li><b>Selling one WhatsApp chat at a time.</b> A seller sends the same photos to ten buyers a day and chases each one by phone, often without a shared language.</li>
+  <li><b>No shared record in production.</b> One order passes through about eight businesses (knitting, dyeing, cutting, printing, stitching, packing). Goods go back and forth on paper challans, and nobody can see where an order really is.</li>
 </ul>
 
 <h2>What CLAIRE Connect does</h2>
-<p>CLAIRE Connect puts the whole trade into one chat app, in the user's own language. It has two halves that share the same chat infrastructure.</p>
 <div class="two">
 <div>
-<h3>1. Marketplace and support (the track)</h3>
+<h3>1. Find, negotiate and order (the track)</h3>
 <ul>
-  <li><b>Claire, an AI trade assistant.</b> A buyer types or speaks a request ("500 cotton T-shirts under ₹120") in any of 10 Indian languages. Claire finds and ranks suppliers on price, trust, stock and delivery, and can split a big order across units.</li>
-  <li><b>Deal rooms.</b> Buyer and seller negotiate in a translated group chat. Offers, counter-offers and orders (with GST, advance and balance) are structured cards. Claire sends each side private price tips: ask for a discount and she tells you what sellers usually settle at, with a one-tap opening offer. Buyers can order a sample first.</li>
-  <li><b>Trade Desk.</b> A human agent dispatch centre. Tickets come from a chat button, from sentiment in a deal, or from late payments and short deliveries. They are routed to an agent who speaks the right language, who joins the same chat.</li>
-  <li><b>Ratings both ways.</b> Buyers rate makers on quality, value and delivery; makers rate buyers on paying on time. Ratings, verification and reply speed feed a trust score on every profile and storefront.</li>
+  <li><b>Claire, an AI trade assistant.</b> A buyer types or speaks a request in any of 10 Indian languages. Claire finds makers and ranks them on price, trust, stock and delivery.</li>
+  <li><b>Live, translated deal rooms.</b> The buyer writes in Hindi and the maker reads it in Tamil; her reply arrives in Hindi. Samples, offers, counter-offers and orders with GST are cards in the chat.</li>
+  <li><b>Private price tips.</b> Ask for a discount and Claire tells only you that sellers usually settle 3–6 % lower, with a one-tap opening offer. In the demo, a ₹98 listing closes at ₹94 for 1,000 pieces.</li>
+  <li><b>Ratings both ways.</b> Buyers rate makers on quality, value and delivery; makers rate buyers on paying on time. Both feed a trust score.</li>
+  <li><b>Trade Desk.</b> When something goes wrong (a late payment, a short delivery), a human agent who speaks the right language joins the same chat, reads what happened before, and sorts it out.</li>
 </ul>
 </div>
 <div>
-<h3>2. Goods: tracking the production chain</h3>
+<h3>2. Track production after the order</h3>
 <ul>
-  <li><b>Every hand-off recorded in seconds.</b> "Send for work", "Got back", sales, returns. The record arrives as a card in a shared chat between the two businesses.</li>
-  <li><b>Two-sided confirmation.</b> The receiver confirms what actually arrived. A difference is shown to both sides and settled, never overwritten. A double-entry ledger keeps every piece accounted for.</li>
-  <li><b>Flow view.</b> For each style or order: production progress, where every piece is right now (at which unit, in the owner's shop, on the way, with a buyer), each stage, and each buyer, with late work and differences flagged.</li>
-  <li><b>A private Claire.</b> Each business can ask questions about its own records in Tamil, Hindi or English ("how much fabric is still at the dyer?"), and record work by voice. Writes are saved only after a one-tap confirmation.</li>
+  <li><b>Every hand-off in seconds.</b> Send for work, got back, sales and returns, typed, spoken or told to Claire. Each record arrives as a card in the chat between the two businesses.</li>
+  <li><b>Confirmed by both sides.</b> The receiver confirms what actually arrived. A difference is shown to both and settled, never silently overwritten.</li>
+  <li><b>Flow view.</b> For each style or order: progress, where every piece is right now (at which unit, in the shop, on the way, with a buyer), each stage, and each buyer.</li>
+  <li><b>A private Claire.</b> "How much is still at Priya Stitching?" Answers come from the business's own records, in Tamil, Hindi or English.</li>
 </ul>
 </div>
 </div>
 
 <div class="shots">
-  <figure><img src="img/deal-counter.png"><figcaption>Deal room (buyer). A counter-offer card, and Claire's tip that only the buyer sees.</figcaption></figure>
-  <figure><img src="img/deal-tamil.png"><figcaption>The same deal for the seller, in Tamil. The order card has GST, and a Trade Desk agent has joined.</figcaption></figure>
-  <figure><img src="img/flow.png"><figcaption>Flow view (Goods, live): progress and where all 500 pieces of a style are right now.</figcaption></figure>
+  <figure><img src="img/deal-counter.png"><figcaption>Deal room: a counter-offer card, and Claire's tip that only the buyer sees.</figcaption></figure>
+  <figure><img src="img/deal-tamil.png"><figcaption>The same deal for the seller, in Tamil, with the order card and GST.</figcaption></figure>
+  <figure><img src="img/flow.png"><figcaption>Flow view: where all 500 pieces of a style are right now.</figcaption></figure>
 </div>
 
-<h2>How it uses Nexconn</h2>
-<p>Every conversation in the app runs on Nexconn: web Chat SDK <code>@nexconn/chat</code> with <code>@nexconn/engine</code>, the optional Call SDK <code>@nexconn/call</code>, and the Nexconn Server API. Each app user is a Nexconn user, and the bots (Claire, CLAIRE Updates, Trade Desk) are Nexconn users too.</p>
+<h2>Features that use the Nexconn SDK</h2>
+<p><b>App Key: <span class="key">m7ua80gbmcvhm</span></b>. Every conversation in the app runs on Nexconn: the web Chat SDK (<code>@nexconn/chat</code> with <code>@nexconn/engine</code>), the Call SDK (<code>@nexconn/call</code>) and the Nexconn Server API. Each app user is a Nexconn user; Claire, CLAIRE Updates and the Trade Desk are Nexconn users too.</p>
 <table>
   <tr><th>Nexconn feature</th><th>Where the app uses it</th></tr>
-  <tr><td>Direct channels</td><td>Each user's one-to-one chat with Claire (search, analytics, record drafts). Server replies are sent through the Server API as the <code>claire</code> user.</td></tr>
-  <tr><td>Group channels</td><td>Every deal room (<code>deal_…</code>), support room, and the Goods conversation between two businesses (<code>goods_…</code>). They are created server-side, and members are added and removed as agents join.</td></tr>
+  <tr><td>Direct channels</td><td>Each user's private chat with Claire (search, questions about their own records, record drafts). Claire replies through the Server API.</td></tr>
+  <tr><td>Group channels</td><td>Every buyer-seller deal room, the Goods chat between two businesses, and support rooms. Created server-side; a Trade Desk agent is added to the same group when they join.</td></tr>
   <tr><td>System channel</td><td>"CLAIRE Updates": order, payment and dispatch notices.</td></tr>
-  <tr><td>Custom messages</td><td>Four registered types:
-    <ul>
-      <li><code>CC:Card</code>: offers, counter-offers, orders, movement and dispute cards, notices;</li>
-      <li><code>CC:Hint</code>: private tips;</li>
-      <li><code>CC:Reply</code>: quick-reply chips;</li>
-      <li><code>CC:Voice</code>: voice notes with transcripts.</li>
-    </ul>
-    A card is updated in place, by re-posting it, as a deal or order moves on.</td></tr>
-  <tr><td>Targeted messages</td><td>Claire's price tips, and the owner-only due reminders, are sent to one member of a group, so the other side never sees them.</td></tr>
-  <tr><td>Translation module</td><td><code>NCEngine.translateModule</code> with a custom translate handler: auto-translation of chat into the reader's language. There are 10 Indian languages, with the UI in English, Tamil and Hindi plus 7 more.</td></tr>
-  <tr><td>History, unread, read receipts</td><td>The channel list shows the latest message and unread count. Message history pages back through a conversation. Read receipts are sent when a chat is opened.</td></tr>
-  <tr><td>Typing indicators</td><td>Shown in deal rooms and support chats.</td></tr>
-  <tr><td>Call SDK</td><td>One-tap voice and video calls from a deal room and from the Trade Desk console. A call summary card ("Voice call · 2:31", "Missed call") is posted into the chat.</td></tr>
-  <tr><td>Webhooks</td><td>The <code>message:send</code> webhook (signature verified) lets the server react to messages. It runs Claire's replies, price detection and sentiment-based escalation, and archives group history, so a late-joining agent can read what came before.</td></tr>
+  <tr><td>Custom messages</td><td><code>CC:Card</code> (offers, counter-offers, orders with GST, samples, goods hand-offs, differences), <code>CC:Hint</code> (private tips), <code>CC:Reply</code> (quick replies), <code>CC:Voice</code> (voice notes with transcripts). Cards update as a deal moves on.</td></tr>
+  <tr><td>Targeted messages</td><td>Claire's private price tips go to one member of the deal group only; payment reminders go to the owner only.</td></tr>
+  <tr><td>Translation module</td><td><code>translateModule</code> with a custom handler: every chat is shown in the reader's language, across 10 Indian languages.</td></tr>
+  <tr><td>History, unread, read receipts, typing</td><td>Chat list with the latest message and unread count; earlier messages page in; read receipts when a chat is opened; typing indicators in deal and support chats.</td></tr>
+  <tr><td>Webhooks</td><td><code>message:send</code> (signature verified): Claire's replies, price detection, escalation to the Trade Desk, and a group archive so a late-joining agent can read what came before.</td></tr>
+  <tr><td>Call SDK</td><td>One-tap 1:1 voice and video calls from a deal room and from the Trade Desk console, with a call summary card posted into the chat.</td></tr>
 </table>
-<div class="wide"><img src="img/trade-desk.png"><figcaption style="text-align:center">The Trade Desk console: queue, ticket with an AI summary and suggested next step, the shared deal chat, and the order context.</figcaption></div>
+<div class="wide"><img src="img/trade-desk.png"><figcaption style="text-align:center">Trade Desk console: the queue, a ticket with an AI summary, the shared deal chat and the order.</figcaption></div>
 
-<h2>Architecture</h2>
+<h2>How it is built</h2>
 <ul>
-  <li><b>Code:</b> a monorepo with three parts:
-    <ul>
-      <li>a React 19 web app (Vite, Tailwind);</li>
-      <li>an Express and TypeScript API on Render, which also serves the web app;</li>
-      <li>shared domain code.</li>
-    </ul>
-  </li>
-  <li><b>Data:</b> MongoDB Atlas.</li>
-  <li><b>AI:</b> LLMs through OpenRouter, falling back to rules. Speech-to-text and text-to-speech use Sarvam AI.</li>
-  <li><b>The Goods ledger:</b> double-entry, with each event, its postings and the holdings written in one transaction. "Ownership" and "where it physically is" are separate, so a business can see goods it owns that sit at another unit. The server checks that every holding equals its postings.</li>
-  <li><b>Quality checks:</b> typecheck and lint, unit tests, and 15 end-to-end smoke scripts, including data isolation between businesses. Load test: about 10 requests a second with 0 errors at 20 concurrent workers. Stress test: 30 concurrent Nexconn connections, 308 messages, 0 send failures, median delivery 317 ms.</li>
-  <li><b>Low-end phones and patchy networks:</b> an offline outbox, a cached app shell, and every main screen ready in under 2 s on a 4×-throttled phone over slow 4G.</li>
+  <li><b>Stack:</b> React 19 web app (Vite, Tailwind) and an Express + TypeScript API on Render; MongoDB Atlas; LLMs through OpenRouter with a rules fallback; Sarvam AI for speech in Indian languages.</li>
+  <li><b>Goods ledger:</b> double-entry, written in one transaction per record, so every piece is always accounted for. Who owns goods and where they physically are are kept separate.</li>
+  <li><b>Tested:</b> unit tests, 15 end-to-end scripts (including isolation between businesses), and a stress test of 30 concurrent Nexconn connections: 308 messages, 0 send failures, median delivery 317 ms.</li>
+  <li><b>For budget phones:</b> offline outbox and cached app shell; every main screen ready in under 2 s on a 4×-throttled phone over slow 4G.</li>
+  <li><b>Built during the challenge:</b> the repository starts on 19 Nov 2026. Two full real-world scenarios (15 businesses) are seeded on the live site for judges.</li>
 </ul>
 
-<h2>Built during the challenge</h2>
-<p>All of it. The repository starts on 19 Nov 2026; nothing existed before the challenge. The marketplace, Claire, deal rooms, the Trade Desk and the Nexconn integration were built first. The Goods supply-chain module followed. It is live for the demo businesses on the public site, seeded with two full real-world scenarios (15 businesses, every hand-off recorded from each participant's own account) and verified for correct quantities and for isolation between businesses.</p>
-
-<h2>Who it is for, and growth</h2>
+<h2>Who it is for, and where it goes next</h2>
 <ul>
-  <li><b>Users:</b> small and mid-sized garment businesses in Tiruppur (makers, job-work units, fabric and trims shops) and their buyers across India. Many are Tamil-first, use budget Android phones, and already run their trade on chat.</li>
-  <li><b>Early use:</b> 3 businesses are testing the live app. Public, live counters of real (non-demo) activity are at <code>claire-connect.onrender.com/api/stats</code>.</li>
-  <li><b>Business model:</b>
-    <ul>
-      <li>a free tier for small units;</li>
-      <li>a paid tier for multi-unit manufacturers (Goods, reports, staff accounts);</li>
-      <li>a small fee on orders closed in a deal room, with the Trade Desk included.</li>
-    </ul>
-  </li>
-  <li><b>Next steps:</b>
-    <ul>
-      <li>onboarding a full Tiruppur chain (yarn → knit → dye → cut → stitch) as a pilot;</li>
-      <li>WhatsApp share links for partners who are not on the app yet (already built for Goods statements);</li>
-      <li>a native review of the translations.</li>
-    </ul>
-  </li>
+  <li><b>Users:</b> Tiruppur's small makers, job-work units, fabric and trims shops, and their buyers across India. Many are Tamil-first and use budget Android phones.</li>
+  <li><b>Business model:</b> free for small units; a paid tier for multi-unit manufacturers (production tracking, reports, staff accounts); a small fee on orders closed in a deal room.</li>
+  <li><b>Next:</b> a pilot with one full Tiruppur chain (yarn → knit → dye → cut → stitch → buyer), WhatsApp share links for partners not yet on the app, and native review of all translations.</li>
 </ul>
 
 </body>
