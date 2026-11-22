@@ -13,12 +13,16 @@ router.get('/health', (_req, res) => {
   res.json({ ok: true, chat: chatMode(), features, uptimeSec: Math.round((Date.now() - startedAt) / 1000) });
 });
 
-const DEMO_PHONES = ['9000000001', '9000000002', '9000000003', '9000000004', '9000000901', '9000000902', '9000000903'];
+// The last three run the Goods (supply-chain) demo: Scenario A's manufacturer and stitching unit, Scenario B's maker.
+const DEMO_PHONES = ['9000000001', '9000000002', '9000000003', '9000000004', '9000001005', '9000001006', '9000002001', '9000000901', '9000000902', '9000000903'];
 const DEMO_LABEL: Record<string, string> = {
   '9000000001': 'Buyer',
   '9000000002': 'Stitching unit',
   '9000000003': 'Manufacturer',
   '9000000004': 'Brand owner',
+  '9000001005': 'Garment maker · Goods',
+  '9000001006': 'Stitching unit · Goods',
+  '9000002001': 'Knitwear maker · Goods',
   '9000000901': 'Trade Desk agent',
   '9000000902': 'Trade Desk agent',
   '9000000903': 'Trade Desk agent',
