@@ -33,6 +33,17 @@
   .wide { break-inside:avoid; text-align:center; } .wide img { width:62%; border:1px solid var(--line); border-radius:8px; }
   .note { border-left:3px solid var(--primary); background:#f6faf8; padding:7px 10px; margin:8px 0; }
   .brk { break-before: page; }
+  a { color:var(--primary); text-decoration:underline; text-underline-offset:2px; }
+  .nx { border:2px solid #3DB394; background:#F3FBF8; border-radius:12px; padding:10px 14px 6px; margin:14px 0 8px; break-inside:auto; }
+  .nx h2 { border-top:none; margin-top:0; padding-top:0; color:#14614E; }
+  .nx table { background:#fff; border-radius:8px; }
+  .chips { display:flex; flex-wrap:wrap; gap:5px; margin:6px 0 8px; }
+  .chip { background:#1F8C73; color:#fff; border-radius:999px; padding:3px 10px; font-size:8.8pt; font-weight:600; }
+  .ml { margin:10px 0 4px; break-inside:avoid; }
+  .ml .row { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
+  .ml img { width:100%; border:1px solid var(--line); border-radius:8px; }
+  .ml figure { margin:0; }
+  .ml .lead { font-weight:700; font-size:11pt; margin:0 0 6px; }
   .two { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
 </style>
 </head>
@@ -43,8 +54,8 @@
 
 <div class="meta">
   <div><b>Nexconn App Key</b><span class="key">m7ua80gbmcvhm</span></div>
-  <div><b>Live app</b><span>claire-connect.onrender.com</span></div>
-  <div><b>Source</b><span>github.com/nandini-kuppala/claire-connect</span></div>
+  <div><b>Live app</b><span><a href="https://claire-connect.onrender.com">claire-connect.onrender.com</a></span></div>
+  <div><b>Source</b><span><a href="https://github.com/nandini-kuppala/claire-connect">github.com/nandini-kuppala/claire-connect</a></span></div>
   <div><b>Try it (demo logins)</b><span style="word-break:normal">Amit · Lakshmi · Murali · Meena</span></div>
 </div>
 
@@ -83,13 +94,19 @@
 </div>
 </div>
 
-<div class="shots">
-  <figure><img src="img/deal-counter.png"><figcaption>Deal room: a counter-offer card, and Claire's tip that only the buyer sees.</figcaption></figure>
-  <figure><img src="img/deal-tamil.png"><figcaption>The same deal for the seller, in Tamil, with the order card and GST.</figcaption></figure>
-  <figure><img src="img/flow.png"><figcaption>Flow view: where all 500 pieces of a style are right now.</figcaption></figure>
+<div class="ml">
+  <p class="lead">People who don't share a language close a deal, live: Amit writes Hindi, Lakshmi reads Tamil.</p>
+  <div class="row">
+    <figure><img src="img/ml-amit-chat.png"><figcaption><b>Amit's phone (Hindi).</b> His message, and Lakshmi's reply, translated into Hindi.</figcaption></figure>
+    <figure><img src="img/ml-lakshmi-chat.png"><figcaption><b>Lakshmi's phone (Tamil).</b> Amit's message arrives in Tamil; she quotes ₹98.</figcaption></figure>
+    <figure><img src="img/ml-amit-tip.png"><figcaption><b>Amit (Hindi).</b> Claire's private tip: sellers settle 3–6 % lower, so offer ₹90.</figcaption></figure>
+    <figure><img src="img/ml-lakshmi-order.png"><figcaption><b>Lakshmi (Tamil).</b> Deal at ₹94: the ₹98,700 order with GST, on both phones.</figcaption></figure>
+  </div>
 </div>
 
-<h2>Features that use the Nexconn SDK</h2>
+<div class="nx">
+<h2>Built on Nexconn: the SDK features we use</h2>
+<div class="chips"><span class="chip">Chat SDK</span><span class="chip">Direct channels</span><span class="chip">Group channels</span><span class="chip">System channel</span><span class="chip">Custom messages</span><span class="chip">Targeted messages</span><span class="chip">Translation</span><span class="chip">History &amp; unread</span><span class="chip">Read receipts</span><span class="chip">Typing indicators</span><span class="chip">Webhooks</span><span class="chip">Call SDK: voice &amp; video</span></div>
 <p><b>App Key: <span class="key">m7ua80gbmcvhm</span></b>. Every conversation in the app runs on Nexconn: the web Chat SDK (<code>@nexconn/chat</code> with <code>@nexconn/engine</code>), the Call SDK (<code>@nexconn/call</code>) and the Nexconn Server API. Each app user is a Nexconn user; Claire, CLAIRE Updates and the Trade Desk are Nexconn users too.</p>
 <table>
   <tr><th>Nexconn feature</th><th>Where the app uses it</th></tr>
@@ -103,6 +120,7 @@
   <tr><td>Webhooks</td><td><code>message:send</code> (signature verified): Claire's replies, price detection, escalation to the Trade Desk, and a group archive so a late-joining agent can read what came before.</td></tr>
   <tr><td>Call SDK</td><td>One-tap 1:1 voice and video calls from a deal room and from the Trade Desk console, with a call summary card posted into the chat.</td></tr>
 </table>
+</div>
 <div class="wide"><img src="img/trade-desk.png"><figcaption style="text-align:center">Trade Desk console: the queue, a ticket with an AI summary, the shared deal chat and the order.</figcaption></div>
 
 <h2>How it is built</h2>
@@ -111,7 +129,7 @@
   <li><b>Goods ledger:</b> double-entry, written in one transaction per record, so every piece is always accounted for. Who owns goods and where they physically are are kept separate.</li>
   <li><b>Tested:</b> unit tests, 15 end-to-end scripts (including isolation between businesses), and a stress test of 30 concurrent Nexconn connections: 308 messages, 0 send failures, median delivery 317 ms.</li>
   <li><b>For budget phones:</b> offline outbox and cached app shell; every main screen ready in under 2 s on a 4×-throttled phone over slow 4G.</li>
-  <li><b>Built during the challenge:</b> the repository starts on 19 Nov 2026. Two full real-world scenarios (15 businesses) are seeded on the live site for judges.</li>
+  <li><b>Built for this hackathon:</b> everything was built for the Nexconn Build Challenge 2026. Two full real-world scenarios (15 businesses) are seeded on the live site for judges.</li>
 </ul>
 
 <h2>Who it is for, and where it goes next</h2>
