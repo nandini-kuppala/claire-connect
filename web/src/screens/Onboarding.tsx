@@ -571,9 +571,9 @@ function IconLabel({ icon, after, children }: { icon: ReactNode; after?: boolean
 
 function Screen({ children, onPointerDownCapture }: { children: ReactNode; onPointerDownCapture?: () => void }) {
   return (
-    <div className="min-h-dvh bg-page">
+    <div className="min-h-dvh bg-page min-[481px]:bg-backdrop">
       <div
-        className="mx-auto flex h-dvh w-full max-w-[480px] flex-col bg-page min-[481px]:shadow-[0_0_0_1px_var(--color-line)]"
+        className="mx-auto flex h-dvh w-full max-w-[480px] flex-col bg-page min-[481px]:shadow-[0_0_0_1px_var(--color-line),0_16px_48px_rgba(16,24,40,0.07)]"
         onPointerDownCapture={onPointerDownCapture}
       >
         {children}

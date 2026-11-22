@@ -477,8 +477,8 @@ export default function Storefront() {
 function Frame({ owner, children }: { owner: boolean; children: ReactNode }) {
   if (owner) return <AppShell>{children}</AppShell>;
   return (
-    <div className="min-h-dvh bg-page">
-      <div className="relative mx-auto min-h-dvh w-full max-w-[480px] bg-page min-[481px]:shadow-[0_0_0_1px_var(--color-line)]">{children}</div>
+    <div className="min-h-dvh bg-page min-[481px]:bg-backdrop">
+      <div className="relative mx-auto min-h-dvh w-full max-w-[480px] bg-page min-[481px]:shadow-[0_0_0_1px_var(--color-line),0_16px_48px_rgba(16,24,40,0.07)]">{children}</div>
     </div>
   );
 }

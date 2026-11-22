@@ -23,6 +23,8 @@
   --color-surface: #ffffff;
   --color-sunken: #f3f4f6;
   --color-page: #ffffff;
+  /* Larger screens only: the area around the 480 px app column, so the white app reads as a device on a calm surface. */
+  --color-backdrop: #edf1ef;
   --color-ink: #13203b; /* logo navy */
   --color-ink-2: #3a465c;
   --color-meta: #667085;
@@ -128,6 +130,11 @@ body {
   -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
   text-rendering: optimizeLegibility;
+}
+@media (min-width: 481px) {
+  body {
+    background: var(--color-backdrop);
+  }
 }
 
 #root {

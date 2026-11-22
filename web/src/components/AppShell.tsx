@@ -21,8 +21,8 @@ export function AppShell({
 }) {
   if (variant === 'chat') {
     return (
-      <div className="min-h-dvh bg-page">
-        <div className={clsx('relative mx-auto flex h-dvh w-full max-w-[480px] flex-col overflow-hidden bg-surface min-[481px]:shadow-[0_0_0_1px_var(--color-line)]', className)}>
+      <div className="min-h-dvh bg-page min-[481px]:bg-backdrop">
+        <div className={clsx('relative mx-auto flex h-dvh w-full max-w-[480px] flex-col overflow-hidden bg-surface min-[481px]:shadow-[0_0_0_1px_var(--color-line),0_16px_48px_rgba(16,24,40,0.07)]', className)}>
           {children}
         </div>
       </div>
@@ -30,13 +30,13 @@ export function AppShell({
   }
   if (variant === 'wide') {
     return (
-      <div className="min-h-dvh bg-page lg:flex">
+      <div className="min-h-dvh bg-page min-[481px]:bg-backdrop lg:flex">
         {nav && (
           <aside className="sticky top-0 hidden h-dvh w-[232px] shrink-0 border-r border-line bg-surface lg:block">
             <RailNav unread={unread} />
           </aside>
         )}
-        <div className={clsx('relative mx-auto min-h-dvh w-full max-w-[480px] bg-page min-[481px]:shadow-[0_0_0_1px_var(--color-line)] lg:mx-0 lg:min-w-0 lg:max-w-none lg:flex-1 lg:shadow-none', className)}>
+        <div className={clsx('relative mx-auto min-h-dvh w-full max-w-[480px] bg-page min-[481px]:shadow-[0_0_0_1px_var(--color-line),0_16px_48px_rgba(16,24,40,0.07)] lg:mx-0 lg:min-w-0 lg:max-w-none lg:flex-1 lg:shadow-none', className)}>
           <main className={clsx('lg:mx-auto lg:max-w-[1120px] lg:px-6 lg:pb-10', nav && 'pb-[calc(76px+var(--safe-bottom))]')}>{children}</main>
           {nav && <div className="lg:hidden"><BottomNav unread={unread} /></div>}
         </div>
@@ -44,8 +44,8 @@ export function AppShell({
     );
   }
   return (
-    <div className="min-h-dvh bg-page">
-      <div className={clsx('relative mx-auto min-h-dvh w-full max-w-[480px] bg-page min-[481px]:shadow-[0_0_0_1px_var(--color-line)]', className)}>
+    <div className="min-h-dvh bg-page min-[481px]:bg-backdrop">
+      <div className={clsx('relative mx-auto min-h-dvh w-full max-w-[480px] bg-page min-[481px]:shadow-[0_0_0_1px_var(--color-line),0_16px_48px_rgba(16,24,40,0.07)]', className)}>
         <main className={clsx(nav && 'pb-[calc(76px+var(--safe-bottom))]')}>{children}</main>
         {nav && <BottomNav unread={unread} />}
       </div>
