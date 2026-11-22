@@ -1,5 +1,7 @@
 # Supply-chain feature — progress log
 
+> **Start here: `HANDOVER.md`** (state, accounts, how to run, open items, experiments). This file is the dated report per slice.
+
 Governing brief: `docs/supply-chain/BRIEF.md` (re-read at the start of every phase and after any context compaction).
 
 ## Current phase
