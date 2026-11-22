@@ -3,6 +3,11 @@ import { defineStrings } from '../../lib/localStrings';
 
 export const FlowS = defineStrings('goods_flow', {
   en: {
+    tab_overview: 'Overview', tab_stages: 'Stages', tab_buyers: 'Buyers',
+    progress: 'Production progress', progress_hint: 'Pieces back from the outside units', progress_aria: '{back} of {total} pieces back from the units',
+    tile_units: 'At units', tile_unit: 'In your unit', tile_transit: 'On the way', tile_buyers: 'With buyers', tile_rejects: 'Rejects', tile_short: 'Not received',
+    total: 'Total: {qty}', buyers_count: 'Buyers ({n})', view_all: 'View all', disputes_n: 'Differences still open ({n})', no_buyers: 'Nothing has gone to a buyer yet.',
+    b_sent: 'Sent', b_received: 'Received', b_transit: 'On the way', b_diff: 'Difference',
     flow: 'Flow', title: 'Where is everything', back: 'Back',
     runs: 'Styles', runs_hint: 'Each style from fabric to the buyers, with what is late.', orders: 'Orders with goods',
     style: 'Style {code}', order: 'Order {code}', jobs_n: '{n} jobs', open_n: '{n} still out', all_back: 'All back',
@@ -30,6 +35,11 @@ export const FlowS = defineStrings('goods_flow', {
     rec_cut: 'From {sent}: {out} made · {waste} waste',
   },
   ta: {
+    tab_overview: 'சுருக்கம்', tab_stages: 'நிலைகள்', tab_buyers: 'வாங்குபவர்கள்',
+    progress: 'உற்பத்தி முன்னேற்றம்', progress_hint: 'வெளி யூனிட்களிலிருந்து திரும்பிய பீஸ்', progress_aria: '{total}-ல் {back} பீஸ் யூனிட்களிலிருந்து திரும்பின',
+    tile_units: 'யூனிட்களில்', tile_unit: 'உங்கள் யூனிட்டில்', tile_transit: 'வழியில்', tile_buyers: 'வாங்குபவர்களிடம்', tile_rejects: 'ரிஜெக்ட்', tile_short: 'சேரவில்லை',
+    total: 'மொத்தம்: {qty}', buyers_count: 'வாங்குபவர்கள் ({n})', view_all: 'எல்லாம் பார்', disputes_n: 'திறந்த வேறுபாடுகள் ({n})', no_buyers: 'இன்னும் எந்த வாங்குபவருக்கும் அனுப்பவில்லை.',
+    b_sent: 'அனுப்பியது', b_received: 'சேர்ந்தது', b_transit: 'வழியில்', b_diff: 'வேறுபாடு',
     flow: 'ஓட்டம்', title: 'எல்லாம் எங்கே இருக்கு', back: 'பின்செல்',
     runs: 'ஸ்டைல்கள்', runs_hint: 'ஒவ்வொரு ஸ்டைலும் துணியிலிருந்து வாங்குபவர் வரை, தாமதம் உட்பட.', orders: 'சரக்கு உள்ள ஆர்டர்கள்',
     style: 'ஸ்டைல் {code}', order: 'ஆர்டர் {code}', jobs_n: '{n} வேலைகள்', open_n: '{n} இன்னும் வெளியில்', all_back: 'எல்லாம் திரும்பியது',
@@ -57,6 +67,11 @@ export const FlowS = defineStrings('goods_flow', {
     rec_cut: '{sent}-லிருந்து: {out} செய்தது · {waste} வேஸ்ட்',
   },
   hi: {
+    tab_overview: 'सारांश', tab_stages: 'चरण', tab_buyers: 'खरीदार',
+    progress: 'उत्पादन प्रगति', progress_hint: 'बाहर की यूनिटों से लौटे पीस', progress_aria: '{total} में से {back} पीस यूनिटों से लौटे',
+    tile_units: 'यूनिटों पर', tile_unit: 'आपकी यूनिट में', tile_transit: 'रास्ते में', tile_buyers: 'खरीदारों के पास', tile_rejects: 'रिजेक्ट', tile_short: 'नहीं पहुँचे',
+    total: 'कुल: {qty}', buyers_count: 'खरीदार ({n})', view_all: 'सब देखें', disputes_n: 'खुले अंतर ({n})', no_buyers: 'अभी किसी खरीदार को नहीं भेजा।',
+    b_sent: 'भेजा', b_received: 'पहुँचा', b_transit: 'रास्ते में', b_diff: 'अंतर',
     flow: 'फ़्लो', title: 'सब कुछ कहाँ है', back: 'वापस',
     runs: 'स्टाइल', runs_hint: 'हर स्टाइल कपड़े से खरीदार तक, देर वाली चीज़ों के साथ।', orders: 'माल वाले ऑर्डर',
     style: 'स्टाइल {code}', order: 'ऑर्डर {code}', jobs_n: '{n} जॉब', open_n: '{n} अभी बाहर', all_back: 'सब वापस आ गया',

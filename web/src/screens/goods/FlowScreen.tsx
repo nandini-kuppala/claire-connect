@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import clsx from 'clsx';
 import { api, errorText } from '../../lib/api';
-import { AlertTriangle, ArrowLeft, CheckCircle2, ChevronRight, CircleDot, Clock, Package, Pause, Truck, Factory, ShoppingBag } from '../../icons';
+import { AlertTriangle, ArrowLeft, ArrowRight, Check, CheckCircle2, ChevronDown, ChevronRight, ChevronUp, CircleDot, Clock, Factory, Layers, Package, Pause, Repeat, Scissors, Shirt, Spool, Store, Truck, Users } from '../../icons';
 import type { IconType } from '../../icons';
 import { useSession } from '../../store/session';
 import { FlowS } from './Flow.strings';
@@ -62,7 +62,6 @@ function statusText(s: S, st: RowStatus, late: { days: number } | null) {
 }
 const sizesText = (z: { size: string; qty: number }[]) => z.map((x) => `${x.size} ${x.qty}`).join(' · ');
 
-const NOW_FILL: Record<NowItem['kind'], string> = { at_unit: 'bg-primary-soft', in_stock: 'bg-ink-2/40', kept_elsewhere: 'bg-teal/60', on_the_way: 'bg-accent', with_buyer: 'bg-success', not_received: 'bg-danger' };
 
 export default function FlowScreen() {
   const { kind, id } = useParams();
@@ -156,6 +155,7 @@ function FlowDetail({ kind, id }: { kind: 'style' | 'order'; id: string }) {
   const lang = useSession((st) => st.user?.language || 'en');
   const [d, setD] = useState<Flow | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [tab, setTab] = useState<Tab>('overview');
   useEffect(() => {
     setD(null);
     setError(null);
@@ -176,110 +176,326 @@ function FlowDetail({ kind, id }: { kind: 'style' | 'order'; id: string }) {
 
   const title = d.order ? s('order', { code: d.order.code }) : s('style', { code: d.run.styles[0] ?? id }) + (d.run.name ? ` · ${d.run.name}` : '');
   const sub = [d.order?.title, d.run.pieces ? fmtQty(d.run.pieces, 'count') : null, d.run.buyers ? s('buyers_n', { n: d.run.buyers }) : null, s('today', { date: shortDate(d.today, lang) })].filter(Boolean).join(' · ');
+  const tabs: { k: Tab; label: string }[] = [{ k: 'overview', label: s('tab_overview') }, { k: 'stages', label: s('tab_stages') }, { k: 'buyers', label: s('tab_buyers') }];
 
   return (
     <div className="pb-28 lg:pb-10">
       <Header title={title} sub={sub} back={back} />
-      <div className="px-4 pt-4 lg:max-w-[1180px]">
-        <div className="lg:grid lg:grid-cols-2 lg:items-start lg:gap-4">
-          <NowCard d={d} s={s} />
-          <div>
-            {d.order && <OrderCard d={d} s={s} />}
-            <BuyersCard d={d} s={s} lang={lang} nav={nav} />
-          </div>
+      <div className="px-4 pt-3 lg:max-w-[880px]">
+        <div role="tablist" className="grid grid-cols-3 gap-1 rounded-full bg-sunken p-1">
+          {tabs.map((t) => (
+            <button key={t.k} role="tab" aria-selected={tab === t.k} onClick={() => setTab(t.k)}
+              className={clsx('min-h-11 rounded-full px-2 text-[15px] font-semibold transition-colors', tab === t.k ? 'bg-ink text-white' : 'text-ink-2 hover:text-ink')}>
+              {t.label}
+            </button>
+          ))}
         </div>
-
-        {d.coming.length > 0 && (
-          <section className="mt-4">
-            <h2 className="font-head text-[17px] font-semibold text-ink">{s('coming')}</h2>
-            <p className="mt-0.5 text-[13px] text-meta">{s('coming_hint')}</p>
-            <ul className="mt-2 divide-y divide-line overflow-hidden rounded-[18px] border border-line bg-surface lg:grid lg:grid-cols-2 lg:divide-y-0">
-              {d.coming.map((c) => (
-                <li key={c.job_id} className="lg:border-b lg:border-line">
-                  <button className="flex min-h-14 w-full items-center gap-3 px-4 py-3 text-left hover:bg-sunken" onClick={() => nav(`/goods/job/${c.job_id}`)}>
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-[15px] font-semibold text-ink">{c.name}</span>
-                      <span className="block text-[14px] text-ink-2"><span className="font-head font-bold tabular-nums text-ink">{fmtQty(c.qty, c.dim)}</span>{c.sizes.length ? ` · ${c.sizes.map((z) => z.size).join(', ')}` : ''}</span>
-                      <span className="mt-1 flex flex-wrap items-center gap-2">
-                        <Pill tone={TONE[c.status].cls} Icon={TONE[c.status].Icon}>{statusText(s, c.status, c.late)}</Pill>
-                        <span className="text-[13px] text-meta">{s('expected', { date: shortDate(c.expected_at, lang) })}</span>
-                      </span>
-                    </span>
-                    <ChevronRight size={18} className="shrink-0 text-meta" aria-hidden />
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </section>
-        )}
-
-        {d.disputes.length > 0 && (
-          <section className="mt-4">
-            <h2 className="font-head text-[17px] font-semibold text-ink">{s('disputes')}</h2>
-            <ul className="mt-2 divide-y divide-line overflow-hidden rounded-[18px] border border-line bg-surface">
-              {d.disputes.map((x) => (
-                <li key={x.id}>
-                  <button className="flex min-h-14 w-full items-center gap-3 px-4 py-3 text-left hover:bg-sunken" onClick={() => nav(`/goods/dispute/${x.id}`)}>
-                    <AlertTriangle size={18} className="shrink-0 text-danger" aria-hidden />
-                    <span className="min-w-0 flex-1 text-[15px] text-ink">{x.label} · <span className="font-semibold tabular-nums text-danger">{s('st_diff', { qty: fmtQty(Math.abs(x.difference), x.dim) })}</span></span>
-                    <ChevronRight size={18} className="shrink-0 text-meta" aria-hidden />
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </section>
-        )}
-
-        <Stages d={d} s={s} lang={lang} nav={nav} />
+        {tab !== 'buyers' && <Progress d={d} s={s} />}
+        {tab === 'overview' && <Overview d={d} s={s} lang={lang} nav={nav} more={() => setTab('buyers')} />}
+        {tab === 'stages' && <StagesTab d={d} s={s} lang={lang} nav={nav} />}
+        {tab === 'buyers' && <BuyersTab d={d} s={s} lang={lang} nav={nav} />}
+        {tab !== 'buyers' && <Differences d={d} s={s} nav={nav} />}
       </div>
     </div>
   );
 }
 
-function NowCard({ d, s }: { d: Flow; s: S }) {
-  const label = (x: NowItem) =>
-    x.kind === 'at_unit' ? s('at_unit', { name: x.name ?? '—' })
-      : x.kind === 'in_stock' ? (x.name ? s('in_stock_at', { place: x.name }) : s('in_stock'))
-      : x.kind === 'kept_elsewhere' ? s('kept_elsewhere', { name: x.name ?? '—' })
-      : x.kind === 'on_the_way' ? s('on_the_way', { name: x.name ?? '—' })
-      : x.kind === 'not_received' ? s('not_received', { name: x.name ?? '—' })
-      : s('with_buyer', { name: x.name ?? '—' });
-  const dims = [...new Set(d.now.map((x) => x.dim))].sort((a) => (a === 'count' ? -1 : 1));
+type Tab = 'overview' | 'stages' | 'buyers';
+
+/** Pieces of the run, and how many are back from the units (no longer being worked on outside). */
+function piecesBack(d: Flow) {
+  const total = d.run.pieces;
+  const out = d.now.filter((x) => x.kind === 'at_unit' && x.dim === 'count').reduce((a, x) => a + x.qty, 0);
+  return { total, back: Math.max(0, total - out) };
+}
+
+function Progress({ d, s }: { d: Flow; s: S }) {
+  const { total, back } = piecesBack(d);
+  const pct = total ? Math.round((back / total) * 100) : 0;
   const c = d.counts;
   return (
-    <section className="rounded-[18px] border border-line bg-surface px-4 py-3.5">
-      <h2 className="font-head text-[17px] font-semibold text-ink">{s('now')}</h2>
+    <section className="mt-4 rounded-[20px] border border-primary-soft bg-primary-tint/60 px-4 py-4 sm:flex sm:items-center sm:gap-5">
+      <div className="min-w-0 flex-1">
+        <p className="text-[14px] font-semibold text-ink-2">{s('progress')}</p>
+        <div className="mt-1 flex items-baseline justify-between gap-3">
+          <p className="font-head text-[30px] font-bold leading-none tabular-nums text-ink">{back.toLocaleString('en-IN')}<span className="text-[20px] text-ink-2"> / {fmtQty(total, 'count')}</span></p>
+          <span className="rounded-full bg-surface px-2.5 py-1 text-[14px] font-bold tabular-nums text-success">{pct}%</span>
+        </div>
+        <div className="mt-3 h-3 overflow-hidden rounded-full bg-surface" role="img" aria-label={s('progress_aria', { back, total })}>
+          <div className="h-full rounded-full bg-success" style={{ width: `${pct}%` }} />
+        </div>
+        <p className="mt-2 text-[13px] text-meta">{s('progress_hint')}</p>
+      </div>
       {(c.late > 0 || c.held > 0 || c.disputes > 0 || c.waiting > 0) && (
-        <div className="mt-2 flex flex-wrap gap-2">
+        <div className="mt-3 flex flex-wrap gap-2 sm:mt-0 sm:w-[200px] sm:flex-col sm:items-start sm:border-l sm:border-primary-soft sm:pl-5">
           {c.late > 0 && <Pill tone={TONE.late.cls} Icon={Clock}>{s('chip_late', { n: c.late })}</Pill>}
           {c.held > 0 && <Pill tone={TONE.held.cls} Icon={Pause}>{s('chip_held', { n: c.held })}</Pill>}
           {c.disputes > 0 && <Pill tone="bg-danger-tint text-danger" Icon={AlertTriangle}>{s('chip_diff', { n: c.disputes })}</Pill>}
-          {c.waiting > 0 && <Pill tone="bg-accent-tint text-accent-ink" Icon={ShoppingBag}>{s('chip_waiting', { n: c.waiting })}</Pill>}
+          {c.waiting > 0 && <Pill tone="bg-accent-tint text-accent-ink" Icon={Users}>{s('chip_waiting', { n: c.waiting })}</Pill>}
         </div>
       )}
-      {d.now.length === 0 && <p className="mt-2 text-[14.5px] text-ink-2">{s('nothing_now')}</p>}
-      {dims.map((dim) => {
-        const items = d.now.filter((x) => x.dim === dim);
-        const total = items.reduce((a, x) => a + x.qty, 0) || 1;
-        return (
-          <div key={dim} className="mt-3">
-            <div className="flex h-4 w-full overflow-hidden rounded-full bg-sunken" role="img" aria-label={items.map((x) => `${fmtQty(x.qty, dim)} ${label(x)}`).join(', ')}>
-              {items.map((x, i) => (
-                <span key={i} className={clsx('h-full', x.kind === 'at_unit' && x.late ? 'bg-accent/70' : NOW_FILL[x.kind], i > 0 && 'border-l-2 border-surface')} style={{ width: `${(x.qty / total) * 100}%` }} />
-              ))}
+    </section>
+  );
+}
+
+/** "Where everything is now" as a few big tiles (pieces only; kg is listed below them when present). */
+function Overview({ d, s, lang, nav, more }: { d: Flow; s: S; lang: string; nav: (to: string) => void; more: () => void }) {
+  const sum = (k: NowItem['kind'], f?: (x: NowItem) => boolean) => d.now.filter((x) => x.dim === 'count' && x.kind === k && (!f || f(x))).reduce((a, x) => a + x.qty, 0);
+  const tiles = [
+    { k: 'units', qty: sum('at_unit'), label: s('tile_units'), Icon: Scissors, cls: 'bg-primary-tint/60 text-primary-press' },
+    { k: 'unit', qty: sum('in_stock', (x) => !x.reject) + sum('kept_elsewhere'), label: s('tile_unit'), Icon: Factory, cls: 'bg-sunken text-ink-2' },
+    { k: 'way', qty: sum('on_the_way'), label: s('tile_transit'), Icon: Truck, cls: 'bg-accent-tint text-accent-ink' },
+    { k: 'buyers', qty: sum('with_buyer'), label: s('tile_buyers'), Icon: Users, cls: 'bg-success-tint text-success' },
+    { k: 'rej', qty: sum('in_stock', (x) => !!x.reject), label: s('tile_rejects'), Icon: Repeat, cls: 'bg-danger-tint text-danger' },
+    { k: 'short', qty: sum('not_received'), label: s('tile_short'), Icon: AlertTriangle, cls: 'bg-danger-tint text-danger' },
+  ].filter((t) => t.qty > 0);
+  const total = tiles.reduce((a, t) => a + t.qty, 0);
+  const other = d.now.filter((x) => x.dim !== 'count');
+  return (
+    <>
+      <section className="mt-5">
+        <div className="flex items-baseline justify-between gap-3">
+          <h2 className="font-head text-[18px] font-semibold text-ink">{s('now')}</h2>
+          {total > 0 && <span className="text-[14px] text-meta">{s('total', { qty: fmtQty(total, 'count') })}</span>}
+        </div>
+        {d.now.length === 0 && <p className="mt-2 text-[14.5px] text-ink-2">{s('nothing_now')}</p>}
+        <div className="mt-2.5 grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+          {tiles.map((t) => (
+            <div key={t.k} className={clsx('rounded-[18px] px-3.5 py-3', t.cls)}>
+              <t.Icon size={22} aria-hidden />
+              <p className="mt-1.5 font-head text-[24px] font-bold leading-none tabular-nums text-ink">{fmtQty(t.qty, 'count')}</p>
+              <p className="mt-1 text-[14px] font-medium text-ink-2">{t.label}</p>
             </div>
-            <ul className="mt-2.5 space-y-1 text-[14.5px]">
-              {items.map((x, i) => (
-                <li key={i} className="flex items-baseline gap-2">
-                  <span className={clsx('mt-1 size-2.5 shrink-0 rounded-[3px]', x.kind === 'at_unit' && x.late ? 'bg-accent/70' : NOW_FILL[x.kind])} aria-hidden />
-                  <span className="shrink-0 font-head font-bold tabular-nums text-ink">{fmtQty(x.qty, dim)}</span>
-                  <span className="min-w-0 text-ink-2">{label(x)}{x.kind === 'at_unit' && x.late ? <span className="font-semibold text-accent-ink"> · {s('late_word')}</span> : null}{x.reject ? <span className="text-meta"> · {s('rejects_word')}</span> : null}</span>
-                </li>
-              ))}
-            </ul>
+          ))}
+        </div>
+        {other.length > 0 && (
+          <p className="mt-2 text-[13.5px] text-ink-2">{other.map((x) => `${fmtQty(x.qty, x.dim)} ${x.kind === 'at_unit' ? s('at_unit', { name: x.name ?? '—' }) : x.kind === 'in_stock' ? s('in_stock') : x.name ?? ''}`).join(' · ')}</p>
+        )}
+      </section>
+
+      {d.coming.length > 0 && (
+        <section className="mt-5">
+          <h2 className="font-head text-[18px] font-semibold text-ink">{s('coming')}</h2>
+          <ul className="mt-2 divide-y divide-line overflow-hidden rounded-[18px] border border-line bg-surface">
+            {d.coming.map((c) => (
+              <li key={c.job_id}>
+                <button className="flex min-h-14 w-full items-center gap-3 px-4 py-3 text-left hover:bg-sunken" onClick={() => nav(`/goods/job/${c.job_id}`)}>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[15px] font-semibold text-ink">{c.name}</span>
+                    <span className="mt-1 flex flex-wrap items-center gap-2">
+                      <span className="font-head text-[15px] font-bold tabular-nums text-ink">{fmtQty(c.qty, c.dim)}</span>
+                      <Pill tone={TONE[c.status].cls} Icon={TONE[c.status].Icon}>{statusText(s, c.status, c.late)}</Pill>
+                      <span className="text-[13px] text-meta">{s('expected', { date: shortDate(c.expected_at, lang) })}</span>
+                    </span>
+                  </span>
+                  <ChevronRight size={18} className="shrink-0 text-meta" aria-hidden />
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {d.order && <OrderCard d={d} s={s} />}
+
+      {d.buyers.length > 0 && (
+        <section className="mt-5">
+          <div className="flex items-baseline justify-between gap-3">
+            <h2 className="font-head text-[18px] font-semibold text-ink">{s('buyers_count', { n: d.buyers.length })}</h2>
+            <button className="inline-flex min-h-11 items-center gap-1 text-[14.5px] font-semibold text-primary" onClick={more}>{s('view_all')}<ArrowRight size={16} aria-hidden /></button>
           </div>
-        );
-      })}
+          <ul className="mt-1 divide-y divide-line overflow-hidden rounded-[18px] border border-line bg-surface">
+            {d.buyers.slice(0, 3).map((b) => (
+              <li key={`${b.party.k}:${b.party.id}`}>
+                <button className="flex min-h-14 w-full items-center gap-3 px-4 py-3 text-left hover:bg-sunken" onClick={() => nav(`/goods/party/${b.party.k}/${b.party.id}`)}>
+                  <span className="flex size-10 shrink-0 items-center justify-center rounded-[12px] bg-sunken text-ink-2"><Store size={20} aria-hidden /></span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[15px] font-semibold text-ink">{b.name}</span>
+                    <span className="block text-[13.5px] text-ink-2">{b.sent ? s('sent_recv', { sent: fmtQty(b.sent, b.dim), received: fmtQty(b.received, b.dim) }) : s('nothing_sent')}</span>
+                    <BuyerPill b={b} s={s} />
+                  </span>
+                  <ChevronRight size={18} className="shrink-0 text-meta" aria-hidden />
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+    </>
+  );
+}
+
+function BuyerPill({ b, s }: { b: Buyer; s: S }) {
+  if (b.disputed > 0) return <span className="mt-1 inline-flex"><Pill tone="bg-danger-tint text-danger" Icon={AlertTriangle}>{s('st_diff', { qty: fmtQty(b.disputed, b.dim) })}</Pill></span>;
+  if (b.on_the_way > 0) return <span className="mt-1 inline-flex"><Pill tone="bg-accent-tint text-accent-ink" Icon={Truck}>{s('st_on_the_way', { qty: fmtQty(b.on_the_way, b.dim) })}</Pill></span>;
+  const need = b.orders.find((o) => o.ordered > o.done);
+  if (need) return <span className="mt-1 inline-flex"><Pill tone="bg-accent-tint text-accent-ink" Icon={Clock}>{s('st_needs', { qty: fmtQty(need.ordered - need.done, need.dim), code: need.code })}</Pill></span>;
+  if (b.sent > 0) return <span className="mt-1 inline-flex"><Pill tone={TONE.done.cls} Icon={CheckCircle2}>{s('st_received')}</Pill></span>;
+  return null;
+}
+
+function Differences({ d, s, nav }: { d: Flow; s: S; nav: (to: string) => void }) {
+  if (!d.disputes.length) return null;
+  return (
+    <section className="mt-5 overflow-hidden rounded-[18px] border border-danger/25 bg-danger-tint">
+      <h2 className="flex items-center gap-2 px-4 pt-3 font-head text-[17px] font-semibold text-ink"><AlertTriangle size={20} className="text-danger" aria-hidden />{s('disputes_n', { n: d.disputes.length })}</h2>
+      <ul className="pb-1">
+        {d.disputes.map((x) => (
+          <li key={x.id}>
+            <button className="flex min-h-12 w-full items-center gap-3 px-4 py-2 text-left" onClick={() => nav(`/goods/dispute/${x.id}`)}>
+              <span className="min-w-0 flex-1 text-[14.5px] text-ink-2">{x.label} · <span className="font-semibold tabular-nums text-danger">{fmtQty(Math.abs(x.difference), x.dim)}</span></span>
+              <ChevronRight size={18} className="shrink-0 text-meta" aria-hidden />
+            </button>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+function BuyersTab({ d, s, lang, nav }: { d: Flow; s: S; lang: string; nav: (to: string) => void }) {
+  if (!d.buyers.length) return <p className="mt-5 text-[14.5px] text-ink-2">{s('no_buyers')}</p>;
+  const pcs = d.buyers.filter((b) => b.dim === 'count');
+  const tot = (f: (b: Buyer) => number) => pcs.reduce((a, b) => a + f(b), 0);
+  const stats = [
+    { label: s('b_received'), qty: tot((b) => b.received), Icon: CheckCircle2, cls: 'bg-success-tint text-success' },
+    { label: s('b_transit'), qty: tot((b) => b.on_the_way), Icon: Truck, cls: 'bg-accent-tint text-accent-ink' },
+    { label: s('b_diff'), qty: tot((b) => b.disputed), Icon: AlertTriangle, cls: 'bg-danger-tint text-danger' },
+  ];
+  return (
+    <>
+      <section className="mt-4 grid grid-cols-3 gap-2 rounded-[20px] border border-line bg-surface p-2.5">
+        {stats.map((x) => (
+          <div key={x.label} className={clsx('rounded-[14px] px-2 py-2.5 text-center', x.cls)}>
+            <x.Icon size={20} className="mx-auto" aria-hidden />
+            <p className="mt-1 font-head text-[19px] font-bold tabular-nums text-ink">{fmtQty(x.qty, 'count')}</p>
+            <p className="text-[12.5px] font-medium">{x.label}</p>
+          </div>
+        ))}
+      </section>
+      <p className="mt-3 text-[13px] text-meta">{s('buyers_hint')}</p>
+      <ul className="mt-2 space-y-3">
+        {d.buyers.map((b) => {
+          const pct = b.sent ? Math.round((b.received / b.sent) * 100) : 0;
+          return (
+            <li key={`${b.party.k}:${b.party.id}`} className="rounded-[18px] border border-line bg-surface p-4">
+              <button className="flex w-full items-start gap-3 text-left" onClick={() => nav(`/goods/party/${b.party.k}/${b.party.id}`)}>
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-[12px] bg-sunken text-ink-2"><Store size={20} aria-hidden /></span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[15.5px] font-semibold text-ink">{b.name}</span>
+                  <span className="block text-[13px] text-meta">{b.last ? shortDate(b.last, lang) : ''}{b.sizes.length ? ` · ${sizesText(b.sizes)}` : ''}</span>
+                  <BuyerPill b={b} s={s} />
+                </span>
+                <ChevronRight size={18} className="mt-2 shrink-0 text-meta" aria-hidden />
+              </button>
+              {b.sent > 0 && (
+                <>
+                  <div className="mt-3 flex items-center gap-3">
+                    <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-sunken"><div className={clsx('h-full rounded-full', b.on_the_way ? 'bg-accent' : 'bg-success')} style={{ width: `${b.on_the_way && !b.received ? 12 : pct}%` }} /></div>
+                    <span className="text-[13px] tabular-nums text-ink-2">{b.received.toLocaleString('en-IN')} / {fmtQty(b.sent, b.dim)}</span>
+                  </div>
+                  <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                    {[[s('b_sent'), b.sent, 'bg-sunken'], [s('b_received'), b.received, 'bg-success-tint'], [s('b_transit'), b.on_the_way, 'bg-accent-tint'], [s('b_diff'), b.disputed, 'bg-danger-tint']].map(([l, q, c]) => (
+                      <div key={l as string} className={clsx('rounded-[12px] px-3 py-2', c as string)}>
+                        <p className="text-[12.5px] font-medium text-ink-2">{l as string}</p>
+                        <p className="font-head text-[16px] font-bold tabular-nums text-ink">{fmtQty(q as number, b.dim)}</p>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    </>
+  );
+}
+
+// ── Stage by stage: a vertical timeline of cards; open stages show their units ────────────────────
+
+interface Col { key: string; title: string; status: RowStatus; Icon: IconType; pill: string; summary: string; body: React.ReactNode }
+
+function StagesTab({ d, s, lang, nav }: { d: Flow; s: S; lang: string; nav: (to: string) => void }) {
+  const cols: Col[] = [];
+  if (d.material.length) {
+    const allIn = d.material.every((m) => m.confirmed);
+    const m0 = d.material[0];
+    cols.push({
+      key: 'material', title: s('material'), status: allIn ? 'done' : 'in_progress', Icon: Spool, pill: allIn ? s('confirmed') : s('not_confirmed'),
+      summary: [d.material.map((m) => fmtQty(m.qty, m.dim)).join(' + '), s('material_row', { name: m0.name, date: shortDate(m0.date, lang) })].join(' · '),
+      body: d.material.map((m) => (
+        <button key={`${m.movement_id}:${m.lot}`} className="mt-2 block min-h-11 w-full rounded-[12px] bg-sunken/70 px-3 py-2 text-left text-[14px] hover:bg-sunken" onClick={() => nav(`/goods/movement/${m.movement_id}`)}>
+          <span className="block font-semibold text-ink"><span className="font-head tabular-nums">{fmtQty(m.qty, m.dim)}</span> · {m.label}</span>
+          <span className="block text-ink-2">{s('material_row', { name: m.name, date: shortDate(m.date, lang) })}{m.lot ? ` · ${s('lot', { lot: m.lot })}` : ''}</span>
+        </button>
+      )),
+    });
+  }
+  for (const st of d.stages) {
+    const title = st.labels?.[lang] ?? st.labels?.en ?? st.key;
+    const status: RowStatus = st.status === 'done' ? 'done' : st.late ? 'late' : st.status;
+    const pill = st.status === 'done' ? s('s_done') : st.late ? s('stage_late', { n: st.late }) : s('stage_open', { n: st.open });
+    const t = st.totals[0];
+    const summary = !t ? '' : st.unit_changing
+      ? s('rec_cut', { sent: fmtQty(t.sent, t.dim), out: st.outputs.map((o) => fmtQty(o.qty, o.dim)).join(' + ') || '0', waste: st.waste.map((w) => fmtQty(w.qty, w.dim)).join(' + ') || fmtQty(0, 'mass') })
+      : [s('row_sent', { qty: fmtQty(t.sent, t.dim) }), s('row_back', { qty: fmtQty(t.good, t.dim) }), t.reject ? s('row_reject', { qty: fmtQty(t.reject, t.dim) }) : null, t.at_unit ? s('row_at', { qty: fmtQty(t.at_unit, t.dim) }) : null].filter(Boolean).join(' · ');
+    cols.push({
+      key: st.key, title, status, Icon: st.key === 'cutting' ? Scissors : st.key === 'packing' ? Package : st.key === 'stitching' ? Shirt : Layers, pill, summary,
+      body: (
+        <>
+          {st.rows.map((r) => <StageRow key={r.id} r={r} s={s} lang={lang} nav={nav} />)}
+          {st.totals.filter(() => !st.unit_changing).map((x) => (
+            <p key={x.dim} className="mt-2 text-[13px] text-meta">{s('rec', { sent: fmtQty(x.sent, x.dim), good: fmtQty(x.good, x.dim), reject: fmtQty(x.reject, x.dim), at: fmtQty(x.at_unit, x.dim), loss: fmtQty(x.loss, x.dim) })}</p>
+          ))}
+        </>
+      ),
+    });
+  }
+  if (d.buyers.length) {
+    const sent = d.buyers.reduce((a, b) => a + (b.dim === 'count' ? b.sent : 0), 0);
+    const waiting = d.buyers.filter((b) => b.waiting).length;
+    cols.push({
+      key: 'dispatch', title: s('dispatch'), status: waiting ? 'in_progress' : 'done', Icon: Truck, pill: waiting ? s('chip_waiting', { n: waiting }) : s('st_received'),
+      summary: `${fmtQty(sent, 'count')} ${s('sent_word')} · ${s('buyers_n', { n: d.buyers.length })}`, body: null,
+    });
+  }
+  const [open, setOpen] = useState<Set<string>>(() => new Set(cols.filter((c) => c.status !== 'done' && c.body).map((c) => c.key)));
+  if (!cols.length) return null;
+  return (
+    <section className="mt-5">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-3">
+        <h2 className="font-head text-[18px] font-semibold text-ink">{s('stages')}</h2>
+        <span className="text-[13px] text-meta">{s('stages_hint')}</span>
+      </div>
+      <ol className="mt-3">
+        {cols.map((c, i) => {
+          const isOpen = open.has(c.key) && !!c.body;
+          const dot = c.status === 'done' ? 'bg-success text-white' : c.status === 'late' ? 'bg-accent text-white' : 'border-2 border-line-strong bg-surface text-ink-2';
+          return (
+            <li key={c.key} className="relative grid grid-cols-[30px_minmax(0,1fr)] gap-x-3 pb-3">
+              {i < cols.length - 1 && <span aria-hidden className={clsx('absolute bottom-0 left-[14px] top-9 w-0.5', c.status === 'done' ? 'bg-success' : c.status === 'late' ? 'bg-accent' : 'bg-line-strong')} />}
+              <span className={clsx('relative mt-4 flex size-[30px] items-center justify-center rounded-full', dot)}>
+                {c.status === 'done' ? <Check size={17} strokeWidth={3} aria-hidden /> : c.status === 'late' ? <Clock size={17} aria-hidden /> : <CircleDot size={16} aria-hidden />}
+              </span>
+              <div className="min-w-0 rounded-[18px] border border-line bg-surface">
+                <button className="flex min-h-16 w-full items-center gap-3 px-3.5 py-3 text-left" onClick={() => c.body && setOpen((o) => { const n = new Set(o); n.has(c.key) ? n.delete(c.key) : n.add(c.key); return n; })} aria-expanded={c.body ? isOpen : undefined}>
+                  <span className={clsx('flex size-11 shrink-0 items-center justify-center rounded-[14px]', c.status === 'done' ? 'bg-success-tint text-success' : c.status === 'late' ? 'bg-accent-tint text-accent-ink' : 'bg-sunken text-ink-2')}><c.Icon size={22} aria-hidden /></span>
+                  <span className="min-w-0 flex-1">
+                    <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                      <span className="font-head text-[16.5px] font-semibold text-ink">{c.title}</span>
+                      <Pill tone={TONE[c.status].cls} Icon={c.status === 'done' ? CheckCircle2 : TONE[c.status].Icon}>{c.pill}</Pill>
+                    </span>
+                    {c.summary && <span className="mt-0.5 block text-[13.5px] text-ink-2">{c.summary}</span>}
+                  </span>
+                  {c.body ? (isOpen ? <ChevronUp size={18} className="shrink-0 text-meta" aria-hidden /> : <ChevronDown size={18} className="shrink-0 text-meta" aria-hidden />) : null}
+                </button>
+                {isOpen && <div className="border-t border-line px-3 pb-3">{c.body}</div>}
+              </div>
+            </li>
+          );
+        })}
+      </ol>
     </section>
   );
 }
@@ -304,128 +520,13 @@ function OrderCard({ d, s }: { d: Flow; s: S }) {
   );
 }
 
-function BuyersCard({ d, s, lang, nav }: { d: Flow; s: S; lang: string; nav: (to: string) => void }) {
-  if (!d.buyers.length) return null;
-  return (
-    <section className="mt-4 lg:mt-0 [section+&]:lg:mt-4">
-      <h2 className="font-head text-[17px] font-semibold text-ink">{s('buyers')}</h2>
-      <p className="mt-0.5 text-[13px] text-meta">{s('buyers_hint')}</p>
-      <ul className="mt-2 divide-y divide-line overflow-hidden rounded-[18px] border border-line bg-surface">
-        {d.buyers.map((b) => (
-          <li key={`${b.party.k}:${b.party.id}`}>
-            <button className="flex min-h-14 w-full items-center gap-3 px-4 py-3 text-left hover:bg-sunken" onClick={() => nav(`/goods/party/${b.party.k}/${b.party.id}`)}>
-              <span className="min-w-0 flex-1">
-                <span className="block text-[15.5px] font-semibold text-ink">{b.name}</span>
-                <span className="block text-[14px] text-ink-2">
-                  {b.sent ? s('sent_recv', { sent: fmtQty(b.sent, b.dim), received: fmtQty(b.received, b.dim) }) : s('nothing_sent')}
-                  {b.last ? <span className="text-meta"> · {shortDate(b.last, lang)}</span> : null}
-                </span>
-                {b.sizes.length > 0 && <span className="block text-[13px] text-meta">{sizesText(b.sizes)}</span>}
-                <span className="mt-1 flex flex-wrap gap-2">
-                  {b.on_the_way > 0 && <Pill tone="bg-accent-tint text-accent-ink" Icon={Truck}>{s('st_on_the_way', { qty: fmtQty(b.on_the_way, b.dim) })}</Pill>}
-                  {b.disputed > 0 && <Pill tone="bg-danger-tint text-danger" Icon={AlertTriangle}>{s('st_diff', { qty: fmtQty(b.disputed, b.dim) })}</Pill>}
-                  {b.returned > 0 && <Pill tone={TONE.held.cls} Icon={Package}>{s('st_returned', { qty: fmtQty(b.returned, b.dim) })}</Pill>}
-                  {b.orders.filter((o) => o.ordered > o.done).map((o) => <Pill key={o.code} tone="bg-accent-tint text-accent-ink" Icon={Clock}>{s('st_needs', { qty: fmtQty(o.ordered - o.done, o.dim), code: o.code })}</Pill>)}
-                  {!b.waiting && b.sent > 0 && <Pill tone={TONE.done.cls} Icon={CheckCircle2}>{s('st_received')}</Pill>}
-                </span>
-              </span>
-              <ChevronRight size={18} className="shrink-0 text-meta" aria-hidden />
-            </button>
-          </li>
-        ))}
-      </ul>
-    </section>
-  );
-}
-
-// ── Stage by stage ───────────────────────────────────────────────────────────────────────────────
-
-interface Col { key: string; title: string; status: RowStatus; Icon: IconType; pill: string; body: React.ReactNode }
-
-function Stages({ d, s, lang, nav }: { d: Flow; s: S; lang: string; nav: (to: string) => void }) {
-  const cols: Col[] = [];
-  if (d.material.length) {
-    const allIn = d.material.every((m) => m.confirmed);
-    cols.push({
-      key: 'material', title: s('material'), status: allIn ? 'done' : 'in_progress', Icon: allIn ? CheckCircle2 : CircleDot, pill: allIn ? s('confirmed') : s('not_confirmed'),
-      body: d.material.map((m) => (
-        <button key={`${m.movement_id}:${m.lot}`} className="mt-2 block min-h-11 w-full rounded-r-[12px] border-l-[3px] border-line-strong bg-sunken/60 px-3 py-2 text-left text-[14px] hover:bg-sunken" onClick={() => nav(`/goods/movement/${m.movement_id}`)}>
-          <span className="block font-semibold text-ink"><span className="font-head tabular-nums">{fmtQty(m.qty, m.dim)}</span> · {m.label}</span>
-          <span className="block text-ink-2">{s('material_row', { name: m.name, date: shortDate(m.date, lang) })}{m.lot ? ` · ${s('lot', { lot: m.lot })}` : ''}</span>
-        </button>
-      )),
-    });
-  }
-  for (const st of d.stages) {
-    const title = st.labels?.[lang] ?? st.labels?.en ?? st.key;
-    const pill = st.status === 'done' ? s('s_done') : st.late ? s('stage_late', { n: st.late }) : s('stage_open', { n: st.open });
-    cols.push({
-      key: st.key, title, status: st.status === 'done' ? 'done' : st.late ? 'late' : st.status, Icon: st.status === 'done' ? CheckCircle2 : st.late ? Clock : TONE[st.status].Icon, pill,
-      body: (
-        <>
-          {st.rows.map((r) => <StageRow key={r.id} r={r} s={s} lang={lang} nav={nav} />)}
-          {st.totals.map((t) => (
-            <p key={t.dim} className="mt-2 text-[13px] text-meta">
-              {st.unit_changing
-                ? s('rec_cut', { sent: fmtQty(t.sent, t.dim), out: st.outputs.map((o) => fmtQty(o.qty, o.dim)).join(' + ') || '0', waste: st.waste.map((w) => fmtQty(w.qty, w.dim)).join(' + ') || fmtQty(0, 'mass') })
-                : s('rec', { sent: fmtQty(t.sent, t.dim), good: fmtQty(t.good, t.dim), reject: fmtQty(t.reject, t.dim), at: fmtQty(t.at_unit, t.dim), loss: fmtQty(t.loss, t.dim) })}
-            </p>
-          ))}
-        </>
-      ),
-    });
-  }
-  if (d.buyers.length) {
-    const sent = d.buyers.reduce((a, b) => a + (b.dim === 'count' ? b.sent : 0), 0);
-    const waiting = d.buyers.filter((b) => b.waiting).length;
-    cols.push({
-      key: 'dispatch', title: s('dispatch'), status: waiting ? 'in_progress' : 'done', Icon: Truck, pill: waiting ? s('chip_waiting', { n: waiting }) : s('st_received'),
-      body: (
-        <>
-          <p className="mt-1 text-[14.5px] text-ink"><span className="font-head font-bold tabular-nums">{fmtQty(sent, 'count')}</span> {s('sent_word')}</p>
-          {d.buyers.map((b) => (
-            <button key={`${b.party.k}:${b.party.id}`} className={clsx('mt-2 block min-h-11 w-full rounded-r-[12px] border-l-[3px] bg-sunken/60 px-3 py-2 text-left text-[14px] hover:bg-sunken', b.waiting ? 'border-accent' : 'border-success')} onClick={() => nav(`/goods/party/${b.party.k}/${b.party.id}`)}>
-              <span className="block font-semibold text-ink">{b.name}</span>
-              <span className="block text-ink-2">{b.sent ? s('sent_recv', { sent: fmtQty(b.sent, b.dim), received: fmtQty(b.received, b.dim) }) : s('nothing_sent')}</span>
-            </button>
-          ))}
-        </>
-      ),
-    });
-  }
-  if (!cols.length) return null;
-  return (
-    <section className="mt-6">
-      <div className="flex flex-wrap items-baseline justify-between gap-x-3">
-        <h2 className="font-head text-[17px] font-semibold text-ink">{s('stages')}</h2>
-        <span className="text-[13px] text-meta">{s('stages_hint')}</span>
-      </div>
-      <ol className="mt-3 lg:grid lg:gap-4" style={{ gridTemplateColumns: `repeat(${Math.min(cols.length, 6)}, minmax(0, 1fr))` }}>
-        {cols.map((c, i) => (
-          <li key={c.key} className="relative grid grid-cols-[28px_minmax(0,1fr)] gap-x-3 pb-5 lg:block lg:pb-0">
-            {i < cols.length - 1 && <span aria-hidden className="absolute bottom-1 left-[13px] top-8 w-0.5 bg-line-strong lg:bottom-auto lg:left-9 lg:right-[-12px] lg:top-[13px] lg:h-0.5 lg:w-auto" />}
-            <span className={clsx('relative flex size-7 items-center justify-center rounded-full', DOT[c.status])}><c.Icon size={16} aria-hidden /></span>
-            <div className="min-w-0 lg:mt-2.5">
-              <div className="flex min-h-7 flex-wrap items-center gap-x-2.5 gap-y-1">
-                <h3 className="font-head text-[16.5px] font-semibold leading-tight text-ink">{c.title}</h3>
-                <Pill tone={TONE[c.status].cls} Icon={c.status === 'done' ? CheckCircle2 : c.key === 'dispatch' ? Truck : c.key === 'material' ? Factory : TONE[c.status].Icon}>{c.pill}</Pill>
-              </div>
-              {c.body}
-            </div>
-          </li>
-        ))}
-      </ol>
-    </section>
-  );
-}
-
 function StageRow({ r, s, lang, nav }: { r: Row; s: S; lang: string; nav: (to: string) => void }) {
   const t = TONE[r.status];
   const parts = r.out_dim !== r.dim
     ? [s('row_sent', { qty: fmtQty(r.sent, r.dim) }), s('row_made', { qty: fmtQty(r.good + r.reject, r.out_dim) }), r.waste ? s('row_waste', { qty: fmtQty(r.waste, 'mass') }) : null, r.at_unit ? s('row_at', { qty: fmtQty(r.at_unit, r.dim) }) : null]
     : [s('row_sent', { qty: fmtQty(r.sent, r.dim) }), s('row_back', { qty: fmtQty(r.good, r.dim) }), r.reject ? s('row_reject', { qty: fmtQty(r.reject, r.dim) }) : null, s('row_at', { qty: fmtQty(r.at_unit, r.dim) }), r.loss ? s('row_loss', { qty: fmtQty(r.loss, r.dim) }) : null];
   return (
-    <button className={clsx('mt-2 block min-h-11 w-full rounded-r-[12px] border-l-[3px] bg-sunken/60 px-3 py-2 text-left text-[14px] hover:bg-sunken', r.status === 'late' ? 'border-accent' : r.status === 'ready' ? 'border-primary' : r.disputes ? 'border-danger' : 'border-line-strong')} onClick={() => nav(`/goods/job/${r.id}`)}>
+    <button className={clsx('mt-2 block min-h-11 w-full rounded-[12px] border-l-[3px] bg-sunken/70 px-3 py-2 text-left text-[14px] hover:bg-sunken', r.status === 'late' ? 'border-accent' : r.status === 'ready' ? 'border-primary' : r.disputes ? 'border-danger' : 'border-line-strong')} onClick={() => nav(`/goods/job/${r.id}`)}>
       <span className="flex flex-wrap items-baseline gap-x-2">
         <span className="font-semibold text-ink">{r.in_house ? s('in_house') : r.name}</span>
         {(r.sizes.length > 0 || r.lots.length > 0) && <span className="text-[13px] text-meta">{[r.sizes.map((z) => z.size).join(', '), r.lots.join(', ')].filter(Boolean).join(' · ')}</span>}
