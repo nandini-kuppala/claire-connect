@@ -22,6 +22,8 @@ import voice from './routes/voice.js';
 import dev from './routes/dev.js';
 import webhooks from './routes/webhooks.js';
 import misc from './routes/misc.js';
+import archives from './routes/archives.js';
+import { startArchiveTicker } from './chatArchive.js';
 
 const LOCAL_ORIGIN = /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\]|[a-z0-9-]+\.localhost)(:\d+)?$/i;
 
@@ -87,7 +89,8 @@ async function main() {
     console.log('[sc] supply-chain module on (per-business flag)');
   }
 
-  for (const r of [misc, auth, onboarding, claire, catalog, business, voice, dev, webhooks]) app.use('/api', r);
+  for (const r of [misc, auth, onboarding, claire, catalog, business, voice, dev, webhooks, archives]) app.use('/api', r);
+  startArchiveTicker();
   for (const path of EXTERNAL_ROUTES) {
     try {
       const mod = (await import(path)) as { default?: Router };

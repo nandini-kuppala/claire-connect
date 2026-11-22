@@ -141,7 +141,8 @@ export const chat = {
       return;
     }
     const r: any = await nexconn.sendGroup({ from, groupId, type, content, toUserIds: opts.onlyTo, pushContent: opts.push });
-    const messageId = r?.result?.messageId ?? r?.result?.messageUID ?? r?.messageId ?? r?.messageUID ?? r?.result?.[0]?.messageId ?? id('srv_', 14);
+    // v4 answers { result: { messageIds: [{ channelId, messageId }] } }; the older shapes are kept as fallbacks.
+    const messageId = r?.result?.messageIds?.[0]?.messageId ?? r?.result?.messageId ?? r?.result?.messageUID ?? r?.messageId ?? r?.messageUID ?? r?.result?.[0]?.messageId ?? id('srv_', 14);
     void archiveGroupMessage({ id: String(messageId), channelId: groupId, senderId: from, type, content, directed: opts.onlyTo ?? null, sentAt: now() });
   },
 

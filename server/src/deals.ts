@@ -2,6 +2,7 @@
 // (spec §J2.2, §J3, §J4, §J5, §J7). MongoDB is the source of truth; chat posts are best-effort.
 import { col, find, findOne, byId, insert, update, claim, bump } from './db/index.js';
 import { chat, archiveGroupMessage } from './chat.js';
+import { moderateText } from './moderation.js';
 import { BOT, features } from './config.js';
 import { getBiz, publicBiz, usersOf, type UserRow } from './biz.js';
 import { trustOf, invalidateTrust } from './trust.js';
@@ -1027,8 +1028,13 @@ export function detectQty(text: string): number | null {
 }
 
 export async function handleInbound(conversationId: string, senderUserId: string, input: { text: string; lang?: string; messageId?: string }) {
-  const text = (input.text ?? '').trim();
-  if (!text) return { ok: true };
+  const raw = (input.text ?? '').trim();
+  if (!raw) return { ok: true };
+  // Same word list as Nexconn's profanity filter (moderation.ts): a blocked message never reached the other side,
+  // so it is neither archived nor answered; a masked one is handled as delivered (masked).
+  const moderated = moderateText(raw);
+  if (moderated.action === 'block') return { ok: true, blocked: true };
+  const text = moderated.text;
   // Keep a server copy for agents who join later (B10). Same id as the webhook's, so it is stored once.
   if (input.messageId) {
     const c = await byId<ConversationDoc>('conversations', conversationId);

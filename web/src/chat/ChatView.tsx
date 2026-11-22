@@ -17,6 +17,7 @@ import { useT } from '../i18n';
 import { useSession } from '../store/session';
 import { CLAIRE_ID, DESK_ID, UPDATES_ID, channelKey, engine, HISTORY_PAGE, sameChannel, type Channel, type ChatMessage, type ConnState } from './engine';
 import { isDifferent, scriptLang, type TranslateRequest } from './translate';
+import { moderateText } from '@shared/moderation';
 import { BubbleShell, MessageBubble, SystemPill, type BubblePosition, type TranslationState } from './MessageBubble';
 import { VoiceBubble } from './VoiceBubble';
 import { Composer } from './Composer';
@@ -110,7 +111,9 @@ function signature(m: ChatMessage): string {
 }
 
 /** Insert or replace by id / optimistic local id / pending signature; keeps ascending order. */
-function upsert(list: ChatMessage[], m: ChatMessage): ChatMessage[] {
+function upsert(list: ChatMessage[], incoming: ChatMessage): ChatMessage[] {
+  // Moderation may block a message before or after its send call returns: the blocked state always wins.
+  const m: ChatMessage = incoming.mine && engine.isBlocked(incoming.id) ? { ...incoming, status: 'blocked' } : incoming;
   let next = list;
   const byId = list.findIndex((x) => x.id === m.id);
   const byLocal = m.localId ? list.findIndex((x) => x.id === m.localId) : -1;
@@ -278,7 +281,12 @@ export function ChatView({
       setTyping({ userId: ev.userId, type: ev.typingType, at: Date.now() });
     });
     const offStatus = engine.onStatus(setConn);
+    const offBlocked = engine.onBlocked((ev) => {
+      if (!sameChannel(ev.channel, channel)) return;
+      setMessages((cur) => cur.map((x) => (x.id === ev.messageId ? { ...x, status: 'blocked' } : x)));
+    });
     return () => {
+      offBlocked();
       offMsg();
       offTyping();
       offStatus();
@@ -373,7 +381,9 @@ export function ChatView({
       // Source = the message's own language (its script), not the counterpart's: an agent's English line is
       // not "from Tamil", and a Claire auto-reply already in my language needs no translation.
       const text = textOf(m);
-      const from = scriptLang(text, counterpartLang) ?? (names?.[m.senderId] ? 'auto' : counterpartLang);
+      // Latin script can be English, Hinglish or Tanglish whatever the sender's language: let the engine detect it
+      // (the label then says "Translated", not "Translated from Telugu" for an English line).
+      const from = scriptLang(text, counterpartLang) ?? 'auto';
       if (from === myLang) return null;
       if (m.type === 'RC:TxtMsg') {
         const local = m.id.startsWith('local_') || m.id.startsWith('tmp_') || engine.mode !== 'nexconn';
@@ -450,8 +460,18 @@ export function ChatView({
     }
   };
 
-  const sendText = async (text: string, reuseId?: string) => {
+  const sendText = async (typed: string, reuseId?: string) => {
     const localId = reuseId ?? newLocalId();
+    // Moderation (shared/moderation.ts, the same list Nexconn's filter has): a blocked text never leaves the phone and
+    // its bubble says why; a masked word goes out as the mask. Nexconn's own filter still checks what is sent.
+    const moderated = moderateText(typed);
+    if (moderated.action === 'block') {
+      const blockedMsg: ChatMessage = { id: localId, channel, senderId: myId, type: 'RC:TxtMsg', content: { text: typed }, sentAt: Date.now(), mine: true, status: 'blocked' };
+      if (reuseId) setMessages((cur) => cur.map((x) => (x.id === reuseId ? blockedMsg : x)));
+      else addOptimistic(blockedMsg);
+      return;
+    }
+    const text = moderated.text;
     if (reuseId) setMessages((cur) => cur.map((x) => (x.id === reuseId ? { ...x, status: 'sending', sentAt: Date.now() } : x)));
     else addOptimistic({ id: localId, channel, senderId: myId, type: 'RC:TxtMsg', content: { text }, sentAt: Date.now(), mine: true, status: 'sending' });
     let sent: ChatMessage;

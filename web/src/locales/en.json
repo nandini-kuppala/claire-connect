@@ -1681,6 +1681,11 @@
     "saved": "Saved",
     "close": "Close"
   },
+  "moderation": {
+    "blocked": "Not delivered. This message has words that aren't allowed in CLAIRE chats.",
+    "blocked_label": "Blocked by moderation",
+    "masked": "Some words were hidden by chat moderation."
+  },
   "nav_sc": {
     "goods": "Goods",
     "claire": "Claire"

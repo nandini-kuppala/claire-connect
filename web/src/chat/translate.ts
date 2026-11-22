@@ -1,9 +1,13 @@
-// Receiver-side translation. Both engines run in parallel for every new message:
-// - Server (POST /api/translate, LLM with a trade glossary) is preferred: in live tests it handled
-//   Hinglish/Tanglish and trade terms far better than the built-in machine translation.
-// - Nexconn built-in translation (translateMessages / translateTexts, source 'auto', batches of ≤ 10)
-//   is the fallback when the server is unavailable or out of daily budget. Its output is only
-//   accepted if every number, ₹ amount and size from the source survives unchanged.
+// Receiver-side translation, Nexconn first:
+// - Nexconn built-in translation is the default: translateTexts for every text (messages, voice transcripts,
+//   streamed answers; see USE_MESSAGE_API for why not translateMessages), source 'auto', batches of ≤ 10. Results
+//   arrive on TranslateHandler.onTranslationCompleted. Re-checked 22 Nov 2026: both now return results (the earlier
+//   "translateTexts never answers" was the console's Translation service being off). Its output is only accepted
+//   if every number, ₹ amount and size from the source survives unchanged (the machine translation sometimes turns
+//   ₹ into £ or drops an amount).
+// - Server fallback (POST /api/translate, LLM with a trade glossary) translates whatever Nexconn did not: not
+//   connected, timed out, failed, or changed a number. It is also the better engine for Hinglish / Tanglish, so
+//   `localStorage.cc_tr_engine = 'server'` puts it first again (debugging / comparison).
 // Results are cached by (id, text, language) in localStorage.
 import { NCEngine, TranslateMessageParam, TranslateSourceType, TranslateTextParam, type TranslateResult } from '@nexconn/chat';
 import { api } from '../lib/api';
@@ -21,12 +25,23 @@ export interface TranslateRequest {
 
 /** True when every number / ₹ amount / size token of the source appears in the translation. */
 export function numbersKept(source: string, translated: string): boolean {
-  const nums = (t: string) => (t.match(/\d[\d,]*(?:\.\d+)?/g) ?? []).map((n) => n.replace(/,/g, '')).sort();
+  // Native digits count as the same number (Nexconn writes "১২,০০০" for 12,000 in Bengali, "१२" in Hindi…).
+  const ascii = (t: string) => t.replace(/\p{Nd}/gu, nativeDigit);
+  const nums = (t: string) => (ascii(t).match(/\d[\d,]*(?:\.\d+)?/g) ?? []).map((n) => n.replace(/,/g, '')).sort();
   const a = nums(source);
   const b = nums(translated);
   if (a.length !== b.length || a.some((n, i) => n !== b[i])) return false;
   const sizes = (t: string) => (t.match(/\b(?:XXXL|XXL|XL|XS|[2-5]XL)\b/gi) ?? []).map((x) => x.toUpperCase()).sort().join(',');
   return sizes(source) === sizes(translated);
+}
+
+// Digit zero of the scripts Nexconn may answer in (Arabic-Indic, Devanagari, Bengali, Gurmukhi, Gujarati, Odia,
+// Tamil, Telugu, Kannada, Malayalam). Each script's ten digits are contiguous from its zero.
+const DIGIT_ZEROS = [0x660, 0x6f0, 0x966, 0x9e6, 0xa66, 0xae6, 0xb66, 0xbe6, 0xc66, 0xce6, 0xd66];
+function nativeDigit(d: string): string {
+  const cp = d.codePointAt(0) ?? 48;
+  const zero = DIGIT_ZEROS.find((z) => cp >= z && cp <= z + 9);
+  return zero == null ? d : String(cp - zero);
 }
 
 // ── Cache ──────────────────────────────────────────────────────────────────
@@ -106,7 +121,7 @@ export function handleTranslationResults(results: TranslateResult[]) {
   }
 }
 
-function waitFor(sourceType: TranslateSourceType, identifier: string, ms = 9000): Promise<string | null> {
+function waitFor(sourceType: TranslateSourceType, identifier: string, ms = 7000): Promise<string | null> {
   const key = pendingKey(sourceType, identifier);
   return new Promise((resolve) => {
     const done: Waiter = (t) => {
@@ -147,13 +162,20 @@ async function nexconnBatch(jobs: Job[], to: string, asMessages: boolean): Promi
   return Promise.all(waits);
 }
 
+const USE_MESSAGE_API = false;
+
 async function viaNexconn(jobs: Job[], to: string): Promise<Map<string, string>> {
   const out = new Map<string, string>();
   if (!nexconnReady || !jobs.length) return out;
-  const groups: [Job[], boolean][] = [
-    [jobs.filter((j) => j.req.kind === 'message'), true],
-    [jobs.filter((j) => j.req.kind !== 'message'), false],
-  ];
+  // Every item goes through translateTexts, message texts included. Side by side on 22 Nov 2026 (6 trade lines,
+  // en → bn), translateMessages garbled 4 of 6 (spaces dropped: "thefabricgsmis180", ₹ → £, words lost) while
+  // translateTexts got all 6 right. translateMessages stays available (set USE_MESSAGE_API) for re-checks.
+  const groups: [Job[], boolean][] = USE_MESSAGE_API
+    ? [
+        [jobs.filter((j) => j.req.kind === 'message'), true],
+        [jobs.filter((j) => j.req.kind !== 'message'), false],
+      ]
+    : [[jobs, false]];
   await Promise.all(
     groups.flatMap(([list, asMessages]) =>
       chunk(list, 10).map(async (batch) => {
@@ -173,12 +195,14 @@ async function viaNexconn(jobs: Job[], to: string): Promise<Map<string, string>>
 async function viaServer(reqs: TranslateRequest[], to: string): Promise<Map<string, string>> {
   const out = new Map<string, string>();
   if (!reqs.length) return out;
-  const froms = new Set(reqs.map((r) => r.from).filter((f) => f && f !== 'auto'));
+  // Pass a source language only when the text is written in that script: Latin text from a Telugu speaker is
+  // usually English (or Tenglish), and telling the server "from Telugu" made it hand the text back unchanged.
+  const froms = new Set(reqs.map((r) => (r.from && r.from !== 'auto' && scriptLang(r.text, r.from) === r.from ? r.from : 'auto')));
   try {
     const r = await api.post<{ translations?: (string | null)[] }>('/api/translate', {
       texts: reqs.map((x) => x.text),
       to,
-      ...(froms.size === 1 ? { from: [...froms][0] } : {}),
+      ...(froms.size === 1 && !froms.has('auto') ? { from: [...froms][0] } : {}),
     });
     (r?.translations ?? []).forEach((t, i) => {
       if (typeof t === 'string' && t.trim() && isDifferent(t, reqs[i].text)) out.set(reqs[i].id, t);
@@ -191,6 +215,18 @@ async function viaServer(reqs: TranslateRequest[], to: string): Promise<Map<stri
 
 // ── Entry point ────────────────────────────────────────────────────────────
 const inflight = new Map<string, Promise<string | null>>();
+
+function preferServer(): boolean {
+  try {
+    return localStorage.getItem('cc_tr_engine') === 'server';
+  } catch {
+    return false;
+  }
+}
+
+/** Which engine answered the last batch (for debugging in the console: `__ccTranslateStats()`). */
+let lastEngine: { primary: 'nexconn' | 'server'; primaryCount: number; otherCount: number } | null = null;
+if (typeof window !== 'undefined') (window as unknown as { __ccTranslateStats?: () => unknown }).__ccTranslateStats = () => lastEngine;
 
 /** Translates items into `to`. The map holds only successful translations. */
 export async function translateItems(items: TranslateRequest[], to: string): Promise<Map<string, string>> {
@@ -220,20 +256,22 @@ export async function translateItems(items: TranslateRequest[], to: string): Pro
       const jobs: Job[] = todo.map((req) => ({ req }));
       const result = new Map<string, string>();
       const remaining = jobs.filter((j) => !result.has(j.req.id));
-      // Both engines start together; the server result wins, Nexconn fills whatever it missed.
-      const nc = viaNexconn(remaining, to);
-      const sv = await viaServer(remaining.map((j) => j.req), to);
-      sv.forEach((v, k) => result.set(k, v));
-      if (remaining.some((j) => !result.has(j.req.id))) {
-        (await nc).forEach((v, k) => {
+      const serverFirst = preferServer();
+      const primary = serverFirst ? await viaServer(remaining.map((j) => j.req), to) : await viaNexconn(remaining, to);
+      primary.forEach((v, k) => result.set(k, v));
+      const missed = remaining.filter((j) => !result.has(j.req.id));
+      if (missed.length) {
+        const fallback = serverFirst ? await viaNexconn(missed, to) : await viaServer(missed.map((j) => j.req), to);
+        fallback.forEach((v, k) => {
           if (!result.has(k)) result.set(k, v);
         });
-        // Last resort: a Nexconn auto-translation that already arrived for this message.
-        for (const j of remaining) {
-          const auto = j.req.kind === 'message' && !result.has(j.req.id) ? unsolicited.get(j.req.id) : undefined;
-          if (auto && sameLang(auto.lang, to) && numbersKept(j.req.text, auto.text)) result.set(j.req.id, auto.text);
-        }
       }
+      // Last resort: a Nexconn auto-translation of the message that already arrived (message engine: checked numbers).
+      for (const j of remaining) {
+        const auto = j.req.kind === 'message' && !result.has(j.req.id) ? unsolicited.get(j.req.id) : undefined;
+        if (auto && sameLang(auto.lang, to) && numbersKept(j.req.text, auto.text) && isDifferent(auto.text, j.req.text)) result.set(j.req.id, auto.text);
+      }
+      lastEngine = { primary: serverFirst ? 'server' : 'nexconn', primaryCount: primary.size, otherCount: result.size - primary.size };
       for (const req of todo) {
         const t = result.get(req.id);
         // An unchanged "translation" may be a silent service failure: don't pin it in the cache.

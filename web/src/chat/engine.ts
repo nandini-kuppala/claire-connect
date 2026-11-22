@@ -44,8 +44,9 @@ export interface ChatMessage {
   metadata?: Record<string, string>;
   sentAt: number;
   mine: boolean;
-  /** Client-side delivery state for optimistic messages. */
-  status?: 'sending' | 'sent' | 'failed';
+  /** Client-side delivery state for optimistic messages. 'blocked' = moderation stopped it (the composer's check or
+   *  Nexconn's filter, reported by MessageHandler.onMessageBlocked). */
+  status?: 'sending' | 'sent' | 'failed' | 'blocked';
   /** Temporary id of the optimistic copy this message replaces. */
   localId?: string;
 }
@@ -55,6 +56,14 @@ export interface TypingEvent {
   userId: string;
   typingType: string;
   at: number;
+}
+
+/** Nexconn moderation stopped one of my messages (MessageHandler.onMessageBlocked). */
+export interface BlockedEvent {
+  messageId: string;
+  channel: Channel;
+  /** 1 = platform word list, 2 = this app's word list, 3 = third-party moderation. */
+  blockType: number;
 }
 
 export type ConnState = 'idle' | 'connecting' | 'connected' | 'disconnected' | 'error';
@@ -107,6 +116,9 @@ type Listener<T> = (v: T) => void;
 const messageListeners = new Set<Listener<ChatMessage>>();
 const typingListeners = new Set<Listener<TypingEvent>>();
 const statusListeners = new Set<Listener<ConnState>>();
+const blockedListeners = new Set<Listener<BlockedEvent>>();
+/** Ids of my messages moderation blocked (the event can arrive before the send call returns). */
+const blockedIds = new Map<string, BlockedEvent>();
 
 let state: ConnState = 'idle';
 let mode: 'nexconn' | 'local' | null = null;
@@ -186,7 +198,9 @@ function metadataOf(m: Message): Record<string, string> | undefined {
 
 function fromNC(m: Message): ChatMessage {
   const sender = m.senderUserId || '';
-  const mine = (myId && sender === myId) || m.direction === MessageDirection.SEND;
+  // Trust the sender id when there is one: after switching accounts in the same browser the SDK's local cache can
+  // still hold the previous user's messages marked SEND, which drew the other side's messages as mine.
+  const mine = sender && myId ? sender === myId : m.direction === MessageDirection.SEND;
   return {
     id: m.messageId || `tmp_${m.clientId}`,
     channel: channelFromIdentifier(m.channelIdentifier),
@@ -307,6 +321,13 @@ function initNexconn(creds: ChatCreds) {
       },
       onMessagesUpdated({ messages }) {
         messages.forEach((m) => emit(fromNC(m)));
+      },
+      onMessageBlocked({ info }) {
+        const ev: BlockedEvent = { messageId: info.messageId, channel: channelFromIdentifier(info.channelIdentifier), blockType: Number(info.blockType) || 0 };
+        blockedIds.set(ev.messageId, ev);
+        if (blockedIds.size > 200) blockedIds.delete(blockedIds.keys().next().value as string);
+        console.info('[chat] message blocked by moderation', ev);
+        blockedListeners.forEach((fn) => fn(ev));
       },
     }),
   );
@@ -490,6 +511,18 @@ export const engine = {
     return () => {
       typingListeners.delete(cb);
     };
+  },
+
+  /** My message was blocked by moderation (shown as "Not delivered" with a notice). */
+  onBlocked(cb: Listener<BlockedEvent>) {
+    blockedListeners.add(cb);
+    return () => {
+      blockedListeners.delete(cb);
+    };
+  },
+
+  isBlocked(messageId: string) {
+    return blockedIds.has(messageId);
   },
 
   onStatus(cb: Listener<ConnState>) {

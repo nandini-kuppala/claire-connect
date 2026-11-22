@@ -88,7 +88,9 @@ claire-connect/
 | System channel (order / payment updates) | `server/src/chat.ts` `system()` → CLAIRE Updates |
 | Custom messages `CC:Card`, `CC:Hint`, `CC:Reply`, `CC:Voice` (registered before connect) | `shared/cards.ts`, `web/src/cards/*` |
 | Targeted group messages (`toUserIds`) for Claire's private tips | `server/src/deals.ts` hints, rating cards |
-| Built-in translation (`translateMessages`, translation language, auto-translate) | `web/src/chat/translate.ts` |
+| Built-in translation (`translateTexts`, translation language, auto-translate): the **default** engine since 22 Nov; server LLM is the fallback | `web/src/chat/translate.ts` |
+| Profanity filter (`/v4/profanity-word/*`, `onMessageBlocked`): block / mask words, "Not delivered" and "Some words were hidden" notices | `shared/moderation.ts`, `server/src/chatops/moderation-cli.ts`, `web/src/chat/MessageBubble.tsx` |
+| File storage (Web SDK uploader, headless worker) + group history query: daily encrypted chat archives, `chat_archives` collection | `server/src/chatArchive.ts`, `server/src/nexconn-node/*`, `server/src/routes/archives.ts` |
 | History query, typing status, read receipts, unread | `web/src/chat/engine.ts`, `ChatView.tsx` |
 | Server API: access-token issue, direct/group/system send, group create/join, stream send | `server/src/nexconn.ts` |
 | Webhook receiver with signature check | `server/src/routes/webhooks.ts` |
@@ -184,7 +186,9 @@ python3 compose.py          # composites → renders/CLAIRE-Connect-demo.mp4
 ## 10. Known issues and next steps
 
 - Matching ignores colour preference (a "white" request can rank a green T-shirt first).
-- Nexconn `translateTexts` (free text, e.g. voice transcripts) accepts requests but never returns results; the server translates those.
+- Nexconn translation (re-checked 22 Nov): `translateMessages` and `translateTexts` both return results now. The app uses `translateTexts` for everything (`translateMessages` garbled 4 of 6 trade lines: spaces dropped, ₹ → £). Hinglish / Tanglish answer 28401, and output that changes a number is rejected; those fall back to the server. Checks: `node scripts/nexconn-features-smoke.mjs [--calls]`.
+- Chat archive: `npm run chat:archive -w server` (dev DBs) or `CHAT_ARCHIVE_EVERY_MIN=60` on the server. Nexconn download URLs are unauthenticated, so files are AES-256-GCM encrypted with `CHAT_ARCHIVE_KEY` (falls back to `JWT_SECRET`; set a fixed key before production, or old archives become unreadable when the secret changes).
+- Moderation words: `npm run chat:moderation -w server -- list|sync|remove-all`. The list is app-wide in Nexconn (same App Key = production too).
 - Calls need the Call service enabled in the Nexconn console (§13). Group calls are not used (deals are 1:1 business ↔ business).
 - Renaming a user does not update their Nexconn profile name.
 - Planning docs 03/04 describe Postgres/Anthropic; the build uses MongoDB/OpenRouter (see notes at the top of those files).

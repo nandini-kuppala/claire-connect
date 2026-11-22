@@ -147,4 +147,24 @@ export const nexconn = {
   joinGroup(groupId: string, userIds: string[]) {
     return call('/v4/group-channel/join', { channelId: groupId, userIds });
   },
+
+  // ── Moderation: the platform profanity filter (docs: /platform-chat-api/moderation/*) ──
+  // A word without `replacement` blocks the whole message (the sender's SDK gets onMessageBlocked); a word with one
+  // is masked before delivery. The platform checks RC:TxtMsg sent from client SDKs; changes take up to ~15 minutes.
+  // The app-wide cap is 50 words.
+  async profanityList(filter: 'replace' | 'block' | 'all' = 'all'): Promise<{ word: string; replacement?: string; filterType?: number | string }[]> {
+    const r: any = await call('/v4/profanity-word/list', { filterType: filter === 'replace' ? '0' : filter === 'block' ? '1' : '2' });
+    return r?.result?.words ?? r?.words ?? [];
+  },
+
+  async profanityAdd(words: { word: string; replacement?: string }[]): Promise<{ remainingQuota?: number }> {
+    const r: any = await call('/v4/profanity-word/batch/add', {
+      words: words.map((w) => ({ word: w.word.slice(0, 32), ...(w.replacement ? { replacement: w.replacement.slice(0, 32) } : {}) })),
+    });
+    return r?.result ?? {};
+  },
+
+  profanityRemove(words: string[]) {
+    return call('/v4/profanity-word/batch/remove', { words: words.slice(0, 50) });
+  },
 };

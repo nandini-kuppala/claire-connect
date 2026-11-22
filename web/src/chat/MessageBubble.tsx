@@ -1,11 +1,12 @@
 // Chat bubbles: the shared shell (colours, radius, softened tail) and the text bubble with
 // translation toggle, time and delivery state.
 import type { ReactNode } from 'react';
-import { AlertCircle, Check, Clock3, Languages } from '../icons';
+import { AlertCircle, Check, Clock3, Languages, ShieldAlert } from '../icons';
 import clsx from 'clsx';
 import { clock, langNative } from '../lib/format';
 import { useT } from '../i18n';
 import type { ChatMessage } from './engine';
+import { MODERATION_MASK, ModerationStrings } from './moderation.strings';
 
 export interface BubblePosition {
   /** First bubble of a run from the same sender. */
@@ -52,12 +53,14 @@ export function BubbleShell({
 
 export function MessageMeta({ message, className }: { message: ChatMessage; className?: string }) {
   const t = useT();
+  const tm = ModerationStrings.use();
   return (
     <span className={clsx('inline-flex items-center gap-1 text-[11px] leading-none whitespace-nowrap text-meta tabular-nums', className)}>
       {clock(message.sentAt)}
       {message.mine && message.status === 'sending' && <Clock3 size={12} aria-label={t('sending')} />}
       {message.mine && (message.status === 'sent' || message.status == null) && <Check size={13} className="text-primary" aria-hidden />}
       {message.mine && message.status === 'failed' && <AlertCircle size={13} className="text-danger" aria-label={t('send_failed')} />}
+      {message.mine && message.status === 'blocked' && <ShieldAlert size={13} className="text-danger" aria-label={tm('blocked_label')} />}
     </span>
   );
 }
@@ -134,9 +137,16 @@ export function MessageBubble({
   streaming?: boolean;
 }) {
   const t = useT();
+  const tm = ModerationStrings.use();
   const translated = translation?.text && !showOriginal ? translation.text : null;
+  // Moderation replaced a word with the mask (Nexconn before delivery, or the composer before sending).
+  const masked = message.status !== 'blocked' && text.includes(MODERATION_MASK);
   const body = translated ?? text;
   const hasToggle = Boolean(translation && (translation.text || translation.failed) && onToggleOriginal);
+  const blocked = message.status === 'blocked';
+  // A moderation notice gets its own line with the time under it, instead of the time tucked into the text.
+  const footer = blocked || masked;
+  const inlineMeta = !hasToggle && !footer;
   return (
     <BubbleShell mine={message.mine} pos={pos}>
       {senderLabel && pos.first && <div className="mb-0.5 text-[12px] font-semibold text-primary">{senderLabel}</div>}
@@ -144,7 +154,7 @@ export function MessageBubble({
         {body}
         {streaming && <span className="ml-0.5 inline-block h-[1em] w-[2px] translate-y-[2px] animate-pulse rounded-full bg-ink-2 align-baseline" aria-hidden />}
         {/* Spacer so the time tucked into the last line never overlaps the text. */}
-        {!hasToggle && <span className={clsx('inline-block', message.mine ? 'w-[74px]' : 'w-[56px]')} aria-hidden />}
+        {inlineMeta && <span className={clsx('inline-block', message.mine ? 'w-[74px]' : 'w-[56px]')} aria-hidden />}
       </p>
       {hasToggle && translation && onToggleOriginal && (
         <div className="flex flex-wrap items-end justify-between gap-x-3">
@@ -152,7 +162,18 @@ export function MessageBubble({
           <MessageMeta message={message} className="mb-1.5 ml-auto" />
         </div>
       )}
-      {!hasToggle && <MessageMeta message={message} className="absolute right-3 bottom-2" />}
+      {inlineMeta && <MessageMeta message={message} className="absolute right-3 bottom-2" />}
+      {footer && (
+        <p className={clsx('mt-1 flex items-start gap-1 text-[12px] leading-snug', blocked ? 'font-medium text-danger' : 'text-meta')} role={blocked ? 'status' : undefined}>
+          <ShieldAlert size={13} aria-hidden className="mt-[2px] shrink-0" />
+          <span>{tm(blocked ? 'blocked' : 'masked')}</span>
+        </p>
+      )}
+      {footer && !hasToggle && (
+        <div className="flex justify-end">
+          <MessageMeta message={message} className="mb-0.5" />
+        </div>
+      )}
       {message.status === 'failed' && onRetrySend && (
         <button type="button" onClick={onRetrySend} className="mt-1 block min-h-[28px] text-left text-[12px] font-semibold text-danger">
           {t('send_failed')}
