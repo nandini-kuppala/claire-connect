@@ -2,25 +2,27 @@
 """v2: animated scenes (clips/*.mp4) + demo scenes (stage PNG + recorded phones/desk) + narration → renders/CLAIRE-Connect-3min.mp4"""
 import json, os, subprocess, sys
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
-FPS = 30; LEAD = 0.3; TAIL = 0.6
+FPS = 30; LEAD = 0.3; TAIL = 0.55
 voice = {s['id']: s['seconds'] for s in json.load(open('voice/timings.json'))['segments']}
 raw = json.load(open('raw/all.json'))
-EXTRA = {'s08': 1.5, 's09': 2.0, 's11': 3.0, 's13': 1.5, 's14': 0.8, 's17': 1.2}
-ORDER = [f's{i:02d}' for i in range(1, 18)]
+EXTRA = {'s11': 1.0, 's13': 0.3, 's17': 1.2}
+ORDER = [f's{i:02d}' for i in range(1, 10)] + ['s09b'] + [f's{i:02d}' for i in range(10, 18)]
 ANIM = {'s01', 's02', 's03', 's04', 's05', 's06', 's10', 's15', 's16', 's17'}
 def win(group, sid, a=None, b=None):
     m = {x['edge']: x['t'] for x in raw[group]['marks'] if x['id'] == sid}
     return (a if a is not None else m['start'], b if b is not None else m['end'])
 TWO = [(716, 120), (1276, 120)]; ONE = (1252, 120)
 DEMO = {
-    's07': ('market', ['amit', 'lakshmi'], win('market', 's07')),
-    's08': ('market', ['amit', 'lakshmi'], win('market', 's08')),
-    's09': ('market', ['amit', 'lakshmi'], win('market', 's09')),
+    's07': ('market2', ['amit', 'lakshmi'], win('market2', 's07')),
+    's08': ('market2', ['amit', 'lakshmi'], win('market2', 's08')),
+    's09': ('market2', ['amit', 'lakshmi'], win('market2', 's09')),
+    's09b': ('ratings', ['store', 'profile'], win('ratings', 's09b')),
     's11': ('goods', ['murali', 'priya'], win('goods', 's11', a=raw['goods']['marks'][0]['t'] + 2.4)),
-    's12': ('goods', ['murali'], win('goods', 's12', a=raw['goods']['marks'][2]['t'] + 3.0)),
-    's13': ('goods', ['murali'], win('goods', 's13', a=63.5, b=77.0)),
+    's12': ('goods', ['murali'], win('goods', 's12', a=raw['goods']['marks'][2]['t'] + 2.5)),
+    's13': ('goods', ['murali'], win('goods', 's13', a=raw['goods']['marks'][4]['t'] + 3.0, b=raw['goods']['marks'][4]['t'] + 16.5)),
     's14': ('desk', ['desk'], win('desk', 's14')),
 }
+OVER = {'s09': ('stages/pill_sample.png', 'sampled', 3.2, 934, 966)}
 ENC = ['-c:v', 'libx264', '-preset', 'medium', '-crf', '18', '-pix_fmt', 'yuv420p', '-r', str(FPS), '-c:a', 'aac', '-b:a', '160k', '-ar', '48000', '-ac', '2']
 def run(cmd):
     r = subprocess.run(cmd, capture_output=True, text=True)
@@ -53,6 +55,12 @@ for sid in ORDER:
             f.append(f'[{vi}:v]setpts=(PTS-STARTPTS)/{speed:.4f},fps={FPS},{sc},tpad=stop_mode=clone:stop_duration={T:.2f},trim=0:{T},format=rgba[c{k}];[{mi}:v]scale={w}:{h},format=gray[m{k}];[c{k}][m{k}]alphamerge[cm{k}];[{prev}][cm{k}]overlay={x}:{y}:shortest=0[o{k}]')
             prev = f'o{k}'
         ai = 1 + 2 * len(names)
+        if sid in OVER:
+            png, mk, dur, ox, oy = OVER[sid]
+            mt = [x['t'] for x in raw[group]['marks'] if x['id'] == sid and x['edge'] == mk][0]
+            t0 = (mt - a) / speed
+            ins += ['-loop', '1', '-i', png]; oi = ai; ai += 1
+            f.append(f"[{prev}][{oi}:v]overlay={ox}:{oy}:enable='between(t,{t0:.2f},{t0 + dur:.2f})'[ov]"); prev = 'ov'
         f.append(f'[{prev}]{fade}[v];[{ai}:a]anull[A];{audio}')
         cmd = ['ffmpeg', '-v', 'error', '-y', *ins, '-i', f'voice/{sid}.mp3', '-filter_complex', ';'.join(f), '-map', '[v]', '-map', '[a]', '-t', str(T), *ENC, out]
         print(f'{sid}: {L:.1f}s of footage at {speed:.2f}x')

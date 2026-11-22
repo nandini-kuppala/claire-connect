@@ -1,5 +1,24 @@
 # CLAIRE Connect: hackathon video (v2, the production script)
 
+**v3 (owner's corrections, 22 Nov evening):**
+- **Deal in Hindi and Tamil:** Amit uses the app in Hindi, Lakshmi in Tamil, and the phones stay in the same positions. The labels now say "Amit's phone" and "Lakshmi's phone".
+- **The deal:**
+  1. Lakshmi quotes ₹98.
+  2. A sample is delivered to Amit's door.
+  3. He asks for the maximum discount on 1,000 pieces.
+  4. Claire's private tip: sellers settle 3–6 % lower (₹92–95.5), so offer ₹90.
+  5. Lakshmi counters at ₹94 (4 % under list) and the order with GST appears on both phones.
+  6. The voiceover adds that two people without a shared language closed a deal.
+- **New ratings scene:** Lakshmi's seller rating and Amit's buyer rating, side by side.
+- **Bridge animation:** reworded to "bridge the gap between buyers and sellers". The tiles turn into circles, are absorbed into the centre, and the logo pops up higher.
+- **WhatsApp cards:** now read "Can you send photos?" and "Price for 500 pieces?".
+- **Hand-off scene:** both phones end on 200 sent / 198 received.
+- **Flow scene:** shows the redesigned Overview, Stages and Buyers tabs.
+- **Wording:** "from his own records" and "most of its businesses are small".
+- **Length:** 3:41.
+- **The scene and voiceover lines below are v2.** The current lines are in `demo-video/v2/segments.json`.
+
+
 v1 was reviewed by the owner on 22 Nov. This version:
 - opens with researched market facts and the real pain (trade fairs, unsold stock, WhatsApp selling);
 - explains the app in simple words before the demo;

@@ -85,6 +85,70 @@ if (ONLY === 'market') {
   fs.writeFileSync(OUT + 'market.json', JSON.stringify({ starts, marks, convId }, null, 1));
 }
 
+if (ONLY === 'market2') {
+  await api('/me', { token: amitT, method: 'PATCH', body: { language: 'hi' } });
+  const H1 = 'नमस्ते लक्ष्मी जी, मुझे कोलकाता की दुकानों के लिए 1000 कॉटन टी-शर्ट चाहिए। क्या पहले सैंपल भेज सकती हैं?';
+  const T1 = 'வணக்கம் அமித்! ஒரு பீஸ் ₹98. மாதிரியை இரண்டு நாளில் உங்கள் கடைக்கே அனுப்புகிறேன்.';
+  const H2 = 'सैंपल मिल गया, कपड़ा और सिलाई बढ़िया है। मुझे 1000 पीस चाहिए। ज़्यादा से ज़्यादा कितनी छूट दे सकती हैं?';
+  for (const [t, to] of [[H1, 'ta'], [T1, 'hi'], [H2, 'ta']]) await api('/translate', { token: amitT, method: 'POST', body: { texts: [t], to } }).catch(() => {});
+  const A = await phone(browser, 'amit', amitT), L = await phone(browser, 'lakshmi', lakT);
+  const a = A.page, l = L.page;
+  const sendBtn = (pg) => pg.locator('textarea').last().locator('xpath=ancestor::*[.//button][1]').locator('button').last();
+  await Promise.all([a.goto('/'), l.goto('/')]); await sleep(4000);
+  mark('s07', 'start'); await sleep(1200);
+  await typeIn(a, a.locator('input').first(), '₹120 से कम में 1000 कॉटन टी-शर्ट, कोलकाता', 55);
+  await a.keyboard.press('Enter'); await sleep(2500);
+  const quick = a.getByRole('button', { name: /^2 हफ्ते$|^2 weeks$/ }).last();
+  await quick.waitFor({ timeout: 45000 }).catch(() => {}); if (await quick.count()) { await sleep(1500); await tap(quick, 500); }
+  const all = a.getByRole('button', { name: /सभी|See all/ }).last();
+  await all.waitFor({ timeout: 90000 }).catch(() => shot(a, 'fail-results')); await sleep(1200); await scrollEnd(a); await sleep(3000);
+  await tap(all, 2500); await smooth(a, 500, 1500); await sleep(2200); await smooth(a, 0, 800);
+  mark('s07', 'end');
+  mark('s08', 'start');
+  const card = a.locator('article').filter({ hasText: 'Lakshmi Garments' }).first();
+  await card.scrollIntoViewIfNeeded(); await sleep(800);
+  await tap(card.getByRole('button', { name: /^(चैट|Chat)$/ }), 300); await a.waitForURL(/\/chat\/deal_/, { timeout: 30000 }); await sleep(2500);
+  const convId = a.url().split('/chat/')[1];
+  await l.goto('/chat/' + convId); await sleep(3000);
+  await typeIn(a, a.locator('textarea').last(), H1, 28); await tap(sendBtn(a), 300);
+  await sleep(5500); await scrollEnd(l); await sleep(1500);
+  await typeIn(l, l.locator('textarea').last(), T1, 40); await tap(sendBtn(l), 300);
+  await sleep(5500); await scrollEnd(a); await sleep(2000);
+  mark('s08', 'end');
+  mark('s09', 'start');
+  await tap(a.getByText('सैंपल मांगें').last(), 1200).catch(() => shot(a, 'fail-sample'));
+  await tap(a.getByRole('button', { name: 'S', exact: true }).last(), 600);
+  await tap(a.getByRole('button', { name: /अनुरोध भेजें/ }).last(), 3500);
+  await scrollEnd(l); await sleep(2500);
+  mark('s09', 'sampled');
+  await typeIn(a, a.locator('textarea').last(), H2, 26); await tap(sendBtn(a), 300);
+  const tipBtn = a.getByRole('button', { name: /सप्लायर को ऑफ़र भेजें/ }).last();
+  await tipBtn.waitFor({ timeout: 40000 }).catch(() => shot(a, 'fail-tip'));
+  mark('s09', 'tip'); await sleep(4000); await tap(tipBtn, 3000);
+  await scrollEnd(l); await sleep(2000);
+  const detail = await api(`/conversations/${convId}`, { token: lakT });
+  const offer = (detail.offers || []).find((o) => o.status === 'pending');
+  if (offer) await api(`/offers/${offer.id}/respond`, { token: lakT, method: 'POST', body: { action: 'counter', unitPrice: 94 } });
+  await a.getByText('काउंटर ऑफ़र आया है').first().waitFor({ timeout: 20000 }).catch(() => {}); await sleep(1500);
+  await a.getByText('काउंटर ऑफ़र आया है').first().scrollIntoViewIfNeeded().catch(() => {}); await sleep(2500);
+  await tap(a.getByRole('button', { name: /^स्वीकार$/ }).last(), 1300); await tap(a.getByRole('button', { name: /हाँ, स्वीकार/ }), 3500);
+  await scrollEnd(a); await scrollEnd(l); await sleep(4500);
+  mark('s09', 'end');
+  await A.ctx.close(); await L.ctx.close();
+  await api('/me', { token: amitT, method: 'PATCH', body: { language: 'en' } });
+}
+if (ONLY === 'ratings') {
+  await api('/me', { token: amitT, method: 'PATCH', body: { language: 'en' } });
+  const A = await phone(browser, 'store', amitT), B = await phone(browser, 'profile', amitT);
+  const a = A.page, b = B.page;
+  await Promise.all([a.goto('/store/b_lakshmi'), b.goto('/me')]); await sleep(4500);
+  mark('s09b', 'start'); await sleep(1500);
+  await a.getByText('Why this score?').first().click({ timeout: 5000 }).catch(() => {}); await sleep(3500);
+  await sleep(4500);
+  mark('s09b', 'end');
+  await A.ctx.close(); await B.ctx.close();
+}
+
 if (ONLY === 'goods') {
   const mT = await login('9000001005'), pT = await login('9000001006');
   await api('/me', { token: mT, method: 'PATCH', body: { language: 'en' } });
@@ -117,12 +181,15 @@ if (ONLY === 'goods') {
   await sleep(2500);
   const fig = p.locator('input').first(); await fig.click(); await fig.fill(''); await sleep(300); for (const ch of '198') { await p.keyboard.insertText(ch); await sleep(160); }
   await sleep(1200); await tap(p.getByRole('button', { name: /^Confirm/ }).last(), 3500);
-  await m.goto('/goods?tab=out'); await sleep(4500);
+  if (mv) await m.goto('/goods/movement/' + mv); else await m.goto('/goods?tab=out');
+  await sleep(5000);
   mark('s11', 'end');
   // s12 · flow view
   mark('s12', 'start');
-  await m.goto('/goods/run/style/' + CODE); await sleep(4500);
-  await smooth(m, 650, 2200); await sleep(2500); await smooth(m, 1500, 2200); await sleep(2000);
+  await m.goto('/goods/run/style/' + CODE); await sleep(4000);
+  await smooth(m, 330, 1400); await sleep(2200); await smooth(m, 0, 700);
+  await tap(m.getByRole('tab', { name: 'Stages' }), 2600); await smooth(m, 420, 1400); await sleep(1800); await smooth(m, 0, 600);
+  await tap(m.getByRole('tab', { name: 'Buyers' }), 3000);
   mark('s12', 'end');
   // s13 · private Claire in Tamil
   await api('/me', { token: mT, method: 'PATCH', body: { language: 'ta' } });

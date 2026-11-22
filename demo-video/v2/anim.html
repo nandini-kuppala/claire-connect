@@ -173,7 +173,7 @@ S.s03.fx = (t) => {
 
 // 4 · WhatsApp hustle
 S.s04 = () => {
-  const chats = [['Delhi', 'भाई, rate kya hai?'], ['Kolkata', 'দাম কত?'], ['Mumbai', 'Price for 500?'], ['Jaipur', 'MOQ?'], ['Surat', 'Photos again pls'], ['Lucknow', 'कब तक भेजोगे?'], ['Patna', 'Sizes?'], ['Pune', 'Any discount?'], ['Kochi', 'GST bill?'], ['Guwahati', 'Call me']];
+  const chats = [['Delhi', 'भाई, rate kya hai?'], ['Kolkata', 'দাম কত?'], ['Mumbai', 'Price for 500 pieces?'], ['Jaipur', 'MOQ?'], ['Surat', 'Can you send photos?'], ['Lucknow', 'कब तक भेजोगे?'], ['Patna', 'Sizes?'], ['Pune', 'Any discount?'], ['Kochi', 'GST bill?'], ['Guwahati', 'Call me']];
   const pos = (i) => { const a = -Math.PI * .92 + (i / 9) * Math.PI * 1.84; return [960 + Math.cos(a) * 640 - 150, 600 + Math.sin(a) * 330 - 40]; };
   return `
   <div class="abs" style="left:110px;top:90px"><div class="kicker red" data-a=".1">The problem · 3</div>
@@ -186,19 +186,35 @@ S.s04 = () => {
   ${chats.map(([city, msg], i) => { const [x, y] = pos(i); return `<div class="bubble" style="left:${x}px;top:${y}px;width:300px" data-a="${1.3 + i * .32}" data-fx="pop"><div style="display:flex;align-items:center;gap:10px"><span style="color:#1F8C73">${ic('photo', 26)}</span><span style="font-size:18px;color:#667085">${city}</span><span style="margin-left:auto;color:#B9502F" data-a="${5.2 + (i % 4) * .25}" data-fx="pop">${ic('call', 24, '#B9502F')}</span></div><div style="margin-top:6px">${msg}</div></div>`; }).join('')}`;
 };
 
-// 5 · Bridge
+// 5 · Bridge: three big tiles turn into circles, get absorbed into the centre, and CLAIRE Connect pops up
 S.s05 = () => `
-  <div class="abs" style="left:0;right:0;top:150px;text-align:center"><div class="h" style="font-size:66px" data-a=".2">What if we could bridge that gap?</div></div>
-  ${[['store', 'Trade fairs', 470], ['box', 'Unsold stock', 860], ['chat', 'WhatsApp selling', 1250]].map(([i, l, x], n) => `<div class="abs" id="g${n}" style="left:${x}px;top:330px;width:200px;text-align:center"><div style="width:130px;height:130px;margin:0 auto;border-radius:36px;background:#F7E4DB;color:#B9502F;display:flex;align-items:center;justify-content:center">${ic(i, 60)}</div><div style="font-weight:700;font-size:24px;margin-top:12px">${l}</div></div>`).join('')}
-  <div class="abs" id="hub" style="left:0;right:0;top:540px;display:flex;flex-direction:column;align-items:center">
-    ${LOGO(170)}
-    <div class="h" style="font-size:92px;margin-top:16px;line-height:1">CLAIRE <span style="color:#3DB394">Connect</span></div>
-    <div style="font-size:30px;color:#3A465C;margin-top:16px">One chat app for the whole trade</div>
+  <div class="abs" style="left:0;right:0;top:120px;text-align:center"><div class="h" style="font-size:62px;line-height:1.1" data-a=".2">What if we could bridge the gap<br>between <span style="color:#1F8C73">buyers</span> and <span style="color:#1F8C73">sellers</span>?</div></div>
+  ${[['store', 'Trade fairs', 360], ['box', 'Unsold stock', 860], ['chat', 'WhatsApp selling', 1360]].map(([i, l, x], n) => `<div class="abs" id="g${n}" style="left:${x - 40}px;top:400px;width:280px;text-align:center">
+      <div class="gt" style="width:200px;height:200px;margin:0 auto;border-radius:52px;background:#F7E4DB;color:#B9502F;display:flex;align-items:center;justify-content:center">${ic(i, 96)}</div>
+      <div class="gl" style="font-weight:800;font-size:34px;margin-top:20px">${l}</div></div>`).join('')}
+  <div class="abs" id="ring" style="left:860px;top:480px;width:200px;height:200px;border-radius:50%;border:6px solid #3DB394;opacity:0"></div>
+  <div class="abs" id="hub" style="left:0;right:0;top:360px;display:flex;flex-direction:column;align-items:center">
+    ${LOGO(180)}
+    <div class="h" style="font-size:96px;margin-top:16px;line-height:1">CLAIRE <span style="color:#3DB394">Connect</span></div>
+    <div style="font-size:32px;color:#3A465C;margin-top:18px">One chat app for the whole trade</div>
     <div class="kicker" style="margin-top:24px">Built on the Nexconn Chat SDK</div>
   </div>`;
 S.s05.fx = (t) => {
-  for (let n = 0; n < 3; n++) { const g = document.getElementById('g' + n); const k = P(t, .3 + n * .2, .5), m = easeIO(cl((t - 2.4) / 1)); g.style.opacity = k * (1 - m); const x = [470, 860, 1250][n]; g.style.transform = `translate(${(860 - x) * m}px, ${260 * m}px) scale(${1 - .6 * m})`; }
-  const h = document.getElementById('hub'); const k = P(t, 3.1, .8); h.style.opacity = k; h.style.transform = `scale(${.85 + .15 * k})`;
+  const X = [360, 860, 1360];
+  for (let n = 0; n < 3; n++) {
+    const g = document.getElementById('g' + n), tile = g.querySelector('.gt'), lab = g.querySelector('.gl');
+    const k = P(t, .4 + n * .25, .6);                       // pop in
+    const r = easeIO(cl((t - 2.3) / .6));                     // become a circle
+    const m = easeIO(cl((t - 2.9 - n * .08) / .75));          // fly into the centre and shrink
+    tile.style.borderRadius = `${52 + r * 48}px`; tile.style.background = r > .5 ? '#E6F6F1' : '#F7E4DB'; tile.style.color = r > .5 ? '#1F8C73' : '#B9502F';
+    lab.style.opacity = String(1 - r);
+    g.style.opacity = String(k * (1 - cl((m - .85) / .15)));
+    g.style.transform = `translate(${(860 - X[n]) * m}px, ${120 * m}px) scale(${(.7 + .3 * k) * (1 - .8 * m)}) rotate(${m * 120 * (n - 1)}deg)`;
+  }
+  const ring = document.getElementById('ring'); const rk = cl((t - 3.5) / .7);
+  ring.style.opacity = String(rk > 0 && rk < 1 ? 1 - rk : 0); ring.style.transform = `scale(${.4 + rk * 2.2})`;
+  const h = document.getElementById('hub'); const k = P(t, 3.6, .7);
+  h.style.opacity = k; h.style.transform = `scale(${.7 + .3 * k + Math.sin(k * Math.PI) * .05})`;
 };
 
 // 6 · How it works in three steps

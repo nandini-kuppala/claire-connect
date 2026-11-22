@@ -1082,6 +1082,18 @@ export async function handleInbound(conversationId: string, senderUserId: string
         : { text: await buyerOfferHint(conv, side, lang, price), action: { label: label('offer_label'), chipId: `offer:${price}${q}` } };
       await safe('price hint', chat.group(conv.channel_id, BOT.claire, CC_HINT, hint, { onlyTo: [sender.id] }));
     }
+  } else if (side === 'buyer' && DISCOUNT_ASK.test(text)) {
+    // 2b. The buyer asks for a discount or the best price without naming one → the same private tip, with an
+    // opening offer about 8 % under the listed price (inside the usual 3–6 % settlement, the seller can counter up).
+    const listed = await listedPrice(conv);
+    if (listed) {
+      const anchor = Math.floor(listed * 0.92);
+      const qty = detectQty(text);
+      const lang = sender.language || 'en';
+      const q = qty ? `:${qty}` : '';
+      const hint: HintPayload = { text: await buyerOfferHint(conv, side, lang, anchor), action: { label: tr(lang, 'offer_label', { price: inr(anchor) }) + (qty ? ` · ${num(qty)} ${unitOf(lang, 'piece')}` : ''), chipId: `offer:${anchor}${q}` } };
+      await safe('discount hint', chat.group(conv.channel_id, BOT.claire, CC_HINT, hint, { onlyTo: [sender.id] }));
+    }
   }
 
   // 3. Seller in Auto mode, no human on the chat → Claire answers after a short wait.
@@ -1274,6 +1286,23 @@ export async function dealChip(user: UserRow, convId: string, chipId: string) {
 }
 
 /** Buyer-side tip with market context: the seller's listed price and the usual settling range (never the floor price). */
+/** "What is your best price / max discount?" in English, Hindi or Tamil (no number needed). */
+const DISCOUNT_ASK = /discount|best price|lowest price|best rate|छूट|डिस्काउंट|सबसे कम|कम से कम|बेस्ट रेट|தள்ளுபடி|குறைந்த விலை|டிஸ்கவுண்ட்/i;
+
+/** The seller's listed price for this deal (lowest active listing in the requirement's category). */
+async function listedPrice(conv: any): Promise<number | null> {
+  if (!conv.seller_business_id) return null;
+  try {
+    const req = conv.requirement_id ? await byId('requirements', conv.requirement_id) : null;
+    const filter: Record<string, unknown> = { business_id: conv.seller_business_id, active: 1 };
+    if (req?.category) filter.category = req.category;
+    const listing = await findOne('listings', filter, { sort: { price: 1 } });
+    return Number(listing?.price) || null;
+  } catch {
+    return null;
+  }
+}
+
 async function buyerOfferHint(conv: any, side: string, lang: string, price: number): Promise<string> {
   const plain = tr(lang, 'offer_hint', { price: inr(price) });
   if (side !== 'buyer' || !conv.seller_business_id) return plain;
