@@ -45,7 +45,13 @@
     4. `stages2.mjs` draws the stage backgrounds;
     5. `compose2.py` composes the final video.
   - **Third-party photos** in `v2/assets/` are not committed (gitignored). Put them back to re-render scenes 1 and 2.
-- [ ] 9. Owner decisions:
+- [x] 9. Goods live in production (22 Nov, approved by the owner):
+  - **Code and switch:** `main` deployed with `SC_ENABLED=1`, set in `render.yaml` and applied by Render's Blueprint sync.
+  - **Seeding:** Scenarios A and B were seeded through the live API (42 checks pass, including isolation), plus one in-progress style for Murali (flow script, all checks pass).
+  - **Database fields:** only `flags.sc` / `is_seed` / `sc_demo` were set, on the 15 demo phones.
+  - **Ledger:** production ledger check gives 66 events, 0 problems.
+  - **Demo logins added:** Murali Garments 9000001005, Priya Stitching 9000001006, Nila Knitwear 9000002001.
+- [ ] 10. Previously listed owner decisions (done):
   - merge `supply-chain` → `main` and deploy;
   - set `SC_ENABLED=1` and flag the demo businesses in production so Goods is live for the judges.
 
