@@ -1,7 +1,7 @@
 // Deals: deal chats, offers & counters, orders and their lifecycle, ratings, samples, job-work offers
 // (spec §J2.2, §J3, §J4, §J5, §J7). MongoDB is the source of truth; chat posts are best-effort.
 import { col, find, findOne, byId, insert, update, claim, bump } from './db/index.js';
-import { chat } from './chat.js';
+import { chat, archiveGroupMessage } from './chat.js';
 import { BOT, features } from './config.js';
 import { getBiz, publicBiz, usersOf, type UserRow } from './biz.js';
 import { trustOf, invalidateTrust } from './trust.js';
@@ -378,7 +378,8 @@ async function bizNames(ids: string[]) {
   return new Map(rows.map((b) => [b._id as string, b as any]));
 }
 
-async function postOrderCard(order: OrderDoc) {
+/** Re-posts the order card; chat shows only the newest card per order, so this replaces the old one on screen. */
+export async function postOrderCard(order: OrderDoc) {
   if (!order.conversation_id) return;
   const conv = await byId<ConversationDoc>('conversations', order.conversation_id);
   if (!conv) return;
@@ -1028,6 +1029,11 @@ export function detectQty(text: string): number | null {
 export async function handleInbound(conversationId: string, senderUserId: string, input: { text: string; lang?: string; messageId?: string }) {
   const text = (input.text ?? '').trim();
   if (!text) return { ok: true };
+  // Keep a server copy for agents who join later (B10). Same id as the webhook's, so it is stored once.
+  if (input.messageId) {
+    const c = await byId<ConversationDoc>('conversations', conversationId);
+    if (c && (c.user_ids ?? []).includes(senderUserId)) void archiveGroupMessage({ id: input.messageId, channelId: c.channel_id, senderId: senderUserId, type: 'RC:TxtMsg', content: { content: text }, directed: null, sentAt: now() });
+  }
   // The production webhook may deliver the same message: whoever claims it first handles it.
   if (input.messageId && !(await claim(`msg:${input.messageId}`))) return { ok: true, deduped: true };
   void bump('messages');

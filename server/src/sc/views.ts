@@ -322,7 +322,10 @@ router.get(
           { _id: { $ne: j._id }, 'owner_party.id': req.ctx.businessId, 'performer_party.k': j.performer_party.k, 'performer_party.id': j.performer_party.id, process_key: j.process_key, 'outputs.0': { $exists: true } } as any,
           { sort: { created_at: -1 }, projection: { outputs: 1 } },
         );
-    res.json({ job: summary, performerName: names.get(key(j.performer_party))?.name ?? '—', process: proc?.labels ?? null, lastOutputSpecId: lastOut?.spec_id ?? prev?.outputs?.at(-1)?.spec_id ?? null, inputSpecId: j.inputs[0]?.spec_id ?? null, outputs: j.outputs });
+    // W: whether Got back may take this receipt's own rate (owner, billed per piece, not at an order's price).
+    const agreed: any = req.ctx.role === 'owner' && !j.order_id ? await col('sc_prices').findOne({ 'record.kind': 'job', 'record.id': j._id } as any, { sort: { created_at: -1 }, projection: { basis: 1 } }) : null;
+    const rateApplies = req.ctx.role === 'owner' && !j.order_id && (!agreed || ['per_output_piece', 'per_good_output_piece'].includes(agreed.basis));
+    res.json({ job: summary, rate_applies: rateApplies, performerName: names.get(key(j.performer_party))?.name ?? '—', process: proc?.labels ?? null, lastOutputSpecId: lastOut?.spec_id ?? prev?.outputs?.at(-1)?.spec_id ?? null, inputSpecId: j.inputs[0]?.spec_id ?? null, outputs: j.outputs });
   }),
 );
 

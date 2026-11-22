@@ -1,5 +1,6 @@
 // Voice onboarding: at most four spoken questions build the business profile, then one tap confirms it.
 import { Router } from 'express';
+import { z } from 'zod';
 import { col, findOne, insert, update } from '../db/index.js';
 import { emptyProfile, extractProfile, type ProfileDraft } from '../ai.js';
 import { transcribe, speak } from '../voice.js';
@@ -10,6 +11,7 @@ import { invalidateTrust } from '../trust.js';
 import { h, HttpError, id, jsonField, now, requireAuth, slugify, upload, type AuthedRequest } from '../util.js';
 import { publicUser } from './auth.js';
 import { catById, LANGS, PALETTE } from '../../../shared/taxonomy.js';
+import { WORK_KEYS } from '../sc/orders.js';
 
 const router = Router();
 
@@ -147,6 +149,23 @@ async function uniqueSlug(name: string, ownBusinessId?: string | null) {
   return `${base}-${id('', 5).toLowerCase()}`;
 }
 
+// S18 "What work does your unit do?": the same checks and stored shape as POST /api/sc/profile/work (businesses.sc_work).
+const WorkBody = z.object({
+  processes: z.array(z.enum(WORK_KEYS)).max(WORK_KEYS.length),
+  capacity: z.string().trim().max(500).transform((v) => v.slice(0, 60)).optional(),
+  turnaround_days: z.number().int().min(0).max(999).transform((v) => Math.min(90, v)).optional(),
+  sends_work: z.boolean().optional(),
+});
+/** Optional and skippable: no answer stores nothing, so the Goods home card asks later. Bad input is a 400. */
+function workFrom(raw: unknown) {
+  if (raw == null) return null;
+  const r = WorkBody.safeParse(raw);
+  if (!r.success) throw new HttpError(400, 'Please check the work you picked and try again.');
+  const b = r.data;
+  if (!b.processes.length && b.sends_work == null) return null;
+  return { processes: [...new Set(b.processes)], capacity: b.capacity || null, turnaround_days: b.turnaround_days ?? null, sends_work: b.sends_work ?? null, skipped: false, at: Date.now() };
+}
+
 const ACCENTS = PALETTE.filter((c) => !['#E5E7EB', '#F5F5F4'].includes(c));
 
 router.post(
@@ -158,6 +177,7 @@ router.post(
     const language = isLang(req.body?.language) ? req.body.language : user.language;
     const ownerName = draft.owner_name || user.name || 'Friend';
     const bizName = draft.business_name || `${ownerName.split(' ')[0]}'s business`;
+    const work = workFrom(req.body?.work);
     const roleLabel = draft.role_label || (draft.sells.some((c) => c.startsWith('service.')) ? 'Job work unit' : draft.sells.length ? 'Seller' : 'Buyer');
 
     const fields = {
@@ -165,6 +185,7 @@ router.post(
       sells: draft.sells, buys: draft.buys, capacity_note: draft.capacity_note, gstin: draft.gstin,
       about: [roleLabel, draft.capacity_note, draft.area && draft.city ? `${draft.area}, ${draft.city}` : draft.city].filter(Boolean).join(' · '),
       is_manufacturer: draft.is_manufacturer ? 1 : 0, updated_at: now(),
+      ...(work ? { sc_work: work } : {}),
     };
 
     let businessId = user.business_id;

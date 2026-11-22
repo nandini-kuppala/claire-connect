@@ -825,8 +825,82 @@ The 30 workers run over 20 users, so 10 owners are on two devices at once. Local
 - **Chat delivery through Nexconn stayed fast** (about 0.3 s) throughout.
 - **Harness limit:** 4 of 30 workers crashed inside the Nexconn Web SDK's protobuf decoder under Node ("pb decode error … Illegal buffer") on a downstream batch. Forcing `binaryType = 'arraybuffer'` didn't help. This is the browser SDK running in Node, not the app; their HTTP and chat stats are missing from the totals.
 
+### Follow-ups: the open items built and verified (2026-11-22)
+An earlier session built the remaining HANDOVER §7 items but left them uncommitted and untested. This session ran everything, had an independent reviewer audit the diff, fixed what it and the browser pass found, and committed.
+
+- **Built:**
+  - **Flow view (S9):** `/goods/flow` and `/goods/run/style|order/:id` (owner only). It shows:
+    - where every piece is now;
+    - buyers;
+    - what is still to come back;
+    - open differences;
+    - each stage, with the conservation line ("sent = back + rejects + still there + loss").
+  - **Closed days (Q):** weekly off days and holidays, applied to every `/api/sc` request and to Claire turns.
+  - **Due reminders and Share bill:**
+    - credit days per party;
+    - hourly due reminders, at most one a day per party, seen by the owner only;
+    - Share bill on WhatsApp, plus a print view.
+  - **Record payment on orders:** replaces the advance/balance buttons for new orders when both sides use Goods.
+  - **Receipt rates:** a per-receipt rate in Got back.
+  - **Onboarding:** a "What work do you do?" step.
+  - **Search:** ranking by declared work and Goods history.
+  - **Trade Desk:**
+    - B10 earlier-messages archive;
+    - the order card re-posted after a ticket resolves;
+    - localized type labels.
+  - **Offline:** a service worker for offline cold start.
+  - **Demo:** a demo reset CLI.
+- **Independent review:** 7 findings, all verified and fixed.
+  - **Closed days didn't reach Claire:** turns come in outside `/api/sc`. They now run inside `withCalendar`.
+  - **A receipt rate could block the whole receipt:** this happened on order-linked or weight-billed jobs, and broke offline replays. Now:
+    - the server drops a rate that doesn't apply (`rate_ignored`);
+    - the form shows the field only when `rate_applies`.
+  - **The paid-order sweep could stall:** after 50 partly-paid orders it stopped reaching new ones. It now picks only orders whose settlements cover the total. The lock is a timestamp that expires after 5 minutes.
+  - **Onboarding could return 400:** a long voice-captured capacity or more than 90 days made it fail. Now:
+    - the client and server shorten the text and clamp the days;
+    - `service.checking` maps to `checking_packing`.
+  - **58 `goods_money3` strings were missing in the 7 overlay languages:** now translated, with placeholders checked.
+  - **Database-name guards were substring matches:** now anchored (`<name>_dev` / `<name>_test_<x>`). This also stops shell injection through `MONGODB_DB` in the scenario script.
+  - **Two small items:**
+    - a failed reminder send now releases the day's run, so the next hour retries;
+    - Flow no longer counts same-unit by-products as both waste and loss.
+- **Found in the browser pass:**
+  - **"Where everything is now" was 2 short:** it summed to 498 of 500, leaving out pieces sent to a buyer that never arrived (an open difference). A new `not_received` row brings it to 500.
+  - **Wrong sizes in "Still to come back":** it showed the sizes *sent* next to the count still at the unit. It now names only the sizes.
+  - **Plural:** "1 differences" became "Differences: 1".
+  - **The flow smoke's own expectations were wrong:**
+    - Kolkata received 98 S + 20 M = 118, not 98.
+    - A buyer opening the style sees only its own 118 pcs. That is its own data, checked: no Murali jobs, buyers or material.
+- **Checks:**
+  - lint and 24/24 unit tests;
+  - all 15 smokes;
+  - Claire smoke (including the injection and isolation checks);
+  - scenarios A and B;
+  - ledger 0 problems;
+  - build, budget 41.6 KB, i18n 100 %.
+  - Browser:
+    - Flow at 375 px and 1280 px, in English and Tamil, with no overflow.
+    - The in-app pane can't register a service worker, so that was checked in headless Chrome (`scripts/sc-sw-check.mjs`): it registers, precaches 37 shell files with no `/api` responses, and the offline cold start renders.
+- **Device pass** (`scripts/sc-device-pass.mjs`):
+  - **Setup:** production build, 4× CPU, slow 4G (150 ms, 1.6 Mbps), 360×740.
+  - **Results** (screen ready with data; service worker warm, so these are return visits):
+
+    | Screen | Ready |
+    |---|---|
+    | Goods home | 1.4–1.8 s |
+    | Flow index | 0.9 s |
+    | A style's flow | 1.2–1.3 s |
+    | Reports | 1.3 s |
+    | Send for work | 0.4 s |
+
+  - Remote-database round trips dominate.
+- **Left:**
+  - installing the nightly reset schedule (owner's machine);
+  - native review of the new overlay strings;
+  - closed days across two businesses can differ by a day (each side uses its own calendar).
+
 ## Open questions
 - T8: a separate free Atlas cluster for integration tests needs to be created by the user (not blocking slice 0's pure tests).
 
 ## Next
-All slices and Phase 7 are done. Remaining, with the owner: native review of strings, the Anthropic key for the Haiku tier, the Flow view, the T8 test cluster, and the decision to merge or enable the flag for real users.
+All slices, Phase 7 and the follow-ups (Flow view and the rest of HANDOVER §7) are done. Remaining, with the owner: native review of strings, the Anthropic key for the Haiku tier, the T8 test cluster, installing the nightly demo reset schedule, and the decision to merge or enable the flag for real users.

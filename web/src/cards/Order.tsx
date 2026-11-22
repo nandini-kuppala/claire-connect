@@ -1,7 +1,9 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSession } from '../store/session';
 import { OrderGoodsS } from '../screens/goods/OrderGoods.strings';
+import { Money3S, MoneyS, inr as inrPaise } from '../screens/goods/Money.strings';
+import { clientId } from '../screens/goods/format';
 import clsx from 'clsx';
 import {
   AlertTriangle,
@@ -29,6 +31,9 @@ import { dealT } from '../chat/deal.strings';
 type OrderPayload = CardOf<'order'>;
 type EventType = 'advance_paid' | 'payment_confirmed' | 'in_production' | 'dispatched' | 'delivered' | 'balance_paid' | 'problem';
 type Form = 'pay' | 'dispatch' | 'problem' | null;
+/** D1: when both businesses use Goods, a new order's money is Record payment (settlements), not the advance/balance buttons. */
+interface OrderMoney { mode: 'settlements' | 'legacy' | 'off'; side: 'buyer' | 'seller'; other: string; total_paise: number; paid_paise: number; due_paise: number }
+type PayMode = 'upi' | 'cash' | 'neft' | 'cheque';
 
 const STEPS = ['confirmed', 'advance_paid', 'in_production', 'dispatched', 'delivered', 'balance_paid'] as const;
 const DAY = 86_400_000;
@@ -41,8 +46,10 @@ function stepIndex(status: string): number {
 }
 
 interface Action {
-  type: EventType;
-  label: StrKey;
+  type: EventType | 'record';
+  label: StrKey | null;
+  /** Text from another table (Record payment comes from the Goods money strings). */
+  text?: string;
   icon: LucideIcon;
   variant: ButtonVariant;
   form: Form;
@@ -88,6 +95,19 @@ export function OrderCard({ payload, ctx }: CardProps<'order'>) {
   const [form, setForm] = useState<{ kind: Exclude<Form, null>; action: Action } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showSteps, setShowSteps] = useState(false);
+  const ms = MoneyS.use();
+  const m3 = Money3S.use();
+  const [money, setMoney] = useState<OrderMoney | null>(null);
+  const [recording, setRecording] = useState<string | null>(null); // the client id of an open Record payment sheet
+  const [paidNote, setPaidNote] = useState(false);
+  const cancelledOrder = payload.status === 'cancelled';
+  const loadMoney = useCallback(() => {
+    if (!goodsOn || role === 'viewer' || cancelledOrder) return;
+    ctx.api.get<OrderMoney>(`/api/sc/orders/${encodeURIComponent(payload.orderId)}/money`).then(setMoney).catch(() => setMoney(null));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [goodsOn, role, cancelledOrder, payload.orderId, payload.status]);
+  useEffect(() => { loadMoney(); }, [loadMoney]);
+  const payMode = money?.mode === 'settlements';
 
   const subtotal = payload.total;
   const gst = Math.round((subtotal * payload.gstPct) / 100);
@@ -95,7 +115,7 @@ export function OrderCard({ payload, ctx }: CardProps<'order'>) {
   // Same basis as the server (server/src/money.ts): advance and balance are shares of the GST-inclusive total.
   const advanceAmt = Math.round((grand * payload.advancePct) / 100);
   const advancePaid = advanceIsPaid(payload);
-  const balanceAmt = Math.max(0, grand - (advancePaid ? advanceAmt : 0));
+  const balanceAmt = payMode && money ? Math.round(money.due_paise / 100) : Math.max(0, grand - (advancePaid ? advanceAmt : 0));
   const idx = stepIndex(payload.status);
   const now = Date.now();
 
@@ -115,8 +135,18 @@ export function OrderCard({ payload, ctx }: CardProps<'order'>) {
     }
   };
 
-  const actions = sent ? [] : actionsFor(role, payload);
+  let actions = sent ? [] : actionsFor(role, payload);
+  if (payMode && money && !sent) {
+    // Record payment replaces "advance paid" / "balance paid" (and the seller's confirm: one record serves both sides).
+    actions = actions.filter((a) => a.type !== 'advance_paid' && a.type !== 'balance_paid' && a.type !== 'payment_confirmed');
+    if (money.due_paise > 0 && role !== 'viewer') {
+      const rec: Action = { type: 'record', label: null, text: ms('record_payment'), icon: IndianRupee, variant: 'primary', form: null };
+      const front = role === 'buyer' ? payload.status !== 'dispatched' : actions.length === 0;
+      actions = front ? [rec, ...actions] : [...actions, { ...rec, variant: 'secondary' }];
+    }
+  }
   const [primary, ...rest] = actions;
+  const tap = (a: Action) => (a.type === 'record' ? setRecording(clientId()) : a.form ? setForm({ kind: a.form, action: a }) : void post(a.type).catch(() => undefined));
   const cancelled = payload.status === 'cancelled';
   const finished = payload.status === 'closed' || payload.status === 'balance_paid';
   const dispatchText = payload.dispatch
@@ -180,6 +210,20 @@ export function OrderCard({ payload, ctx }: CardProps<'order'>) {
             <br />+ {t('gst', { pct: payload.gstPct })} {inr(gst)}
           </p>
         </div>
+
+        {payMode && money && (money.paid_paise > 0 || money.due_paise === 0) && (
+          <p className={clsx('mt-2 flex items-center gap-1.5 text-[13px] font-semibold', money.due_paise === 0 ? 'text-success' : 'text-ink-2')}>
+            {money.due_paise === 0 ? <CircleCheck size={15} aria-hidden /> : <Wallet size={15} aria-hidden />}
+            {money.due_paise === 0
+              ? m3('order_fully_paid')
+              : `${m3('order_paid_of', { paid: inrPaise(money.paid_paise), total: inrPaise(money.total_paise) })} · ${m3('order_due', { amt: inrPaise(money.due_paise) })}`}
+          </p>
+        )}
+        {paidNote && (
+          <p className="mt-2 flex items-center gap-1.5 text-[13px] font-medium text-success" role="status">
+            <CircleCheck size={16} aria-hidden /> {ms('saved')}
+          </p>
+        )}
 
         {payload.qtyDone != null && payload.qty > 0 && (
           <div className="mt-3">
@@ -300,9 +344,9 @@ export function OrderCard({ payload, ctx }: CardProps<'order'>) {
               icon={primary.icon}
               loading={busy === primary.type}
               disabled={busy !== null}
-              onClick={() => (primary.form ? setForm({ kind: primary.form, action: primary }) : void post(primary.type).catch(() => undefined))}
+              onClick={() => tap(primary)}
             >
-              {t(primary.label)}
+              {primary.text ?? t(primary.label!)}
             </Button>
             {rest.length > 0 && (
               <div className="mt-1 flex flex-wrap justify-center gap-1">
@@ -315,9 +359,9 @@ export function OrderCard({ payload, ctx }: CardProps<'order'>) {
                     className={a.variant === 'danger' ? 'text-danger hover:bg-danger-tint' : undefined}
                     loading={busy === a.type}
                     disabled={busy !== null}
-                    onClick={() => (a.form ? setForm({ kind: a.form, action: a }) : void post(a.type).catch(() => undefined))}
+                    onClick={() => tap(a)}
                   >
-                    {t(a.label)}
+                    {a.text ?? t(a.label!)}
                   </Button>
                 ))}
               </div>
@@ -345,8 +389,24 @@ export function OrderCard({ payload, ctx }: CardProps<'order'>) {
         amount={form?.action.type === 'advance_paid' ? advanceAmt : balanceAmt}
         busy={busy !== null}
         error={error}
-        onSubmit={(body) => (form ? post(form.action.type, body) : Promise.resolve())}
+        onSubmit={(body) => (form ? post(form.action.type as EventType, body) : Promise.resolve())}
       />
+      {payMode && money && (
+        <RecordPaymentSheet
+          key={recording ?? 'closed'}
+          open={recording !== null}
+          onClose={() => setRecording(null)}
+          title={role === 'buyer' ? m3('order_i_paid', { name: payload.sellerName }) : m3('order_they_paid', { name: payload.buyerName })}
+          due={money.due_paise}
+          onSave={async (b) => {
+            await ctx.api.post('/api/sc/settlements', { party: { k: 'b', id: money.other }, direction: money.side === 'buyer' ? 'paid' : 'received', order_id: payload.orderId, client_id: recording, ...b });
+            setRecording(null);
+            setPaidNote(true);
+            loadMoney();
+            ctx.refresh();
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -408,7 +468,7 @@ function EventSheet({
     onSubmit(body).catch(() => undefined);
   };
 
-  const title = form ? (kind === 'dispatch' ? t('dispatch_title') : kind === 'problem' ? t('problem_title') : t(form.action.label)) : '';
+  const title = form ? (kind === 'dispatch' ? t('dispatch_title') : kind === 'problem' ? t('problem_title') : t(form.action.label!)) : '';
 
   return (
     <Sheet
@@ -427,7 +487,7 @@ function EventSheet({
             disabled={!valid}
             onClick={submit}
           >
-            {form ? t(form.action.label) : ''}
+            {form ? t(form.action.label!) : ''}
           </Button>
         </>
       }
@@ -478,6 +538,60 @@ function EventSheet({
             </Field>
           </>
         )}
+        <button type="submit" hidden aria-hidden tabIndex={-1} />
+      </form>
+    </Sheet>
+  );
+}
+
+/** Record payment on an order (D1): a settlement for both sides' Bills, capped at what is still due. Record only. */
+function RecordPaymentSheet({ open, onClose, title, due, onSave }: { open: boolean; onClose: () => void; title: string; due: number; onSave: (b: { amount_paise: number; mode: PayMode; ref?: string }) => Promise<void> }) {
+  const ms = MoneyS.use();
+  const m3 = Money3S.use();
+  const [amt, setAmt] = useState(due > 0 ? String(due / 100) : '');
+  const [mode, setMode] = useState<PayMode>('upi');
+  const [ref, setRef] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const paise = Math.round(Number(amt) * 100);
+  const save = async () => {
+    if (!(paise > 0) || paise > due || busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await onSave({ amount_paise: paise, mode, ...(ref.trim() ? { ref: ref.trim() } : {}) });
+    } catch (e) {
+      setError(errMsg(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <Sheet
+      open={open}
+      onClose={onClose}
+      title={title}
+      footer={
+        <>
+          <ErrorLine>{error}</ErrorLine>
+          <Button block size="lg" className="mt-1" icon={IndianRupee} loading={busy} disabled={!(paise > 0) || paise > due} onClick={() => void save()}>
+            {ms('record_payment')}
+          </Button>
+        </>
+      }
+    >
+      <form className="space-y-4 pt-1" onSubmit={(e) => { e.preventDefault(); void save(); }}>
+        <div className="rounded-[18px] bg-sunken px-3.5 py-3">
+          <p className="text-[13px] text-meta">{m3('order_due', { amt: inrPaise(due) })}</p>
+        </div>
+        <Field label={ms('amount')}>
+          <input className={clsx(inputCls, 'font-head font-bold tabular-nums')} inputMode="decimal" value={amt} onChange={(e) => setAmt(e.target.value.replace(/[^\d.]/g, ''))} autoFocus />
+        </Field>
+        <ChoiceChips label={ms('mode')} options={(['upi', 'cash', 'neft', 'cheque'] as PayMode[]).map((x) => ({ value: x, label: ms(`m_${x}`) }))} value={mode} onChange={setMode} />
+        <Field label={ms('ref')}>
+          <input className={inputCls} value={ref} maxLength={60} onChange={(e) => setRef(e.target.value)} autoComplete="off" />
+        </Field>
+        <p className="text-[12.5px] text-meta">{m3('order_pay_hint')}</p>
         <button type="submit" hidden aria-hidden tabIndex={-1} />
       </form>
     </Sheet>

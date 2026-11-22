@@ -10,7 +10,7 @@ if (!['A', 'B'].includes(scenario) || !phones.length || phones.some((p) => !/^\d
   console.error('usage: npx tsx src/sc/demo-cli.ts <A|B> <phone> [<phone> …]');
   process.exit(2);
 }
-if (!/_dev|_test_/.test(dbName)) {
+if (!/^[a-z0-9_]+_(dev|test_[a-z0-9_]+)$/i.test(dbName)) {
   console.error(`Refusing: MONGODB_DB is "${dbName}". Use a dev/test database (e.g. nexconn_sc_dev).`);
   process.exit(2);
 }

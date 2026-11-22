@@ -5,12 +5,13 @@ import clsx from 'clsx';
 import { api, errorText, getToken } from '../../lib/api';
 import { ArrowLeft, ChevronRight, Upload, AlertTriangle } from '../../icons';
 import { useSession } from '../../store/session';
-import { MoneyS, inr } from './Money.strings';
+import { Money3S, MoneyS, inr } from './Money.strings';
 import { shortDate } from './format';
 
 export interface Bal { party: { k: 'b' | 'c'; id: string }; name: string; i_owe: number; they_owe: number; paid: number; received: number; setoff: number; balance_i_owe: number; balance_they_owe: number; net: number; oldest_unpaid_days: number | null; unpriced: number }
 interface Perf { party: { k: string; id: string }; name: string; process: string; process_label: string; n: number; enough: boolean; median_days: number | null; promised_days: number | null; excluded_days: number; excluded_why: string[]; loss_pct: number | null; loss_norm_pct: number | null; best_loss_pct: number | null; rejects_pct: number | null; disputes: number }
 interface Gst { job_id: string; name: string; label: string; days: number; due_by: string }
+interface Due { party: { k: 'b' | 'c'; id: string }; name: string; side: 'they_owe' | 'i_owe'; overdue_paise: number; oldest_date: string; days: number; credit_days: number }
 
 /** CSV comes from an authenticated route, so it's fetched and handed to the browser as a file. */
 export async function downloadCsv(name: 'bills' | 'performance') {
@@ -24,6 +25,10 @@ export async function downloadCsv(name: 'bills' | 'performance') {
 
 export default function ReportsScreen() {
   const m = MoneyS.use();
+  const m3 = Money3S.use();
+  const [dues, setDues] = useState<Due[]>([]);
+  const loadDues = () => void api.get<{ rows: Due[] }>('/api/sc/reminders').then((x) => setDues(x.rows)).catch(() => undefined);
+  const snooze = (d: Due) => void api.post(`/api/sc/reminders/${d.party.k}/${d.party.id}/snooze`, { days: 7 }).then(loadDues).catch((e) => setError(errorText(e)));
   const nav = useNavigate();
   const [params, setParams] = useSearchParams();
   const tab = params.get('tab') === 'performance' ? 'performance' : 'bills';
@@ -38,7 +43,7 @@ export default function ReportsScreen() {
     if (tab === 'bills') void api.get<{ parties: Bal[] }>('/api/sc/bills').then((x) => setBills(x.parties)).catch((e) => setError(errorText(e)));
     else void api.get<{ rows: Perf[] }>('/api/sc/reports/performance').then((x) => setPerf(x.rows)).catch((e) => setError(errorText(e)));
   }, [tab]);
-  useEffect(() => { void api.get<{ rows: Gst[] }>('/api/sc/reports/gst').then((x) => setGst(x.rows)).catch(() => undefined); }, []);
+  useEffect(() => { void api.get<{ rows: Gst[] }>('/api/sc/reports/gst').then((x) => setGst(x.rows)).catch(() => undefined); loadDues(); }, []);
 
   const why = (w: string) => (w === 'held_for_dues' ? m('held_for_dues') : m('paused'));
   return (
@@ -72,6 +77,21 @@ export default function ReportsScreen() {
 
         {tab === 'bills' && (
           <>
+            {dues.length > 0 && (
+              <section className="mt-4 rounded-[18px] border border-accent/40 bg-accent-tint px-4 py-3">
+                <h2 className="flex items-center gap-2 text-[15px] font-semibold text-accent-ink"><AlertTriangle size={18} aria-hidden />{m3('due_title')}</h2>
+                <ul className="mt-1 divide-y divide-accent/20">
+                  {dues.slice(0, 12).map((d) => (
+                    <li key={`${d.party.k}:${d.party.id}:${d.side}`} className="flex items-center gap-2 py-1.5">
+                      <button className="min-h-11 min-w-0 flex-1 text-left text-[14px] text-ink underline-offset-2 hover:underline" onClick={() => nav(`/goods/reports/bills/${d.party.k}/${d.party.id}`)}>
+                        {d.side === 'they_owe' ? m3('due_they', { name: d.name, amt: inr(d.overdue_paise), days: d.days, credit: d.credit_days }) : m3('due_me', { name: d.name, amt: inr(d.overdue_paise), days: d.days, credit: d.credit_days })}
+                      </button>
+                      <button className="min-h-11 shrink-0 rounded-full px-2.5 text-[13px] font-semibold text-ink-2 hover:bg-surface" onClick={() => snooze(d)}>{m3('snooze')}</button>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
             <p className="mt-4 text-[13px] text-meta">{m('record_only')}</p>
             {bills && bills.length === 0 && <p className="mt-3 text-[14.5px] text-ink-2">{m('no_bills')}</p>}
             <ul className="mt-2 divide-y divide-line overflow-hidden rounded-[18px] border border-line bg-surface">

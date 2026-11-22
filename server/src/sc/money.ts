@@ -12,7 +12,7 @@ import { todayIST, workingDaysBetween } from '../../../shared/sc/dates.js';
 import { winningAssertion } from '../../../shared/sc/evidence.js';
 import type { PartyRef } from '../../../shared/sc/types.js';
 import { toBase } from '../../../shared/sc/units.js';
-import { orderUnit } from './orders.js';
+import { orderMoney, orderPaidCheck, orderUnit } from './orders.js';
 import { advanceAmount, balanceAmount } from '../money.js';
 
 const router = Router();
@@ -92,6 +92,12 @@ export async function billItems(ctx: Ctx, party?: PartyRef): Promise<BillItem[]>
   ]);
   const procs = new Map((procList as any[]).map((p) => [p.key, p]));
   const agreed = new Map<string, Rate>((priceList as any[]).map((p) => [p.record.id, { basis: p.basis, value_paise: p.value_paise }])); // latest wins
+  // W: a rate set on one Got back overrides the job's rate for the pieces that came with that receipt.
+  const receiptRates = new Map<string, Map<string, number>>();
+  for (const p of (await col('sc_prices').find({ 'record.kind': 'receipt', job_id: { $in: ids } } as any, { projection: { record: 1, job_id: 1, value_paise: 1 } }).sort({ created_at: 1 }).toArray()) as any[]) {
+    if (!receiptRates.has(p.job_id)) receiptRates.set(p.job_id, new Map());
+    receiptRates.get(p.job_id)!.set(p.record.id, p.value_paise);
+  }
   const jobOrders = new Map(((await col('orders').find({ _id: { $in: [...new Set(jobs.map((j) => j.order_id).filter(Boolean))] } } as any, { projection: { unit: 1, unit_price: 1, gst_pct: 1 } }).toArray()) as any[]).map((o) => [o._id, o]));
   const rated = jobs.map((j) => ({ j, rate: isMe(ctx, j.client_party) && isMe(ctx, j.performer_party) ? null : jobRate(j, agreed, cards, jobOrders) }));
   const movIds = [...new Set(rated.filter((x) => x.rate?.basis === 'per_input_mass').flatMap((x) => (x.j.inputs as any[]).map((i) => i.movement_id).filter(Boolean)))];
@@ -104,6 +110,29 @@ export async function billItems(ctx: Ctx, party?: PartyRef): Promise<BillItem[]>
     // Work on input weight is billed once the job is done; piece rates accrue as goods come back.
     if (rate?.basis === 'per_input_mass' && !['completed', 'closed'].includes(j.status)) continue;
     if (!rate && !(j.outputs?.length)) continue;
+    const ov = receiptRates.get(j._id);
+    if (ov?.size && (!rate || rate.basis === 'per_output_piece' || rate.basis === 'per_good_output_piece')) {
+      // Pieces from receipts with their own rate are billed at it; the rest at the job's rate (or counted as unpriced).
+      const grades: string[] = rate?.basis === 'per_good_output_piece' ? procs.get(j.process_key)?.billable_grades ?? ['A'] : ['A', 'B', 'rework', 'reject', 'scrap'];
+      const outs = ((j.outputs ?? []) as any[]).filter((o) => grades.includes(o.grade ?? 'A') && (o.dim ?? 'count') === 'count');
+      const byReceipt = new Map<string, { qty: number; date: string }>();
+      let rest = 0;
+      for (const o of outs) {
+        if (o.movement_id && ov.has(o.movement_id)) {
+          const cur = byReceipt.get(o.movement_id) ?? { qty: 0, date: o.business_date ?? j.business_date };
+          cur.qty += o.qty;
+          byReceipt.set(o.movement_id, cur);
+        } else rest += o.qty;
+      }
+      for (const [mid, x] of byReceipt) {
+        const r = ov.get(mid)!;
+        items.push({ party: other, dir: iAmClient ? 'i_owe' : 'they_owe', date: x.date, label: label(j.process_key), qty: fmt(x.qty, 'count'), rate_paise: r, amount_paise: Math.round(x.qty * r), source: { kind: 'job', id: j._id }, note: 'receipt_rate' });
+      }
+      const date = j.closure?.business_date ?? j.outputs?.at(-1)?.business_date ?? j.business_date;
+      if (rest > 0 || (!rate && !byReceipt.size)) items.push({ party: other, dir: iAmClient ? 'i_owe' : 'they_owe', date, label: label(j.process_key), qty: rest ? fmt(rest, 'count') : null, rate_paise: rate ? Math.round(rate.value_paise) : null, amount_paise: rate ? Math.round(rest * rate.value_paise) : 0, source: { kind: 'job', id: j._id }, ...(rate ? {} : { note: 'no_rate' }) });
+      for (const a of (j.closure?.adjustments ?? []) as any[]) items.push({ party: other, dir: iAmClient ? 'they_owe' : 'i_owe', date: a.date, label: a.label, qty: `${a.qty} ${a.unit}`, rate_paise: a.rate_paise, amount_paise: a.amount_paise, source: { kind: 'job', id: j._id }, note: 'leftover_kept' });
+      continue;
+    }
     const q = rate ? billable(j, rate.basis, movements, procs) : { base: 0, dim: 'count' };
     if (rate && q.base === 0) continue; // nothing billable yet
     const amount = rate ? Math.round(rate.basis === 'lump_sum' ? rate.value_paise : toUnit(q.base, q.dim) * rate.value_paise) : 0;
@@ -206,14 +235,14 @@ export async function billItems(ctx: Ctx, party?: PartyRef): Promise<BillItem[]>
 
 // ── Settlements (the only money record) ─────────────────────────────────────────────────────────
 /** Settlements between me and a party, seen from my side (a payment they recorded to me reads "received"). */
-async function settlementsWith(ctx: Ctx, party?: PartyRef) {
+export async function settlementsWith(ctx: Ctx, party?: PartyRef) {
   const rows = await col('sc_settlements').find({ parties: ctx.businessId, voided_at: null } as any).sort({ business_date: 1 }).limit(2000).toArray();
   return (rows as any[])
     .map((s) => {
       const mine = s.recorder_business_id === ctx.businessId;
       const other = (mine ? s.party : { k: 'b', id: s.recorder_business_id }) as PartyRef;
       const dir = s.direction === 'setoff' ? 'setoff' : mine ? s.direction : s.direction === 'paid' ? 'received' : 'paid';
-      return { id: s._id as string, party: other, dir: dir as 'paid' | 'received' | 'setoff', amount_paise: s.amount_paise as number, mode: s.mode as string, ref: s.ref as string | null, business_date: s.business_date as string, mine };
+      return { id: s._id as string, party: other, dir: dir as 'paid' | 'received' | 'setoff', amount_paise: s.amount_paise as number, mode: s.mode as string, ref: s.ref as string | null, business_date: s.business_date as string, mine, ...(s.order_id ? { order_id: s.order_id as string } : {}) };
     })
     .filter((s) => !party || pk(s.party) === pk(party))
     .concat(await mirroredOrderPayments(ctx, party));
@@ -226,8 +255,10 @@ async function settlementsWith(ctx: Ctx, party?: PartyRef) {
 async function mirroredOrderPayments(ctx: Ctx, party?: PartyRef) {
   if (party && party.k !== 'b') return [];
   const mine = { $or: [{ buyer_business_id: ctx.businessId }, { seller_business_id: ctx.businessId }] };
-  const orders = (await col('orders').find({ ...mine, $and: [{ $or: [{ advance_paid_at: { $ne: null } }, { paid_at: { $ne: null } }] }, ...(party ? [{ $or: [{ buyer_business_id: party.id }, { seller_business_id: party.id }] }] : [])] } as any,
-    { projection: { code: 1, total: 1, gst_pct: 1, advance_pct: 1, advance_paid_at: 1, paid_at: 1, buyer_business_id: 1, seller_business_id: 1 } }).limit(500).toArray()) as any[];
+  const orders = ((await col('orders').find({ ...mine, $and: [{ $or: [{ advance_paid_at: { $ne: null } }, { paid_at: { $ne: null } }] }, ...(party ? [{ $or: [{ buyer_business_id: party.id }, { seller_business_id: party.id }] }] : [])] } as any,
+    { projection: { code: 1, total: 1, gst_pct: 1, advance_pct: 1, advance_paid_at: 1, paid_at: 1, buyer_business_id: 1, seller_business_id: 1, sc_pay: 1 } }).limit(500).toArray()) as any[])
+    // An order paid through Record payment has its money in settlements already; its paid flags came from them.
+    .filter((o) => !o.sc_pay);
   if (!orders.length) return [];
   const ids = orders.map((o) => o._id);
   const linked = new Set<string>([
@@ -289,6 +320,40 @@ export async function balances(ctx: Ctx, only?: PartyRef, pre?: { items: BillIte
   }).sort((a, b) => Math.abs(b.net) - Math.abs(a.net));
 }
 
+/**
+ * What is still unpaid per party and side, oldest first (first in, first out): each bill line with the part of it not
+ * yet covered by payments or set-offs. Due reminders use it with each party's credit days.
+ */
+export function unpaidLines(items: BillItem[], sets: Awaited<ReturnType<typeof settlementsWith>>) {
+  const by = new Map<string, { party: PartyRef; i_owe: BillItem[]; they_owe: BillItem[]; paid: number; received: number; setoff: number }>();
+  const get = (p: PartyRef) => {
+    if (!by.has(pk(p))) by.set(pk(p), { party: p, i_owe: [], they_owe: [], paid: 0, received: 0, setoff: 0 });
+    return by.get(pk(p))!;
+  };
+  for (const it of items) if (it.note !== 'no_rate') get(it.party)[it.dir].push(it);
+  for (const s of sets) {
+    const b = get(s.party);
+    if (s.dir === 'setoff') b.setoff += s.amount_paise;
+    else b[s.dir] += s.amount_paise;
+  }
+  const out: { party: PartyRef; side: 'i_owe' | 'they_owe'; lines: { date: string; remaining: number }[] }[] = [];
+  for (const b of by.values()) {
+    for (const side of ['i_owe', 'they_owe'] as const) {
+      let cover = side === 'i_owe' ? b.paid + b.setoff : b.received + b.setoff;
+      // Returns (negative lines) reduce what is owed overall, so they count as cover.
+      for (const it of b[side]) if (it.amount_paise < 0) cover -= it.amount_paise;
+      const lines: { date: string; remaining: number }[] = [];
+      for (const it of b[side].filter((x) => x.amount_paise > 0).sort((x, y) => x.date.localeCompare(y.date))) {
+        const used = Math.min(cover, it.amount_paise);
+        cover -= used;
+        if (it.amount_paise - used > 0) lines.push({ date: it.date, remaining: it.amount_paise - used });
+      }
+      if (lines.length) out.push({ party: b.party, side, lines });
+    }
+  }
+  return out;
+}
+
 router.get(
   '/sc/bills',
   h(async (req: ScRequest, res) => {
@@ -305,7 +370,10 @@ router.get(
     if (party.k === 'c' && !(await col('sc_contacts').findOne({ _id: party.id, owner_business_id: req.ctx.businessId } as any, { projection: { _id: 1 } }))) throw new HttpError(404, 'Not found');
     const [items, sets] = await Promise.all([billItems(req.ctx, party), settlementsWith(req.ctx, party)]);
     const [bal] = await balances(req.ctx, party, { items, sets });
-    res.json({ balance: bal ?? null, items, settlements: sets });
+    // For Share bill (who I am, their phone) and due reminders (credit days, snooze).
+    const { partyContact, creditDays, reminderState } = await import('./dues.js');
+    const [contact, credit, reminder] = await Promise.all([partyContact(req.ctx, party), creditDays(req.ctx.businessId, [party]), reminderState(req.ctx, party, items, sets)]);
+    res.json({ balance: bal ?? null, items, settlements: sets, me: contact.me, contact: contact.them, credit_days: credit.get(pk(party)) ?? null, reminder });
   }),
 );
 
@@ -324,6 +392,7 @@ router.post(
       note: z.string().trim().max(200).optional(),
       business_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
       client_id: z.string().min(8).max(40),
+      order_id: z.string().max(64).optional(),
     }), req.body);
     if (b.party.k === 'b' && b.party.id === ctx.businessId) throw new HttpError(400, 'Pick the other party.');
     if (b.party.k === 'c' && !(await col('sc_contacts').findOne({ _id: b.party.id, owner_business_id: ctx.businessId } as any))) throw new HttpError(404, 'Not found');
@@ -332,6 +401,17 @@ router.post(
     if (b.party.k === 'b' && !(await tradesWith(ctx.businessId, b.party.id))) throw new HttpError(404, 'Not found');
     const dup = await col('sc_settlements').findOne({ recorder_business_id: ctx.businessId, client_id: b.client_id } as any);
     if (dup) return res.json({ settlement: { id: dup._id }, duplicate: true });
+    // Record payment on an order (D1: replaces the order's advance / balance buttons when both use Goods). The buyer
+    // records "paid", the seller "received"; it can't exceed what is still due on the order (one record serves both).
+    let order: any = null;
+    if (b.order_id) {
+      const om = await orderMoney(ctx, b.order_id);
+      order = om.order;
+      if (om.mode !== 'settlements') throw new HttpError(409, 'Use the order buttons for this order.');
+      if (b.party.k !== 'b' || b.party.id !== om.other) throw new HttpError(400, 'Pick the other party.');
+      if (b.direction !== (om.side === 'buyer' ? 'paid' : 'received')) throw new HttpError(400, 'Please check the details and try again.');
+      if (b.amount_paise > om.due_paise) throw new HttpError(409, om.due_paise > 0 ? `That is more than is due on this order (₹${(om.due_paise / 100).toFixed(2)}).` : 'This order is fully paid.');
+    }
     if (b.direction === 'setoff') {
       const [bal] = await balances(ctx, b.party);
       const max = bal ? Math.min(bal.balance_i_owe, bal.balance_they_owe) : 0;
@@ -341,8 +421,13 @@ router.post(
     await col('sc_settlements').insertOne({
       _id: id, id, recorder_business_id: ctx.businessId, recorded_by: ctx.userId, party: b.party, parties: [ctx.businessId, ...(b.party.k === 'b' ? [b.party.id] : [])],
       direction: b.direction, amount_paise: b.amount_paise, mode: b.direction === 'setoff' ? 'adjustment' : b.mode, ref: b.ref ?? null, note: b.note ?? null,
-      business_date: b.business_date ?? todayIST(), client_id: b.client_id, created_at: Date.now(), voided_at: null,
+      business_date: b.business_date ?? todayIST(), client_id: b.client_id, created_at: Date.now(), voided_at: null, ...(order ? { order_id: order._id } : {}),
     } as any);
+    if (order) {
+      await col('orders').updateOne({ _id: order._id } as any, { $set: { sc_pay: true } });
+      // In the background: the order flow posts its chat card and notices, which can take seconds.
+      void orderPaidCheck(order._id).catch((e) => console.warn('[sc] order paid', (e as Error).message));
+    }
     res.status(201).json({ settlement: { id } });
   }),
 );

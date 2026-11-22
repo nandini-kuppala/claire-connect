@@ -12,6 +12,7 @@ import { approxPending } from '@shared/sc/conservation';
 import { toBase } from '@shared/sc/units';
 import { todayIST } from '@shared/sc/dates';
 import { RecS } from './Record.strings';
+import { Money3S } from './Money.strings';
 import { SpecPicker } from './SpecPicker';
 import { clientId, qty as fmtQty, shortDate } from './format';
 import type { ResolvedSpec } from './types';
@@ -20,13 +21,17 @@ interface JobSummary {
   id: string; process_key: string; status: string; since: string; expected_at: string; dim: 'mass' | 'count' | 'length';
   sent: number; issued: number; issuedBasis: string; outputs: number; pending: number; pendingAsOutput: number | null; lossNormPct: number; inputLabel: string; outputLabel: string | null;
 }
-interface JobResp { job: JobSummary; performerName: string; process: Record<string, string> | null; lastOutputSpecId: string | null; inputSpecId: string | null }
+interface JobResp { job: JobSummary; rate_applies?: boolean; performerName: string; process: Record<string, string> | null; lastOutputSpecId: string | null; inputSpecId: string | null }
 
 const inputCls = 'min-h-12 w-full rounded-[16px] border border-line-strong bg-surface px-3.5 text-[16px] outline-none focus:border-primary';
 const GRADES = ['A', 'B', 'rework', 'reject'] as const;
 
 export default function GotBackForm() {
   const s = RecS.use();
+  const m3 = Money3S.use();
+  const isOwner = useSession((st) => st.user?.role !== 'staff');
+  const [rateApplies, setRateApplies] = useState(false);
+  const [rate, setRate] = useState('');
   const nav = useNavigate();
   const { id } = useParams();
   const lang = useSession((st) => st.user?.language || 'en');
@@ -47,6 +52,7 @@ export default function GotBackForm() {
   useEffect(() => {
     void api.get<JobResp>(`/api/sc/jobs/${id}`).then(async (r) => {
       setData(r);
+      setRateApplies(!!r.rate_applies);
       const specId = r.lastOutputSpecId ?? r.inputSpecId;
       if (specId) {
         const sp = await api.get<{ aliases: unknown[]; recent: { id: string; material_type_id: string; attrs: Record<string, unknown> }[] }>('/api/sc/specs');
@@ -97,6 +103,8 @@ export default function GotBackForm() {
       const r = await postOrQueue<{ movement: { id: string }; undo_until: number }>(`/api/sc/jobs/${job.id}/return`, {
         client_id: cid, business_date: todayIST(), last: last === true,
         lines: [{ spec_id: spec.spec.id, qty: Number(q), unit, grade, rolls: Number(rolls) > 0 ? Number(rolls) : undefined, they_sent: Number(theySent) > 0 ? Number(theySent) : undefined, unprocessed: unprocessed || undefined }],
+        // W: this lot's own rate per piece (owner only); Bills uses it for these pieces instead of the job rate.
+        ...(isOwner && rateApplies && spec.dimension === 'count' && !unprocessed && Number(rate) > 0 ? { rate_paise: Math.round(Number(rate) * 100) } : {}),
       }, `${s('got_back')} · ${spec.spec.label_en}`);
       if ('queued' in r) nav('/goods?queued=1&tab=coming', { replace: true });
       else nav(`/goods?saved=${r.movement.id}&until=${r.undo_until}&tab=coming`, { replace: true });
@@ -175,6 +183,13 @@ export default function GotBackForm() {
                   <input type="checkbox" className="size-5 accent-[var(--color-primary)]" checked={unprocessed} onChange={(e) => setUnprocessed(e.target.checked)} />
                   {s('unprocessed')}
                 </label>
+                {isOwner && rateApplies && spec.dimension === 'count' && !unprocessed && (
+                  <label className="block">
+                    <span className="mb-1.5 block text-[13px] font-semibold text-ink-2">{m3('lot_rate')}</span>
+                    <input className={inputCls + ' w-32 tabular-nums'} inputMode="decimal" value={rate} onChange={(e) => setRate(e.target.value.replace(/[^\d.]/g, ''))} />
+                    <span className="mt-1 block text-[12.5px] text-meta">{m3('lot_rate_hint')}</span>
+                  </label>
+                )}
               </>
             )}
           </section>

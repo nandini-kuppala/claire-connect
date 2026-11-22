@@ -11,6 +11,8 @@ import { BrandMark, ClaireMark } from '../components/Avatar';
 import { Button } from '../components/Button';
 import { catName, errMsg, extFor, patchSession, tx, useMe, useRecorder } from '../desk/kit';
 import { OnboardingStrings } from './Onboarding.strings';
+// The work chips share their labels with the Goods home card (same keys, same translations).
+import { OrderGoodsS } from './goods/OrderGoods.strings';
 
 interface ProfileDraft {
   owner_name: string | null;
@@ -31,7 +33,25 @@ const EMPTY: ProfileDraft = { owner_name: null, business_name: null, role_label:
 const STEPS = ['intro', 'business', 'location', 'gst'] as const;
 const SPEECH_LANG: Record<string, string> = { ta: 'ta-IN', hi: 'hi-IN', en: 'en-IN', te: 'te-IN', kn: 'kn-IN', ml: 'ml-IN', bn: 'bn-IN', mr: 'mr-IN', gu: 'gu-IN', or: 'or-IN' };
 
-type Phase = 'interview' | 'confirm' | 'saving' | 'products';
+type Phase = 'interview' | 'work' | 'confirm' | 'saving' | 'products';
+
+// S18 "What work does your unit do?" — same keys and shape as POST /api/sc/profile/work (businesses.sc_work).
+const WORK_KEYS = ['knitting', 'dyeing', 'printing', 'embroidery', 'cutting', 'stitching', 'checking_packing', 'fabric_shop', 'trims_shop', 'yarn', 'transport', 'selling_garments'] as const;
+type WorkKey = (typeof WORK_KEYS)[number];
+/** Processes done as job work: these also ask capacity and usual turnaround. */
+const JOB_WORK = new Set<WorkKey>(['knitting', 'dyeing', 'printing', 'embroidery', 'cutting', 'stitching', 'checking_packing']);
+interface WorkAnswer { processes: WorkKey[]; capacity: string; days: string; sendsWork: boolean | null }
+/** Pre-select what the interview already understood (e.g. "stitching job work" → Stitching). */
+function workFromDraft(d: ProfileDraft): WorkKey[] {
+  const out = new Set<WorkKey>();
+  for (const c of d.sells) {
+    if (c.startsWith('service.')) { const k = (c === 'service.checking' ? 'checking_packing' : c.slice(8)) as WorkKey; if (WORK_KEYS.includes(k)) out.add(k); }
+    else if (c.startsWith('fabric.')) out.add('fabric_shop');
+    else if (c.startsWith('yarn.')) out.add('yarn');
+    else if (c.startsWith('garment.')) out.add('selling_garments');
+  }
+  return [...out];
+}
 
 export default function Onboarding() {
   const t = useT();
@@ -52,6 +72,13 @@ export default function Onboarding() {
   const [catalogOpen, setCatalogOpen] = useState(false);
   const [published, setPublished] = useState(false);
   const [confirmText, setConfirmText] = useState<string | null>(null);
+  // null until the work step is answered or skipped; skipping saves nothing (the Goods card asks later).
+  const [work, setWork] = useState<WorkAnswer | null>(null);
+  const [workAsked, setWorkAsked] = useState(false);
+  /** The interview is done: the work step comes once, then the confirm step. */
+  function toReview() {
+    setPhase(workAsked ? 'confirm' : 'work');
+  }
 
   const audio = useRef<HTMLAudioElement | null>(null);
   const unlocked = useRef(false);
@@ -113,7 +140,7 @@ export default function Onboarding() {
     if (r.done || !r.next) {
       if (r.next?.text) setConfirmText(r.next.text);
       if (r.next?.ttsUrl && unlocked.current) play(r.next.ttsUrl);
-      setPhase('confirm');
+      toReview();
       return;
     }
     const idx = STEPS.indexOf(r.next.key as (typeof STEPS)[number]);
@@ -245,7 +272,11 @@ export default function Onboarding() {
     setPhase('saving');
     setError(null);
     try {
-      const r = (await api.post('/api/onboarding/complete', { draft, language: lang })) as { business: any; user: any };
+      const days = Number.parseInt(work?.days ?? '', 10);
+      const workBody = work && work.processes.length
+        ? { processes: work.processes, capacity: work.capacity.trim().slice(0, 60) || undefined, turnaround_days: Number.isFinite(days) ? Math.min(90, days) : undefined, sends_work: work.sendsWork ?? undefined }
+        : work && work.sendsWork != null ? { processes: [], sends_work: work.sendsWork } : undefined;
+      const r = (await api.post('/api/onboarding/complete', { draft, language: lang, work: workBody })) as { business: any; user: any };
       // The onboarded user is stored only when leaving onboarding, so an app-level "already onboarded" redirect
       // cannot skip the add-products step.
       pendingUser.current = r.user ?? {};
@@ -261,7 +292,9 @@ export default function Onboarding() {
   const filled = [draft.owner_name, draft.business_name, draft.sells.length || draft.buys.length ? 1 : null, draft.city, draft.gstin].filter(Boolean).length;
 
   const o = OnboardingStrings.use();
-  const stepLabels = [o('s_intro'), o('s_business'), o('s_location'), o('s_gst'), o('s_confirm')];
+  const g = OrderGoodsS.use();
+  const stepLabels = [o('s_intro'), o('s_business'), o('s_location'), o('s_gst'), o('s_work'), o('s_confirm')];
+  const TOTAL = stepLabels.length;
 
   // ── Products step (sellers) ──
   if (phase === 'products') {
@@ -303,11 +336,37 @@ export default function Onboarding() {
     );
   }
 
+  // ── Work step (S18): what the unit does; optional ──
+  if (phase === 'work') {
+    return (
+      <Screen>
+        <TopBar stepIdx={TOTAL - 2} labels={stepLabels} stepText={o('step_of', { n: TOTAL - 1, total: TOTAL })} />
+        <WorkStep
+          initial={work ?? { processes: workFromDraft(draft), capacity: (draft.capacity_note ?? '').slice(0, 60), days: '', sendsWork: null }}
+          title={g('work_q')}
+          hint={g('work_hint')}
+          label={(k) => g(`w_${k}` as 'w_dyeing')}
+          o={o}
+          onDone={(w) => {
+            setWork(w);
+            setWorkAsked(true);
+            setPhase('confirm');
+          }}
+          onSkip={() => {
+            setWork(null);
+            setWorkAsked(true);
+            setPhase('confirm');
+          }}
+        />
+      </Screen>
+    );
+  }
+
   // ── Confirm step ──
   if (phase === 'confirm' || phase === 'saving') {
     return (
       <Screen>
-        <TopBar stepIdx={STEPS.length} labels={stepLabels} stepText={o('step_of', { n: STEPS.length + 1, total: STEPS.length + 1 })} />
+        <TopBar stepIdx={TOTAL - 1} labels={stepLabels} stepText={o('step_of', { n: TOTAL, total: TOTAL })} />
         <div className="flex-1 overflow-y-auto px-4 pb-6">
           <div className="mt-3 flex items-start gap-3">
             <ClaireMark size={40} />
@@ -324,6 +383,13 @@ export default function Onboarding() {
           <Button size="lg" block loading={phase === 'saving'} onClick={complete} disabled={phase === 'saving' || !(draft.business_name || draft.owner_name)}>
             <IconLabel icon={phase === 'saving' ? null : <Check size={18} aria-hidden />}>{tx(t, 'yes_correct', 'Yes, correct')}</IconLabel>
           </Button>
+          {work?.processes.length ? (
+            <button type="button" onClick={() => setPhase('work')} disabled={phase === 'saving'} className="mt-2 flex min-h-11 w-full flex-wrap items-center justify-center gap-1.5 rounded-[16px] px-2 text-[13.5px] text-ink-2 hover:bg-sunken">
+              <span className="font-semibold text-ink">{o('s_work')}:</span>
+              {work.processes.map((k) => <span key={k}>{g(`w_${k}` as 'w_dyeing')}</span>).reduce<ReactNode[]>((a, x, i) => (i ? [...a, '·', x] : [x]), [])}
+              <Pencil size={14} aria-hidden className="text-meta" />
+            </button>
+          ) : null}
           <Button variant="ghost" block className="mt-1.5" onClick={() => setPhase('interview')} disabled={phase === 'saving'}>
             <IconLabel icon={<Mic size={18} aria-hidden />}>{tx(t, 'onb_fix_voice', 'Fix something by voice')}</IconLabel>
           </Button>
@@ -337,7 +403,7 @@ export default function Onboarding() {
   const showAnswer = !!(transcript || interim || recorder.recording || busy);
   return (
     <Screen onPointerDownCapture={unlock}>
-      <TopBar stepIdx={stepIdx} labels={stepLabels} stepText={o('step_of', { n: stepIdx + 1, total: STEPS.length + 1 })} />
+      <TopBar stepIdx={stepIdx} labels={stepLabels} stepText={o('step_of', { n: stepIdx + 1, total: TOTAL })} />
 
       <div className="flex flex-1 flex-col overflow-y-auto px-5 pb-4">
         {/* Claire's question: one at a time, big and readable */}
@@ -478,7 +544,7 @@ export default function Onboarding() {
                 <button
                   type="button"
                   className="inline-flex min-h-[44px] items-center gap-1 rounded-full px-3 text-[14px] font-medium text-meta transition-colors hover:bg-sunken"
-                  onClick={() => setPhase('confirm')}
+                  onClick={toReview}
                 >
                   {tx(t, 'onb_review', 'Review profile')} <ArrowRight size={15} aria-hidden />
                 </button>
@@ -518,7 +584,7 @@ function Screen({ children, onPointerDownCapture }: { children: ReactNode; onPoi
 
 /** Brand + "Step 2 of 5 · Your business" + a segmented progress bar. */
 function TopBar({ stepIdx, labels, stepText }: { stepIdx: number; labels: string[]; stepText: string }) {
-  const total = STEPS.length + 1;
+  const total = labels.length;
   const idx = Math.min(stepIdx, total - 1);
   return (
     <div className="px-4 pt-[max(12px,env(safe-area-inset-top))] pb-1">
@@ -672,5 +738,71 @@ function Chips({ items }: { items: string[] }) {
         </span>
       ))}
     </span>
+  );
+}
+
+/** S18: multi-select chips, then (for job-work processes) capacity and usual turnaround, then "Do you send work?". */
+function WorkStep({ initial, title, hint, label, o, onDone, onSkip }: {
+  initial: WorkAnswer; title: string; hint: string; label: (k: WorkKey) => string;
+  o: ReturnType<typeof OnboardingStrings.use>; onDone: (w: WorkAnswer) => void; onSkip: () => void;
+}) {
+  const [w, setW] = useState<WorkAnswer>(initial);
+  const toggle = (k: WorkKey) => setW((x) => ({ ...x, processes: x.processes.includes(k) ? x.processes.filter((p) => p !== k) : [...x.processes, k] }));
+  const jobWork = w.processes.some((k) => JOB_WORK.has(k));
+  const answered = w.processes.length > 0 || w.sendsWork != null;
+  return (
+    <>
+      <div className="flex-1 overflow-y-auto px-4 pb-6">
+        <div className="mt-3 flex items-start gap-3">
+          <ClaireMark size={40} />
+          <div className="flex-1 rounded-[18px] rounded-tl-[6px] border border-line bg-surface px-4 py-3">
+            <p className="font-head text-[18px] leading-snug font-semibold text-ink">{title}</p>
+            <p className="mt-1 text-[14px] leading-relaxed text-ink-2">{hint}</p>
+          </div>
+        </div>
+        <div className="mt-4 flex flex-wrap gap-2" role="group" aria-label={title}>
+          {WORK_KEYS.map((k) => {
+            const on = w.processes.includes(k);
+            return (
+              <button key={k} type="button" aria-pressed={on} onClick={() => toggle(k)}
+                className={clsx('inline-flex min-h-11 items-center gap-1.5 rounded-full border px-4 text-[14.5px] font-semibold transition-colors', on ? 'border-primary bg-primary text-white' : 'border-line-strong bg-surface text-ink hover:bg-sunken')}>
+                {on && <Check size={15} aria-hidden />}{label(k)}
+              </button>
+            );
+          })}
+        </div>
+        {jobWork && (
+          <div className="mt-5 grid gap-3 rounded-[18px] border border-line bg-surface p-4">
+            <label className="block">
+              <span className="text-[13.5px] font-medium text-ink-2">{o('cap_label')}</span>
+              <input value={w.capacity} maxLength={60} onChange={(e) => setW((x) => ({ ...x, capacity: e.target.value }))} placeholder={o('cap_ph')}
+                className="mt-1.5 h-12 w-full rounded-[16px] border border-line-strong bg-surface px-3 text-[16px] text-ink outline-none placeholder:text-meta focus:border-primary" />
+            </label>
+            <label className="block">
+              <span className="text-[13.5px] font-medium text-ink-2">{o('days_label')}</span>
+              <input value={w.days} inputMode="numeric" onChange={(e) => setW((x) => ({ ...x, days: e.target.value.replace(/\D/g, '').slice(0, 2) }))}
+                className="mt-1.5 h-12 w-28 rounded-[16px] border border-line-strong bg-surface px-3 font-head text-[16px] text-ink tabular-nums outline-none focus:border-primary" />
+            </label>
+          </div>
+        )}
+        <div className="mt-5">
+          <p className="text-[15px] font-semibold text-ink">{o('sends_q')}</p>
+          <div className="mt-2 flex gap-2">
+            {([true, false] as const).map((v) => (
+              <button key={String(v)} type="button" aria-pressed={w.sendsWork === v} onClick={() => setW((x) => ({ ...x, sendsWork: x.sendsWork === v ? null : v }))}
+                className={clsx('min-h-11 min-w-[88px] rounded-full border px-4 text-[14.5px] font-semibold transition-colors', w.sendsWork === v ? 'border-primary bg-primary-tint text-primary' : 'border-line-strong bg-surface text-ink hover:bg-sunken')}>
+                {v ? o('yes') : o('no')}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+      <div className="border-t border-line bg-surface px-4 pt-3 pb-[max(16px,env(safe-area-inset-bottom))]">
+        <Button size="lg" block disabled={!answered} onClick={() => onDone(w)}>
+          <IconLabel icon={<ArrowRight size={18} aria-hidden />} after>{o('continue')}</IconLabel>
+        </Button>
+        <Button variant="ghost" block className="mt-1.5" onClick={onSkip}>{o('skip')}</Button>
+      </div>
+    </>
   );
 }

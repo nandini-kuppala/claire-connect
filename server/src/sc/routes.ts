@@ -20,9 +20,11 @@ import linking from './link.js';
 import staff from './staff.js';
 import money from './money.js';
 import orders from './orders.js';
+import dues from './dues.js';
 
 const router = Router();
 router.use('/sc', requireAuth, requireSc);
+router.use(dues); // first: closed days (Q) for every /sc request, then credit days, due reminders, calendar
 router.use(setup);
 router.use(records);
 router.use(views);
@@ -37,6 +39,7 @@ router.use(linking);
 router.use(staff);
 router.use(money);
 router.use(orders);
+router.use((await import('./flow.js')).default); // S9 flow view (owner only)
 
 /** Action chips and the Goods badge (03 §4.2). Late/confirm/dispute counts arrive with slices 1–2. */
 router.get(

@@ -12,6 +12,7 @@ import { qtyBase, specInfo } from './ledgerOps.js';
 import { sendForWork } from './records.js';
 import { partyNames } from './views.js';
 import { orderEvent } from '../deals.js';
+import { advanceAmount, grandTotal } from '../money.js';
 import { todayIST, workingDaysBetween } from '../../../shared/sc/dates.js';
 import { winningAssertion } from '../../../shared/sc/evidence.js';
 import { toBase } from '../../../shared/sc/units.js';
@@ -133,11 +134,87 @@ export async function orderCoverage(orderId: string): Promise<boolean> {
   if (!claim.modifiedCount) return false;
   try {
     await orderEvent(asUser(buyer), o._id, 'delivered', { via: 'goods', received: p.done });
-    return true;
   } finally {
     await col('orders').updateOne({ _id: o._id } as any, { $unset: { sc_delivering: '' } });
   }
+  // Paid in full before it arrived (Record payment): now that it is delivered, the balance is paid too.
+  await orderPaidCheck(o._id).catch((e) => console.warn('[sc] order paid', (e as Error).message));
+  return true;
 }
+
+// ── Record payment on an order (D1): settlements replace the advance / balance buttons ─────────────
+/**
+ * When both businesses use Goods, a new order's money is recorded as settlements (Record payment) instead of the
+ * order's advance / balance buttons. An order whose advance or balance was already tapped stays on the buttons
+ * (those taps are mirrored read-only into Bills), so nothing is counted twice.
+ */
+export async function orderMoney(ctx: Ctx, id: string) {
+  const o = await myOrder(ctx, id);
+  const side: 'buyer' | 'seller' = o.buyer_business_id === ctx.businessId ? 'buyer' : 'seller';
+  const other: string = side === 'buyer' ? o.seller_business_id : o.buyer_business_id;
+  const on = await bothOnGoods(o);
+  const mode: 'settlements' | 'legacy' | 'off' = o.status === 'cancelled' ? 'off' : !on ? 'legacy' : o.sc_pay || (!o.advance_paid_at && !o.paid_at) ? 'settlements' : 'legacy';
+  const rows = (await col('sc_settlements').find({ order_id: o._id, voided_at: null } as any).sort({ business_date: 1, created_at: 1 }).toArray()) as any[];
+  const paid = rows.reduce((a, r) => a + r.amount_paise, 0);
+  const total = grandTotal(o) * 100;
+  return {
+    order: o, mode, side, other, total_paise: total, advance_paise: advanceAmount(o) * 100, advance_pct: o.advance_pct ?? 0, paid_paise: paid,
+    due_paise: mode === 'settlements' && !o.paid_at ? Math.max(0, total - paid) : 0,
+    settlements: rows.map((r) => ({ id: r._id as string, amount_paise: r.amount_paise as number, mode: r.mode as string, ref: (r.ref as string | null) ?? null, business_date: r.business_date as string, mine: r.recorder_business_id === ctx.businessId })),
+  };
+}
+
+/**
+ * Settlements on an order reached a milestone: run the existing order flow once, so the order card, the balance-due
+ * notice, the rating card, trust and Trade Desk's overdue checks keep working. The advance once it is covered; the
+ * balance once the whole order is paid and delivered. Confirmation is implied (one record serves both sides).
+ */
+export async function orderPaidCheck(orderId: string): Promise<'advance_paid' | 'balance_paid' | null> {
+  const o: any = await col('orders').findOne({ _id: orderId } as any);
+  if (!o || !o.sc_pay || o.paid_at || ['cancelled', 'closed'].includes(o.status)) return null;
+  const rows = (await col('sc_settlements').find({ order_id: o._id, voided_at: null } as any, { projection: { amount_paise: 1 } }).toArray()) as any[];
+  const paid = rows.reduce((a, r) => a + r.amount_paise, 0);
+  const total = grandTotal(o) * 100;
+  const adv = advanceAmount(o) * 100;
+  const type = o.delivered_at && paid >= total ? 'balance_paid' : !o.advance_paid_at && adv > 0 && paid >= adv ? 'advance_paid' : null;
+  if (!type) return null;
+  const buyer = await ownerUser(o.buyer_business_id);
+  if (!buyer) return null;
+  // The lock is a timestamp, so one left by a crash expires after 5 minutes instead of blocking the order for good.
+  const claim = await col('orders').updateOne({ _id: o._id, $or: [{ sc_paying: { $exists: false } }, { sc_paying: { $lt: Date.now() - 300_000 } }, { sc_paying: true }] } as any, { $set: { sc_paying: Date.now() } });
+  if (!claim.modifiedCount) return null;
+  const confirmed = type === 'balance_paid' ? 'balance_confirmed_at' : 'advance_confirmed_at';
+  try {
+    // Set first, so the order card the flow posts doesn't ask the seller to confirm a payment they recorded or saw.
+    await col('orders').updateOne({ _id: o._id } as any, { $set: { [confirmed]: Date.now() } });
+    await orderEvent(asUser(buyer), o._id, type, { via: 'goods', paid: paid / 100 });
+    return type;
+  } catch (e) {
+    await col('orders').updateOne({ _id: o._id, [type === 'balance_paid' ? 'paid_at' : 'advance_paid_at']: { $in: [null, undefined] } } as any, { $unset: { [confirmed]: '' } });
+    throw e;
+  } finally {
+    await col('orders').updateOne({ _id: o._id } as any, { $unset: { sc_paying: '' } });
+  }
+}
+
+/** Orders paid in full through settlements but delivered some other way (the order's own Received button). */
+export async function orderPaidSweep() {
+  // Delivered but partly paid is the normal credit state, so pick only the orders whose settlements cover the total.
+  const rows = (await col('orders').find({ sc_pay: true, paid_at: null, delivered_at: { $ne: null }, status: { $nin: ['cancelled', 'closed'] } } as any).toArray()) as any[];
+  if (!rows.length) return;
+  const sums = (await col('sc_settlements').aggregate([{ $match: { order_id: { $in: rows.map((r) => r._id) }, voided_at: null } }, { $group: { _id: '$order_id', paid: { $sum: '$amount_paise' } } }]).toArray()) as any[];
+  const paid = new Map(sums.map((x) => [x._id as string, x.paid as number]));
+  for (const r of rows.filter((o) => (paid.get(o._id) ?? 0) >= grandTotal(o) * 100)) await orderPaidCheck(r._id).catch((e) => console.warn('[sc] order paid sweep', (e as Error).message));
+}
+
+router.get(
+  '/sc/orders/:id/money',
+  h(async (req: ScRequest, res) => {
+    const m: Partial<Awaited<ReturnType<typeof orderMoney>>> = await orderMoney(req.ctx, req.params.id);
+    delete m.order;
+    res.json(m);
+  }),
+);
 
 /** A movement just left its undo window (card job): re-check the order it belongs to, directly or through its job. */
 export async function orderCoverageForMovement(movementId: string) {

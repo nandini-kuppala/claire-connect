@@ -12,7 +12,7 @@
 ---
 
 ## 1. Where things stand (one paragraph)
-The whole build plan is done and pushed: slices 0 → 9, Phase 7 (final verification), a load test, a full bug hunt and a 30-connection stress test.
+The whole build plan is done: slices 0 → 9, Phase 7 (final verification), a load test, a full bug hunt, a 30-connection stress test, and a follow-ups session that built every remaining open item (§7).
 - **Branch and repo:** everything is on `supply-chain` in GitHub repo `nandini-kuppala/claire-connect`, which matches `origin`. **Nothing is merged to `main`.** The brief forbade merging before the hackathon deadline (22 Nov 2026, 23:59 IST), and any merge needs the owner's approval.
 - **Feature flag:** the feature is behind `SC_ENABLED=1` plus a per-business flag `businesses.flags.sc`. Production is untouched.
 - **Checks:** all automated checks pass (section 6).
@@ -123,7 +123,8 @@ API on :8787, web on :5173 (proxies `/api`, `/uploads`, `/l/`).
   - `.claude/` is untracked, so recreate the entry on a new machine.
 - **Flag a business:** `MONGODB_DB=nexconn_sc_dev npm run sc:flag -w server -- <id|phone> on`.
 - **Static checks:** `npm run lint` (typecheck + style lint), `npm test` (24 unit tests).
-- **Smokes** (dev server running): `python3 scripts/sc-smoke-s{1,2,3,4,45,6,7,8a,8b,9}.py`, `scripts/sc-smoke-audit.py`, `scripts/sc-smoke-ledger.py`, `scripts/sc-smoke-money2.py`.
+- **Smokes** (dev server running): `python3 scripts/sc-smoke-s{1,2,3,4,45,6,7,8a,8b,9}.py`, `scripts/sc-smoke-audit.py`, `scripts/sc-smoke-ledger.py`, `scripts/sc-smoke-money2.py`, `scripts/sc-smoke-flow.py`. A full run takes about 45 minutes against the remote dev database. macOS has no `timeout` command, so don't wrap them in one.
+- **Demo reset:** `MONGODB_DB=nexconn_sc_dev npm run sc:demo-reset -w server [-- --dry-run]`.
 - **Scenarios end to end:** `python3 scripts/sc-demo-scenarios.py` (43 checks; re-runnable).
 - **Claire:** `cd server && MONGODB_DB=nexconn_sc_dev SC_ENABLED=1 npx tsx src/sc/claire/smoke.mts`; fixtures with `npm run sc:claire-fixtures -w server` (`SC_LLM_OFF=1` = rules only).
 - **Ledger:** `MONGODB_DB=nexconn_sc_dev npm run sc:verify -w server`. Every event balances and every holding equals its postings; expected result: 0 problems.
@@ -138,21 +139,39 @@ API on :8787, web on :5173 (proxies `/api`, `/uploads`, `/l/`).
 - ledger 0 problems;
 - build OK, budget OK, i18n 14/14.
 
+**Follow-ups session (22 Nov, later):** everything that §7 used to list as "not built" or "still open" is now built, reviewed and tested. See `PROGRESS.md` → "Follow-ups: the open items built and verified".
+- **Last regression after it:**
+  - lint OK, 24/24 unit tests;
+  - all 15 smokes pass (including the new `sc-smoke-flow.py`), the Claire smoke passes, scenarios A and B pass;
+  - ledger 0 problems;
+  - build OK, budget 41.6 KB;
+  - i18n 100 % in all languages.
+- **New check scripts:**
+  - `scripts/sc-sw-check.mjs`: the service worker, offline cold start.
+  - `scripts/sc-device-pass.mjs`: 4× CPU on slow 4G.
+
 ## 7. What is left (open items)
-- **Bugs still open:**
-  - **B10** (marketplace): a Trade Desk agent sees no chat history from before joining. It needs a Nexconn server-side history API or the late-joiner history setting.
-  - After a Trade Desk ticket resolves, the order card in chat still shows the dispute line, because it isn't re-posted.
-  - The desk-only labels "Short delivery" and "Late delivery" are English.
-- **Not built (from the plan):**
-  - The **Flow view** (S9 in `03-product-ux.md`).
-  - A nightly demo reset.
-  - A service worker (cold start offline).
-  - Record payment replacing the legacy order advance/balance buttons.
-  - Closed days and per-receipt rate overrides.
-  - Due reminders, and bill share/PDF.
-  - The onboarding "What work do you do?" step (only the Goods home card exists).
-  - Search ranking by declared work.
-  - A 4× CPU-throttled device pass.
+- **Done in the follow-ups session:**
+  - B10 (desk sees earlier messages, from the server's own archive);
+  - the order card re-posted after a ticket resolves;
+  - desk labels localized;
+  - Flow view;
+  - demo reset (`sc:demo-reset`);
+  - service worker;
+  - Record payment on orders;
+  - closed days;
+  - receipt rates;
+  - due reminders and Share bill / print;
+  - onboarding work step;
+  - search ranking by declared work;
+  - the 4× CPU device pass.
+- **Still open (small):**
+  - **Demo reset schedule:** the reset is a command. A nightly schedule is not installed, because that changes the machine. The cron/launchd line is in `server/src/sc/demo-reset-cli.ts`, so the owner can install it.
+  - **B10 history:** the archive fills only from when this code runs. Messages users send in non-deal group chats reach it only if the Nexconn `message:send` webhook is configured for groups.
+  - **Desk wording:** the console's own wording (e.g. "Before you joined") is English, like the rest of the agent console.
+  - **Closed days across businesses:** an expected date is fixed with the recorder's calendar, and each side counts late days on its own calendar. With different holidays, the two sides can differ by a day or two.
+  - **Service worker in the in-app browser:** it can't register in Claude's in-app browser pane, an embedded-browser limit. It works in Chrome (checked headless).
+  - **Translations:** the new `goods_money3` overlay strings (7 languages) are machine translations, like the rest, and need native review.
 - **Performance:** about 10 req/s is a database round-trip limit. To speed it up:
   - host the API in the same region as Atlas;
   - check the Atlas tier;

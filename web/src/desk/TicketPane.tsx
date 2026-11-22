@@ -1,9 +1,10 @@
 // Centre pane: ticket header, "Join conversation" banner, then the live (translated) group chat with Claire's whisper chips.
-import { useState } from 'react';
-import { Languages, LogIn, MessageSquareText } from '../icons';
+import { useEffect, useState } from 'react';
+import { ChevronDown, ChevronUp, History, Languages, LogIn, MessageSquareText } from '../icons';
 import { ClaireMark } from '../components/Avatar';
 import { engine, type Channel } from '../chat/engine';
-import { C, HEAD, LangChip, Spinner, errMsg, fmtTime, useNow, type Ticket } from './kit';
+import { C, HEAD, LangChip, Spinner, errMsg, fmtTime, useNow, type EarlierMessage, type Ticket } from './kit';
+import { translateItems } from '../chat/translate';
 import { PRIORITY_COLOR, SlaChip } from './QueuePane';
 import { ChatView } from '../chat/ChatView';
 
@@ -116,6 +117,7 @@ export function TicketPane({
         </div>
       ) : channel ? (
         <>
+          {!!ticket.earlier?.length && <EarlierPanel key={ticket.id} messages={ticket.earlier} />}
           <div className="min-h-0 flex-1">
             <ChatView key={channel.targetId} channel={channel} conversationId={ticket.conversationId ?? undefined} counterpartLang={counterpartLang} compact uiLang="en" placeholder="Message" />
           </div>
@@ -146,5 +148,52 @@ export function TicketPane({
         <div className="flex flex-1 items-center justify-center"><Spinner size={24} /></div>
       )}
     </section>
+  );
+}
+
+/**
+ * B10: Nexconn shows a member only what was sent after they joined, so the live chat below starts at the agent's join.
+ * This panel shows the part before it from the server's archive, translated to English like the live chat.
+ */
+function EarlierPanel({ messages }: { messages: EarlierMessage[] }) {
+  const [open, setOpen] = useState(true);
+  const [english, setEnglish] = useState<Map<string, string>>(new Map());
+  const sig = messages.map((m) => m.id).join(',');
+  useEffect(() => {
+    let alive = true;
+    const items = messages.filter((m) => m.side !== 'claire' && m.text && !m.text.startsWith('[')).map((m) => ({ id: `earlier:${m.id}`, text: m.text, from: m.language ?? 'auto', kind: 'text' as const }));
+    if (items.length) void translateItems(items, 'en').then((r) => { if (alive) setEnglish(r); }).catch(() => undefined);
+    return () => { alive = false; };
+    // The detail is re-fetched every few seconds; translate again only when the messages change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sig]);
+  const sideColor = (m: EarlierMessage) => (m.side === 'buyer' ? C.primary : m.side === 'seller' ? C.clay : m.side === 'claire' ? C.plum : C.meta);
+  return (
+    <div className="border-b bg-surface" style={{ borderColor: C.border }}>
+      <button onClick={() => setOpen((o) => !o)} aria-expanded={open} className="flex min-h-11 w-full items-center gap-2 px-5 text-left text-[13px] font-semibold" style={{ color: C.ink2 }}>
+        <History size={16} aria-hidden />
+        <span className="flex-1">Before you joined · {messages.length} {messages.length === 1 ? 'message' : 'messages'}</span>
+        {open ? <ChevronUp size={16} aria-hidden /> : <ChevronDown size={16} aria-hidden />}
+      </button>
+      {open && (
+        <ol className="max-h-[34vh] space-y-2 overflow-y-auto px-5 pb-3">
+          {messages.map((m) => {
+            const en = english.get(`earlier:${m.id}`);
+            const shown = en && en.trim() !== m.text.trim() ? en : m.text;
+            return (
+              <li key={m.id} className="rounded-[14px] px-3 py-2" style={{ background: C.sunken }}>
+                <p className="flex items-center gap-1.5 text-[12px]" style={{ color: C.meta }}>
+                  <span className="font-semibold" style={{ color: sideColor(m) }}>{m.senderName}</span>
+                  {m.side === 'buyer' || m.side === 'seller' ? <span>· {m.side}</span> : null}
+                  <span>· {fmtTime(m.sentAt)}</span>
+                </p>
+                <p className="mt-0.5 text-[14px] leading-snug whitespace-pre-line" style={{ color: C.ink }}>{shown}</p>
+                {shown !== m.text && <p className="mt-0.5 text-[12px] leading-snug" style={{ color: C.meta }}>{m.text}</p>}
+              </li>
+            );
+          })}
+        </ol>
+      )}
+    </div>
   );
 }
