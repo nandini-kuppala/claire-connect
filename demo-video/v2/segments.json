@@ -17,7 +17,7 @@
  },
  {
   "id": "s05",
-  "text": "What if we could bridge that gap? That's why we built Claire Connect. One chat app for the whole trade, built on Nexconn."
+  "text": "What if we could bridge the gap between buyers and sellers? That's why we built Claire Connect. One chat app for the whole trade, built on Nexconn."
  },
  {
   "id": "s06",
@@ -25,15 +25,19 @@
  },
  {
   "id": "s07",
-  "text": "Here's Amit, a buyer in Kolkata. He asks Claire for a thousand cotton T-shirts. Claire finds makers in Tiruppur, ranked by price, trust and delivery."
+  "text": "Here's Amit, a buyer in Kolkata, who uses the app in Hindi. He asks Claire for a thousand cotton T-shirts. Claire finds makers in Tiruppur, ranked by price, trust and delivery."
  },
  {
   "id": "s08",
-  "text": "He opens a chat with Lakshmi Garments. Two phones, live on one Nexconn channel. Amit writes in English, Lakshmi reads it in Tamil, and her reply reaches him in English."
+  "text": "He opens a chat with Lakshmi Garments. Two phones, live on one Nexconn channel. Amit writes in Hindi, Lakshmi reads it in Tamil, and her reply, ninety eight rupees a piece, reaches him in Hindi."
  },
  {
   "id": "s09",
-  "text": "First, a sample, to check the fabric and the stitching. The quality is good, so he offers ninety rupees for a thousand pieces. Claire gives him a private tip that only he can see. Lakshmi counters at ninety four, he accepts, and the order, with GST, appears on both phones."
+  "text": "He requests a sample, delivered to his doorstep, to check the fabric and the stitching. The quality is good, so he asks for the best price on a thousand pieces. Claire privately tips him that sellers usually settle three to six percent lower, and suggests ninety rupees. Lakshmi counters at ninety four, he accepts, and the order, with GST, appears on both phones. Two people who don't speak each other's language just closed a deal, with Claire's help."
+ },
+ {
+  "id": "s09b",
+  "text": "After delivery, buyers rate sellers on quality, value and delivery, so everyone can see the standards a maker keeps. And sellers rate buyers too, on paying on time."
  },
  {
   "id": "s10",
@@ -45,11 +49,11 @@
  },
  {
   "id": "s12",
-  "text": "And at any moment, he can see where all five hundred pieces are. At which unit, in his shop, on the way, or with a buyer."
+  "text": "And at any moment, he can see where all five hundred pieces are. At which unit, in his shop, on the way, or with a buyer. Stage by stage, and buyer by buyer."
  },
  {
   "id": "s13",
-  "text": "He can even ask his own Claire, in Tamil, and the answer comes only from his own records."
+  "text": "He can even ask his own Claire, in Tamil, and the answer comes from his own records."
  },
  {
   "id": "s14",
@@ -61,7 +65,7 @@
  },
  {
   "id": "s16",
-  "text": "Tiruppur aims to reach one lakh crore rupees in exports by twenty thirty, and almost every business in it is small. Claire Connect gives each of them a direct line to buyers, and to each other."
+  "text": "Tiruppur aims to reach one lakh crore rupees in exports by twenty thirty, and most of its businesses are small. Claire Connect gives each of them a direct line to buyers, and to each other."
  },
  {
   "id": "s17",

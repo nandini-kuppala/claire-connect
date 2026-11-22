@@ -25,7 +25,7 @@
   {
    "id": "s05",
    "file": "voice/s05.mp3",
-   "seconds": 8.09
+   "seconds": 9.17
   },
   {
    "id": "s06",
@@ -35,17 +35,22 @@
   {
    "id": "s07",
    "file": "voice/s07.mp3",
-   "seconds": 10.32
+   "seconds": 11.95
   },
   {
    "id": "s08",
    "file": "voice/s08.mp3",
-   "seconds": 10.82
+   "seconds": 12.65
   },
   {
    "id": "s09",
    "file": "voice/s09.mp3",
-   "seconds": 17.21
+   "seconds": 26.9
+  },
+  {
+   "id": "s09b",
+   "file": "voice/s09b.mp3",
+   "seconds": 10.46
   },
   {
    "id": "s10",
@@ -60,12 +65,12 @@
   {
    "id": "s12",
    "file": "voice/s12.mp3",
-   "seconds": 7.75
+   "seconds": 10.56
   },
   {
    "id": "s13",
    "file": "voice/s13.mp3",
-   "seconds": 5.57
+   "seconds": 5.26
   },
   {
    "id": "s14",
@@ -80,7 +85,7 @@
   {
    "id": "s16",
    "file": "voice/s16.mp3",
-   "seconds": 11.33
+   "seconds": 11.04
   },
   {
    "id": "s17",
