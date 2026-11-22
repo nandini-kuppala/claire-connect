@@ -13,7 +13,7 @@ def win(group, sid, a=None, b=None):
     return (a if a is not None else m['start'], b if b is not None else m['end'])
 TWO = [(716, 120), (1276, 120)]; ONE = (1252, 120)
 DEMO = {
-    's07': ('market2', ['amit', 'lakshmi'], win('market2', 's07')),
+    's07': ('market2', ['amit'], win('market2', 's07')),
     's08': ('market2', ['amit', 'lakshmi'], win('market2', 's08')),
     's09': ('market2', ['amit', 'lakshmi'], win('market2', 's09')),
     's09b': ('ratings', ['store', 'profile'], win('ratings', 's09b')),
@@ -22,6 +22,11 @@ DEMO = {
     's13': ('goods', ['murali'], win('goods', 's13', a=raw['goods']['marks'][4]['t'] + 3.0, b=raw['goods']['marks'][4]['t'] + 16.5)),
     's14': ('desk', ['desk'], win('desk', 's14')),
 }
+m2 = {x['id'] + ':' + x['edge']: x['t'] for x in raw['market2']['marks']}
+CUTS = {'s08': [(40.6, 44.8), (52.4, 57.6)]}  # idle stretches (no change on either phone), dropped from both at once
+SLIDE = {'s08': m2['s08:start'] + 5.6}    # Lakshmi's phone slides in once Amit picks her
+CAST = json.load(open('raw/cast_market2.json'))  # exact-time screencast videos for the two-phone deal
+FLASH = {}
 OVER = {'s09': ('stages/pill_sample.png', 'sampled', 3.2, 934, 966)}
 ENC = ['-c:v', 'libx264', '-preset', 'medium', '-crf', '18', '-pix_fmt', 'yuv420p', '-r', str(FPS), '-c:a', 'aac', '-b:a', '160k', '-ar', '48000', '-ac', '2']
 def run(cmd):
@@ -42,19 +47,35 @@ for sid in ORDER:
     else:
         group, names, (a, b) = DEMO[sid]; L = b - a; HOLD = 1.4 if sid != 's12' else 0.6
         speed = min(3.2, max(1.0, L / (T - HOLD)))
-        ins = ['-loop', '1', '-framerate', str(FPS), '-t', str(T), '-i', f'stages/{sid}.png']
+        ins = ['-loop', '1', '-framerate', str(FPS), '-t', str(T), '-i', f'stages/{"s08base" if sid in SLIDE else sid}.png']
         f = []; prev = '0:v'
         desk = names == ['desk']
+        cut = CUTS.get(sid)
+        cutlen = sum(c1 - c0 for c0, c1 in cut) if cut else 0
+        if cut: L -= cutlen; speed = min(3.2, max(1.0, L / (T - HOLD)))
+        slide = SLIDE.get(sid)
+        if slide:
+            ins += ['-loop', '1', '-i', 'stages/s08_slide.png']; si = len([x for x in ins if x == '-i']) - 1
         for k, n in enumerate(names):
-            off = a - raw[group]['starts'][n]
-            ins += ['-ss', f'{off:.3f}', '-t', f'{L:.3f}', '-i', raw[group]['vids'][n]]
+            fv = FLASH.get(group)
+            if group == 'market2': off = a - CAST[n]['t0']
+            else: off = (a - raw[group]['flashAt'] + fv[n]) if fv else a - raw[group]['starts'][n]
+            src = CAST[n]['mp4'] if group == 'market2' else raw[group]['vids'][n]
+            ins += ['-ss', f'{off:.3f}', '-t', f'{L + cutlen:.3f}', '-i', src]
             if desk: x, y, w, h, mask = 240, 180, 1440, 860, 'stages/mask_desk.png'; sc = f'scale={w}:{h}'
-            else: (x, y), w, h, mask = (TWO[k] if len(names) == 2 else ONE), 416, 900, 'stages/mask_phone.png'; sc = f'crop=390:844:0:0,scale={w}:{h}:flags=lanczos'
+            else: (x, y), w, h, mask = (TWO[k] if (len(names) == 2 or sid == 's07') else ONE), 416, 900, 'stages/mask_phone.png'; sc = f'scale={w}:{h}:flags=lanczos' if group == 'market2' else f'crop=390:844:0:0,scale={w}:{h}:flags=lanczos'
             ins += ['-loop', '1', '-i', mask]
-            vi, mi = 1 + 2 * k, 2 + 2 * k
-            f.append(f'[{vi}:v]setpts=(PTS-STARTPTS)/{speed:.4f},fps={FPS},{sc},tpad=stop_mode=clone:stop_duration={T:.2f},trim=0:{T},format=rgba[c{k}];[{mi}:v]scale={w}:{h},format=gray[m{k}];[c{k}][m{k}]alphamerge[cm{k}];[{prev}][cm{k}]overlay={x}:{y}:shortest=0[o{k}]')
+            vi, mi = (1 if not slide else 2) + 2 * k, (2 if not slide else 3) + 2 * k
+            sel = (f"fps={FPS},select='not(" + '+'.join(f'between(t,{c0 - a:.3f},{c1 - a:.3f})' for c0, c1 in cut) + f")',setpts=N/({FPS}*TB),") if cut else ''
+            f.append(f'[{vi}:v]setpts=PTS-STARTPTS,{sel}setpts=PTS/{speed:.4f},fps={FPS},{sc},tpad=stop_mode=clone:stop_duration={T:.2f},trim=0:{T},format=rgba[c{k}];[{mi}:v]scale={w}:{h},format=gray[m{k}];[c{k}][m{k}]alphamerge[cm{k}]')
+            if slide and k == 1:
+                t0 = (slide - a) / speed
+                xe = f"if(lt(t,{t0:.2f}),1920,if(lt(t,{t0 + 0.7:.2f}),1148+772*pow(1-(t-{t0:.2f})/0.7,3),1148))"
+                f.append(f"[{prev}][{si}:v]overlay=x='{xe}':y=0[sl];[sl][cm{k}]overlay=x='{xe}+128':y={y}:shortest=0[o{k}]")
+            else:
+                f.append(f'[{prev}][cm{k}]overlay={x}:{y}:shortest=0[o{k}]')
             prev = f'o{k}'
-        ai = 1 + 2 * len(names)
+        ai = len([x for x in ins if x == '-i'])
         if sid in OVER:
             png, mk, dur, ox, oy = OVER[sid]
             mt = [x['t'] for x in raw[group]['marks'] if x['id'] == sid and x['edge'] == mk][0]
