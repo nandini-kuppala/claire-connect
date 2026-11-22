@@ -4,140 +4,257 @@
 <meta charset="utf-8">
 <title>CLAIRE Connect · Project write-up</title>
 <style>
-  @page { size: A4; margin: 13mm 14mm 13mm 14mm; }
-  :root { --ink:#16202a; --ink2:#47515c; --meta:#6b7480; --line:#e3e7ea; --primary:#1f8c73; --tint:#e6f6f1; --accent:#b7791f; }
-  * { box-sizing: border-box; }
-  body { margin:0; font-family: -apple-system, "Helvetica Neue", Helvetica, Arial, sans-serif; color:var(--ink); font-size:10pt; line-height:1.45; }
-  h1 { font-size:24pt; margin:0; letter-spacing:-0.3px; }
-  h1 span { color:var(--primary); }
-  h2 { font-size:13pt; margin:18px 0 6px; padding-top:6px; border-top:1px solid var(--line); }
-  h3 { font-size:10.8pt; margin:12px 0 3px; }
+  @page { size: A4; margin: 12mm 13mm; }
+  :root { --ink:#15202B; --ink2:#3E4A57; --meta:#6B7480; --line:#E3E7EA; --teal:#1F8C73; --teal2:#3DB394; --mint:#E6F6F1; --mint2:#F3FBF8; --amber:#9A6512; --amberbg:#FBEFD9; --clay:#B9502F; --claybg:#F7E4DB; --navy:#13203B; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:-apple-system,"Helvetica Neue",Helvetica,Arial,sans-serif; color:var(--ink); font-size:10pt; line-height:1.5; }
+  h1 { font-size:26pt; margin:0; letter-spacing:-0.4px; line-height:1.1; }
+  h1 span { color:var(--teal2); }
+  h2 { font-size:14pt; margin:16px 0 6px; letter-spacing:-0.2px; }
+  h2 .n { display:inline-block; width:22px; height:22px; border-radius:50%; background:var(--teal); color:#fff; font-size:10pt; text-align:center; line-height:22px; margin-right:8px; vertical-align:2px; }
   p { margin:4px 0 8px; }
-  ul { margin:4px 0 8px; padding-left:18px; }
-  li { margin:2px 0; }
-  .sub { color:var(--ink2); font-size:11pt; margin-top:4px; }
-  .meta { display:grid; grid-template-columns: repeat(4, 1fr); gap:8px; margin:14px 0 6px; }
-  .meta div { border:1px solid var(--line); border-radius:8px; padding:7px 9px; }
-  .meta b { display:block; font-size:8pt; color:var(--meta); font-weight:600; text-transform:uppercase; letter-spacing:.4px; }
-  .meta span { font-size:9.6pt; word-break:break-all; }
-  .key { font-family: ui-monospace, Menlo, monospace; font-size:11pt; background:var(--tint); color:#0f5c4a; padding:2px 6px; border-radius:4px; }
-  table { width:100%; border-collapse:collapse; margin:6px 0 10px; font-size:9.4pt; }
-  tr { break-inside:avoid; }
-  th, td { text-align:left; vertical-align:top; padding:5px 7px; border-bottom:1px solid var(--line); }
-  th { font-size:8.4pt; color:var(--meta); text-transform:uppercase; letter-spacing:.3px; font-weight:600; }
-  td:first-child { font-weight:600; white-space:nowrap; }
-  .shots { display:flex; gap:14px; justify-content:center; align-items:flex-start; margin:8px 0 4px; break-inside:avoid; }
-  .shots figure { margin:0; width:38mm; }
-  .shots img { width:100%; border:1px solid var(--line); border-radius:8px; }
-  figcaption { font-size:8.4pt; color:var(--meta); margin-top:3px; }
-  .wide { break-inside:avoid; text-align:center; } .wide img { width:62%; border:1px solid var(--line); border-radius:8px; }
-  .note { border-left:3px solid var(--primary); background:#f6faf8; padding:7px 10px; margin:8px 0; }
-  .brk { break-before: page; }
-  a { color:var(--primary); text-decoration:underline; text-underline-offset:2px; }
-  .nx { border:2px solid #3DB394; background:#F3FBF8; border-radius:12px; padding:10px 14px 6px; margin:14px 0 8px; break-inside:auto; }
-  .nx h2 { border-top:none; margin-top:0; padding-top:0; color:#14614E; }
-  .nx table { background:#fff; border-radius:8px; }
-  .chips { display:flex; flex-wrap:wrap; gap:5px; margin:6px 0 8px; }
-  .chip { background:#1F8C73; color:#fff; border-radius:999px; padding:3px 10px; font-size:8.8pt; font-weight:600; }
-  .ml { margin:10px 0 4px; break-inside:avoid; }
-  .ml .row { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
-  .ml img { width:100%; border:1px solid var(--line); border-radius:8px; }
-  .ml figure { margin:0; }
-  .ml .lead { font-weight:700; font-size:11pt; margin:0 0 6px; }
+  a { color:var(--teal); font-weight:600; text-decoration:underline; text-underline-offset:2px; }
+  .tag { color:var(--ink2); font-size:11pt; margin:6px 0 0; }
+  .meta { display:grid; grid-template-columns:1.1fr 1.3fr 1.6fr 1.3fr; gap:8px; margin:12px 0 4px; }
+  .meta div { border:1px solid var(--line); border-radius:10px; padding:7px 10px; }
+  .meta b { display:block; font-size:7.6pt; color:var(--meta); text-transform:uppercase; letter-spacing:.5px; }
+  .meta span { font-size:9.6pt; }
+  .key { font-family:ui-monospace,Menlo,monospace; font-weight:700; color:#0F5C4A; background:var(--mint); padding:1px 6px; border-radius:4px; }
+  .story { display:grid; grid-template-columns:1fr 210px; gap:16px; align-items:start; }
+  .quote { background:var(--navy); color:#fff; border-radius:14px; padding:14px 16px; font-size:11pt; line-height:1.45; font-weight:600; }
+  .quote small { display:block; margin-top:8px; font-weight:400; font-size:8.5pt; color:#B8C2D0; }
+  .stats { display:grid; grid-template-columns:repeat(5,1fr); gap:8px; margin:8px 0 6px; }
+  .stat { border-radius:12px; padding:10px 10px 9px; background:#F4F6F8; }
+  .stat .v { font-size:15pt; font-weight:800; letter-spacing:-0.5px; line-height:1.05; color:var(--ink); }
+  .stat .l { font-size:8.4pt; color:var(--ink2); margin-top:4px; line-height:1.3; }
+  .stat.good { background:var(--mint); } .stat.good .v { color:#14614E; }
+  .stat.bad { background:var(--claybg); } .stat.bad .v { color:var(--clay); }
+  .src { font-size:7.6pt; color:var(--meta); margin:2px 0 6px; }
+  .barriers { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin:8px 0; }
+  .bar { border:1px solid var(--line); border-radius:12px; padding:10px 12px; }
+  .bar .ic { width:34px; height:34px; border-radius:10px; background:var(--claybg); color:var(--clay); display:flex; align-items:center; justify-content:center; margin-bottom:6px; }
+  .bar h4 { margin:0 0 3px; font-size:10.5pt; }
+  .bar p { margin:0; font-size:9pt; color:var(--ink2); }
+  .fix { color:#14614E; font-weight:600; font-size:9pt; margin-top:5px; display:block; }
   .two { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .feat { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:8px 0; }
+  .f { border-radius:12px; padding:10px 12px; background:var(--mint2); border:1px solid #CFEDE3; }
+  .f .t { font-weight:700; font-size:10pt; display:flex; align-items:center; gap:7px; }
+  .f .t i { font-style:normal; width:22px; height:22px; border-radius:50%; background:var(--teal); color:#fff; font-size:9pt; display:inline-flex; align-items:center; justify-content:center; }
+  .f p { margin:4px 0 0; font-size:9pt; color:var(--ink2); }
+  .steps { display:flex; align-items:stretch; gap:0; margin:10px 0 6px; }
+  .step { flex:1; background:#F4F6F8; border-radius:10px; padding:8px 9px; font-size:8.6pt; color:var(--ink2); position:relative; }
+  .step b { display:block; color:var(--ink); font-size:9pt; margin-bottom:2px; }
+  .arrow { width:16px; display:flex; align-items:center; justify-content:center; color:var(--teal2); font-weight:800; }
+  .shots { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin:6px 0; break-inside:avoid; }
+  .shots img { width:100%; border:1px solid var(--line); border-radius:8px; display:block; }
+  .shots figcaption { font-size:8pt; color:var(--meta); margin-top:3px; line-height:1.35; }
+  .shots figure { margin:0; }
+  .lead { font-weight:700; font-size:11pt; margin:10px 0 4px; }
+  .chain { margin:8px 0; }
+  .roles { display:grid; grid-template-columns:repeat(6,1fr); gap:6px; margin:6px 0; }
+  .role { text-align:center; border:1px solid var(--line); border-radius:10px; padding:7px 4px; font-size:8.4pt; font-weight:600; }
+  .role span { display:block; font-weight:400; color:var(--meta); font-size:7.6pt; }
+  .nx { border:2px solid var(--teal2); background:var(--mint2); border-radius:14px; padding:12px 14px 8px; margin:14px 0 8px; }
+  .nx h2 { margin-top:0; color:#14614E; }
+  .chips { display:flex; flex-wrap:wrap; gap:5px; margin:6px 0 8px; }
+  .chip { background:var(--teal); color:#fff; border-radius:999px; padding:3px 10px; font-size:8.6pt; font-weight:600; }
+  table { width:100%; border-collapse:collapse; font-size:9pt; background:#fff; border-radius:8px; }
+  td { padding:5px 8px; border-bottom:1px solid var(--line); vertical-align:top; }
+  td:first-child { font-weight:700; width:140px; }
+  tr { break-inside:avoid; }
+  .next { display:grid; grid-template-columns:repeat(5,1fr); gap:7px; margin:8px 0; }
+  .cl { border-radius:10px; padding:8px 8px; background:#F4F6F8; font-size:8.6pt; }
+  .cl b { display:block; font-size:9.2pt; }
+  .cl span { color:var(--meta); }
+  .cl.now { background:var(--mint); border:1px solid #BFE7DA; }
+  .note { border-left:3px solid var(--teal2); background:var(--mint2); padding:7px 11px; border-radius:0 8px 8px 0; margin:8px 0; }
+  .pb { break-before:page; }
+  svg text { font-family:-apple-system,"Helvetica Neue",Helvetica,Arial,sans-serif; }
 </style>
 </head>
 <body>
 
 <h1>CLAIRE <span>Connect</span></h1>
-<div class="sub">One chat app for India's knitwear trade, in everyone's own language. Built on the Nexconn Chat SDK.<br>Team <b>Coders</b> · Track: <b>Marketplace &amp; Support</b> · Nexconn Build Challenge 2026</div>
+<p class="tag">One app where everyone in India's garment supply chain can find each other, talk in their own language, close deals and track every order. Built on the Nexconn Chat SDK.</p>
 
 <div class="meta">
   <div><b>Nexconn App Key</b><span class="key">m7ua80gbmcvhm</span></div>
   <div><b>Live app</b><span><a href="https://claire-connect.onrender.com">claire-connect.onrender.com</a></span></div>
-  <div><b>Source</b><span><a href="https://github.com/nandini-kuppala/claire-connect">github.com/nandini-kuppala/claire-connect</a></span></div>
-  <div><b>Try it (demo logins)</b><span style="word-break:normal">Amit · Lakshmi · Murali · Meena</span></div>
+  <div><b>Source code</b><span><a href="https://github.com/nandini-kuppala/claire-connect">github.com/nandini-kuppala/claire-connect</a></span></div>
+  <div><b>Try the demo</b><span>Sign in, then "Explore as a demo business"</span></div>
+</div>
+<p class="src">Team Coders · Track: Marketplace and Support · Nexconn Build Challenge 2026 · Built for this hackathon</p>
+
+<h2><span class="n">1</span>Why we built it</h2>
+<div class="story">
+  <div>
+    <p>This started at home. A teammate's father runs a garment unit in Tiruppur, India's knitwear town. For years he made what his regular buyers ordered. Then some of those buyers stopped ordering, and he was left with stock he had already made. There were shops in other states that needed exactly those clothes. He had no way to reach them. He did not know them, and they did not speak his language.</p>
+    <p>Making the clothes was just as hard. Yarn, fabric, dyeing, printing and stitching all happen at different units. Every order was tracked through phone calls, WhatsApp messages and paper notes. Details went missing. He could never be sure how much material he really needed, so he always bought far too much or far too little.</p>
+    <p>He is not alone. Many Tiruppur makers have lost their work and moved to other businesses. Yet buyers across India still need these clothes. The demand is there. What is missing is a way to connect it to the people who can make it.</p>
+  </div>
+  <div class="quote">"There were buyers who needed what we had. We just could not reach them, or talk to them."<small>From a teammate's family, who run a garment unit in Tiruppur.</small></div>
 </div>
 
-<h2>Why we built it</h2>
-<p>One of our team's families runs a garment unit in Tiruppur. It buys fabric, cuts in-house, sends the pieces out to stitching units, packs in-house, and sells to shops across India. Every step of that runs on phone calls, WhatsApp photos and memory. Buyers in the north speak Hindi; the stitching units speak Tamil. When 400 pieces go to a stitcher and 398 come back, nobody can prove which number is right. We built CLAIRE Connect so that a small business like this can find buyers, close deals across languages, and track every piece of an order, all from one chat app they already know how to use.</p>
-
-<h2>The problem it solves</h2>
-<p>Tiruppur is India's knitwear capital: a record ₹46,000 crore of exports in FY26, with a target of ₹1 lakh crore by 2030 (Tiruppur Exporters' Association, via Business Standard), and an estimated ₹35,000 crore sold inside India. About 95 % of its units are small businesses. Yet the trade still works the way it did decades ago:</p>
-<ul>
-  <li><b>Trade fairs and middlemen.</b> Buyers travel to Tiruppur to see the goods. Those who cannot, buy through local wholesalers and resellers, paying more at every step.</li>
-  <li><b>Unsold stock.</b> Makers over-produce and sit on stock: in one festival season, about 70 % of garments sold came from old stock (TEMA, via DT Next).</li>
-  <li><b>Selling one WhatsApp chat at a time.</b> A seller sends the same photos to ten buyers a day and chases each one by phone, often without a shared language.</li>
-  <li><b>No shared record in production.</b> One order passes through about eight businesses (knitting, dyeing, cutting, printing, stitching, packing). Goods go back and forth on paper challans, and nobody can see where an order really is.</li>
-</ul>
-
-<h2>What CLAIRE Connect does</h2>
-<div class="two">
-<div>
-<h3>1. Find, negotiate and order (the track)</h3>
-<ul>
-  <li><b>Claire, an AI trade assistant.</b> A buyer types or speaks a request in any of 10 Indian languages. Claire finds makers and ranks them on price, trust, stock and delivery.</li>
-  <li><b>Live, translated deal rooms.</b> The buyer writes in Hindi and the maker reads it in Tamil; her reply arrives in Hindi. Samples, offers, counter-offers and orders with GST are cards in the chat.</li>
-  <li><b>Private price tips.</b> Ask for a discount and Claire tells only you that sellers usually settle 3–6 % lower, with a one-tap opening offer. In the demo, a ₹98 listing closes at ₹94 for 1,000 pieces.</li>
-  <li><b>Ratings both ways.</b> Buyers rate makers on quality, value and delivery; makers rate buyers on paying on time. Both feed a trust score.</li>
-  <li><b>Trade Desk.</b> When something goes wrong (a late payment, a short delivery), a human agent who speaks the right language joins the same chat, reads what happened before, and sorts it out.</li>
-</ul>
+<h2><span class="n">2</span>The problem</h2>
+<p>Tiruppur shows both the size of the opportunity and the size of the gap.</p>
+<div class="stats">
+  <div class="stat good"><div class="v">₹46,000 cr</div><div class="l">knitwear exports in FY26, a record</div></div>
+  <div class="stat good"><div class="v">~₹35,000 cr</div><div class="l">sold inside India every year (estimate)</div></div>
+  <div class="stat"><div class="v">95%</div><div class="l">of units are small businesses</div></div>
+  <div class="stat bad"><div class="v">70%</div><div class="l">of festival season sales came from old, unsold stock</div></div>
+  <div class="stat bad"><div class="v">1 in 4</div><div class="l">small and medium units shut down in two years as orders dropped</div></div>
 </div>
-<div>
-<h3>2. Track production after the order</h3>
-<ul>
-  <li><b>Every hand-off in seconds.</b> Send for work, got back, sales and returns, typed, spoken or told to Claire. Each record arrives as a card in the chat between the two businesses.</li>
-  <li><b>Confirmed by both sides.</b> The receiver confirms what actually arrived. A difference is shown to both and settled, never silently overwritten.</li>
-  <li><b>Flow view.</b> For each style or order: progress, where every piece is right now (at which unit, in the shop, on the way, with a buyer), each stage, and each buyer.</li>
-  <li><b>A private Claire.</b> "How much is still at Priya Stitching?" Answers come from the business's own records, in Tamil, Hindi or English.</li>
-</ul>
-</div>
-</div>
+<p class="src">Sources: Tiruppur Exporters' Association via Business Standard (Jun 2026); Deccan Herald; Apparel Resources; TEMA via DT Next and The Hindu (May 2024).</p>
 
-<div class="ml">
-  <p class="lead">People who don't share a language close a deal, live: Amit writes Hindi, Lakshmi reads Tamil.</p>
-  <div class="row">
-    <figure><img src="img/ml-amit-chat.png"><figcaption><b>Amit's phone (Hindi).</b> His message, and Lakshmi's reply, translated into Hindi.</figcaption></figure>
-    <figure><img src="img/ml-lakshmi-chat.png"><figcaption><b>Lakshmi's phone (Tamil).</b> Amit's message arrives in Tamil; she quotes ₹98.</figcaption></figure>
-    <figure><img src="img/ml-amit-tip.png"><figcaption><b>Amit (Hindi).</b> Claire's private tip: sellers settle 3–6 % lower, so offer ₹90.</figcaption></figure>
-    <figure><img src="img/ml-lakshmi-order.png"><figcaption><b>Lakshmi (Tamil).</b> Deal at ₹94: the ₹98,700 order with GST, on both phones.</figcaption></figure>
+<p>So there is plenty of work, but it does not reach the people who can do it. Three walls stand in the way:</p>
+<div class="barriers">
+  <div class="bar">
+    <div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 5h8M8 3v2M6 5c0 4 3 7 6 8M10 5c-1 4-4 7-6 8M13 21l4-10 4 10M14.5 18h5"/></svg></div>
+    <h4>Language</h4>
+    <p>Buyers in the north and east speak Hindi or Bengali. Most makers in Tiruppur speak Tamil. Deals fall through, or go through middlemen.</p>
+  </div>
+  <div class="bar">
+    <div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="10" r="3"/><path d="M12 21s-7-6-7-11a7 7 0 0 1 14 0c0 5-7 11-7 11Z"/></svg></div>
+    <h4>Distance</h4>
+    <p>Buyers travel to trade fairs to see goods. Those who cannot, buy through wholesalers and pay more at every step. Sellers send the same photos to ten buyers a day.</p>
+  </div>
+  <div class="bar">
+    <div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 7h6v6H3zM15 11h6v6h-6zM9 10h3a3 3 0 0 1 3 3"/></svg></div>
+    <h4>A supply chain nobody can see</h4>
+    <p>One order passes through about eight units. Material moves on calls, WhatsApp and paper, so nobody knows what is where, or how much is really needed.</p>
   </div>
 </div>
 
-<div class="nx">
-<h2>Built on Nexconn: the SDK features we use</h2>
-<div class="chips"><span class="chip">Chat SDK</span><span class="chip">Direct channels</span><span class="chip">Group channels</span><span class="chip">System channel</span><span class="chip">Custom messages</span><span class="chip">Targeted messages</span><span class="chip">Translation</span><span class="chip">History &amp; unread</span><span class="chip">Read receipts</span><span class="chip">Typing indicators</span><span class="chip">Webhooks</span><span class="chip">Call SDK: voice &amp; video</span></div>
-<p><b>App Key: <span class="key">m7ua80gbmcvhm</span></b>. Every conversation in the app runs on Nexconn: the web Chat SDK (<code>@nexconn/chat</code> with <code>@nexconn/engine</code>), the Call SDK (<code>@nexconn/call</code>) and the Nexconn Server API. Each app user is a Nexconn user; Claire, CLAIRE Updates and the Trade Desk are Nexconn users too.</p>
-<table>
-  <tr><th>Nexconn feature</th><th>Where the app uses it</th></tr>
-  <tr><td>Direct channels</td><td>Each user's private chat with Claire (search, questions about their own records, record drafts). Claire replies through the Server API.</td></tr>
-  <tr><td>Group channels</td><td>Every buyer-seller deal room, the Goods chat between two businesses, and support rooms. Created server-side; a Trade Desk agent is added to the same group when they join.</td></tr>
-  <tr><td>System channel</td><td>"CLAIRE Updates": order, payment and dispatch notices.</td></tr>
-  <tr><td>Custom messages</td><td><code>CC:Card</code> (offers, counter-offers, orders with GST, samples, goods hand-offs, differences), <code>CC:Hint</code> (private tips), <code>CC:Reply</code> (quick replies), <code>CC:Voice</code> (voice notes with transcripts). Cards update as a deal moves on.</td></tr>
-  <tr><td>Targeted messages</td><td>Claire's private price tips go to one member of the deal group only; payment reminders go to the owner only.</td></tr>
-  <tr><td>Translation module</td><td><code>translateModule</code> with a custom handler: every chat is shown in the reader's language, across 10 Indian languages.</td></tr>
-  <tr><td>History, unread, read receipts, typing</td><td>Chat list with the latest message and unread count; earlier messages page in; read receipts when a chat is opened; typing indicators in deal and support chats.</td></tr>
-  <tr><td>Webhooks</td><td><code>message:send</code> (signature verified): Claire's replies, price detection, escalation to the Trade Desk, and a group archive so a late-joining agent can read what came before.</td></tr>
-  <tr><td>Call SDK</td><td>One-tap 1:1 voice and video calls from a deal room and from the Trade Desk console, with a call summary card posted into the chat.</td></tr>
-</table>
+<h2 class="pb"><span class="n">3</span>What CLAIRE Connect does</h2>
+<p>CLAIRE Connect brings the whole chain into one place, with an AI assistant called Claire who speaks your language.</p>
+
+<svg viewBox="0 0 700 250" width="100%" style="margin:4px 0 2px">
+  <g stroke="#BFE7DA" stroke-width="2.5">
+    <line x1="350" y1="125" x2="110" y2="48"/><line x1="350" y1="125" x2="110" y2="202"/>
+    <line x1="350" y1="125" x2="350" y2="24"/><line x1="350" y1="125" x2="350" y2="228"/>
+    <line x1="350" y1="125" x2="590" y2="48"/><line x1="350" y1="125" x2="590" y2="202"/>
+  </g>
+  <circle cx="350" cy="125" r="62" fill="#13203B"/>
+  <text x="350" y="120" text-anchor="middle" fill="#fff" font-size="17" font-weight="800">CLAIRE</text>
+  <text x="350" y="141" text-anchor="middle" fill="#3DB394" font-size="17" font-weight="800">Connect</text>
+  <g font-size="12">
+    <rect x="20" y="22" width="180" height="52" rx="12" fill="#E6F6F1"/><text x="110" y="43" text-anchor="middle" font-weight="800" fill="#14614E">Find</text><text x="110" y="61" text-anchor="middle" fill="#3E4A57">ask Claire for what you need</text>
+    <rect x="20" y="176" width="180" height="52" rx="12" fill="#E6F6F1"/><text x="110" y="197" text-anchor="middle" font-weight="800" fill="#14614E">Talk</text><text x="110" y="215" text-anchor="middle" fill="#3E4A57">chat in your own language</text>
+    <rect x="260" y="0" width="180" height="48" rx="12" fill="#E6F6F1"/><text x="350" y="20" text-anchor="middle" font-weight="800" fill="#14614E">Deal</text><text x="350" y="37" text-anchor="middle" fill="#3E4A57">sample, price, order, GST</text>
+    <rect x="260" y="204" width="180" height="46" rx="12" fill="#E6F6F1"/><text x="350" y="223" text-anchor="middle" font-weight="800" fill="#14614E">Trust</text><text x="350" y="240" text-anchor="middle" fill="#3E4A57">ratings for buyers and sellers</text>
+    <rect x="500" y="22" width="180" height="52" rx="12" fill="#FBEFD9"/><text x="590" y="43" text-anchor="middle" font-weight="800" fill="#9A6512">Make</text><text x="590" y="61" text-anchor="middle" fill="#3E4A57">track material at every unit</text>
+    <rect x="500" y="176" width="180" height="52" rx="12" fill="#FBEFD9"/><text x="590" y="197" text-anchor="middle" font-weight="800" fill="#9A6512">Help</text><text x="590" y="215" text-anchor="middle" fill="#3E4A57">a real person when it goes wrong</text>
+  </g>
+</svg>
+
+<div class="feat">
+  <div class="f"><div class="t"><i>1</i>Find the right partner</div><p>Tell Claire what you need, by typing or speaking, in any of 10 Indian languages. She finds makers and ranks them by price, trust and delivery time.</p></div>
+  <div class="f"><div class="t"><i>2</i>Talk without a shared language</div><p>Every message is translated for the reader. A buyer writes in Hindi, the maker reads it in Tamil, and her reply comes back in Hindi.</p></div>
+  <div class="f"><div class="t"><i>3</i>Close the deal in the chat</div><p>Ask for a sample, make an offer, agree a price and place the order with GST, all as cards in the same chat. Claire quietly tells you what a fair price looks like.</p></div>
+  <div class="f"><div class="t"><i>4</i>Know who you are dealing with</div><p>Buyers rate makers on quality, value and delivery. Makers rate buyers on paying on time. Everyone sees a trust score before they trade.</p></div>
+  <div class="f"><div class="t"><i>5</i>Run production in one place</div><p>Every unit you work with is on the same app. Send fabric for dyeing or pieces for stitching, and both sides see what went out, what came back and what is still pending.</p></div>
+  <div class="f"><div class="t"><i>6</i>Get help from a person</div><p>If a payment is late or a delivery is short, our Trade Desk sends someone who speaks both languages into the same chat to sort it out.</p></div>
 </div>
-<div class="wide"><img src="img/trade-desk.png"><figcaption style="text-align:center">Trade Desk console: the queue, a ticket with an AI summary, the shared deal chat and the order.</figcaption></div>
 
-<h2>How it is built</h2>
-<ul>
-  <li><b>Stack:</b> React 19 web app (Vite, Tailwind) and an Express + TypeScript API on Render; MongoDB Atlas; LLMs through OpenRouter with a rules fallback; Sarvam AI for speech in Indian languages.</li>
-  <li><b>Goods ledger:</b> double-entry, written in one transaction per record, so every piece is always accounted for. Who owns goods and where they physically are are kept separate.</li>
-  <li><b>Tested:</b> unit tests, 15 end-to-end scripts (including isolation between businesses), and a stress test of 30 concurrent Nexconn connections: 308 messages, 0 send failures, median delivery 317 ms.</li>
-  <li><b>For budget phones:</b> offline outbox and cached app shell; every main screen ready in under 2 s on a 4×-throttled phone over slow 4G.</li>
-  <li><b>Built for this hackathon:</b> everything was built for the Nexconn Build Challenge 2026. Two full real-world scenarios (15 businesses) are seeded on the live site for judges.</li>
-</ul>
+<p class="lead">A real deal, from the demo: two people, two languages, one order</p>
+<div class="steps">
+  <div class="step"><b>Ask</b>Amit, a buyer in Kolkata, asks Claire in Hindi for 1,000 cotton T-shirts</div><div class="arrow">›</div>
+  <div class="step"><b>Match</b>Claire finds Lakshmi Garments in Tiruppur</div><div class="arrow">›</div>
+  <div class="step"><b>Talk</b>He writes in Hindi, she reads in Tamil, and replies with a price</div><div class="arrow">›</div>
+  <div class="step"><b>Sample</b>He orders a sample to check the fabric and stitching</div><div class="arrow">›</div>
+  <div class="step"><b>Price</b>Claire privately tells him sellers settle 3 to 6 percent lower</div><div class="arrow">›</div>
+  <div class="step" style="background:#E6F6F1"><b>Order</b>They agree ₹94 a piece. The ₹98,700 order appears for both</div>
+</div>
+<div class="shots">
+  <figure><img src="img/ml-amit-chat.png"><figcaption><b>Amit's phone, in Hindi.</b> Lakshmi's Tamil reply reaches him in Hindi.</figcaption></figure>
+  <figure><img src="img/ml-lakshmi-chat.png"><figcaption><b>Lakshmi's phone, in Tamil.</b> Amit's Hindi message reaches her in Tamil.</figcaption></figure>
+  <figure><img src="img/ml-amit-tip.png"><figcaption><b>Only Amit sees this.</b> Claire's tip on a fair price, with a one tap offer.</figcaption></figure>
+  <figure><img src="img/ml-lakshmi-order.png"><figcaption><b>Deal done.</b> The order with GST, in Tamil on her phone and Hindi on his.</figcaption></figure>
+</div>
 
-<h2>Who it is for, and where it goes next</h2>
-<ul>
-  <li><b>Users:</b> Tiruppur's small makers, job-work units, fabric and trims shops, and their buyers across India. Many are Tamil-first and use budget Android phones.</li>
-  <li><b>Business model:</b> free for small units; a paid tier for multi-unit manufacturers (production tracking, reports, staff accounts); a small fee on orders closed in a deal room.</li>
-  <li><b>Next:</b> a pilot with one full Tiruppur chain (yarn → knit → dye → cut → stitch → buyer), WhatsApp share links for partners not yet on the app, and native review of all translations.</li>
-</ul>
+<h2><span class="n">4</span>One order, many hands, one view</h2>
+<p>A single T-shirt order touches many businesses. Today each of them keeps its own notes. On CLAIRE Connect they work in the same place, so the owner of the order can see every step.</p>
+
+<svg viewBox="0 0 700 150" width="100%" class="chain">
+  <line x1="45" y1="58" x2="655" y2="58" stroke="#BFE7DA" stroke-width="4"/>
+  <g font-size="11.5" text-anchor="middle">
+    <g transform="translate(45,58)"><circle r="26" fill="#FBEFD9"/><text y="4" font-weight="800" fill="#9A6512">Yarn</text></g>
+    <g transform="translate(132,58)"><circle r="26" fill="#FBEFD9"/><text y="4" font-weight="800" fill="#9A6512">Knit</text></g>
+    <g transform="translate(219,58)"><circle r="26" fill="#FBEFD9"/><text y="4" font-weight="800" fill="#9A6512">Dye</text></g>
+    <g transform="translate(306,58)"><circle r="26" fill="#E6F6F1"/><text y="4" font-weight="800" fill="#14614E">Cut</text></g>
+    <g transform="translate(393,58)"><circle r="26" fill="#FBEFD9"/><text y="4" font-weight="800" fill="#9A6512">Print</text></g>
+    <g transform="translate(480,58)"><circle r="26" fill="#FBEFD9"/><text y="4" font-weight="800" fill="#9A6512">Stitch</text></g>
+    <g transform="translate(567,58)"><circle r="26" fill="#E6F6F1"/><text y="4" font-weight="800" fill="#14614E">Pack</text></g>
+    <g transform="translate(655,58)"><circle r="26" fill="#13203B"/><text y="4" font-weight="800" fill="#fff">Buyer</text></g>
+  </g>
+  <rect x="130" y="104" width="440" height="34" rx="17" fill="#13203B"/>
+  <text x="350" y="126" text-anchor="middle" fill="#fff" font-size="12.5" font-weight="700">Every handover recorded and confirmed by both sides</text>
+  <g font-size="9.5" fill="#6B7480" text-anchor="middle"><text x="306" y="98">in the owner's unit</text><text x="480" y="98">outside unit</text></g>
+</svg>
+
+<div class="two">
+  <div>
+    <p class="lead" style="margin-top:4px">What the owner can see at any moment</p>
+    <ul style="margin:2px 0 0;padding-left:18px">
+      <li>How much material went out to each unit, and how much came back</li>
+      <li>Where every piece is right now: at a unit, in the shop, on the way, or with the buyer</li>
+      <li>Which work is late, and which units deliver on time</li>
+      <li>How much is lost at each step, so the next purchase is planned on real numbers, not guesses</li>
+    </ul>
+  </div>
+  <div class="note"><b>Ask, do not search.</b> Every business has its own private Claire. Ask "how much fabric is still with the dyer?" in Tamil, Hindi or English and she answers from your own records. Or just tell her "sent 400 pieces to Priya for stitching" and she fills in the record for you to confirm.</div>
+</div>
+
+<p class="lead">Who it is for: everyone in the garment supply chain</p>
+<div class="roles">
+  <div class="role">Yarn traders<span>spinners, agents</span></div>
+  <div class="role">Knitting units<span>fabric makers</span></div>
+  <div class="role">Dyeing units<span>and processing</span></div>
+  <div class="role">Printing and embroidery</div>
+  <div class="role">Fabric and trims shops<span>buttons, labels</span></div>
+  <div class="role">Cutting units</div>
+  <div class="role">Stitching units<span>job work</span></div>
+  <div class="role">Checking and packing</div>
+  <div class="role">Garment makers<span>and brands</span></div>
+  <div class="role">Transporters</div>
+  <div class="role">Wholesalers</div>
+  <div class="role">Retailers<span>across India</span></div>
+</div>
+<p>One business often plays more than one part. A unit can buy fabric, cut in house, send stitching outside and sell to shops, all from the same account.</p>
+
+<div class="nx">
+  <h2>Built on Nexconn: the SDK features we use</h2>
+  <div class="chips"><span class="chip">Chat SDK</span><span class="chip">Direct channels</span><span class="chip">Group channels</span><span class="chip">System channel</span><span class="chip">Custom messages</span><span class="chip">Targeted messages</span><span class="chip">Translation</span><span class="chip">History and unread</span><span class="chip">Read receipts</span><span class="chip">Typing indicators</span><span class="chip">Webhooks</span><span class="chip">Call SDK: voice and video</span></div>
+  <p style="font-size:9.4pt">Every conversation in CLAIRE Connect runs on Nexconn, using the web Chat SDK (<code>@nexconn/chat</code>, <code>@nexconn/engine</code>), the Call SDK (<code>@nexconn/call</code>) and the Server API. App Key: <span class="key">m7ua80gbmcvhm</span></p>
+  <table>
+    <tr><td>Direct channels</td><td>Each user's private chat with Claire, for finding partners and asking about their own records.</td></tr>
+    <tr><td>Group channels</td><td>Every buyer and seller deal room, every chat between two units in the supply chain, and Trade Desk support. An agent joins the same group.</td></tr>
+    <tr><td>System channel</td><td>Order, payment and dispatch updates.</td></tr>
+    <tr><td>Custom messages</td><td>Sample, offer, order and handover cards, voice notes and quick replies, all inside the chat.</td></tr>
+    <tr><td>Targeted messages</td><td>Claire's private price tips. Only one person in the chat sees them.</td></tr>
+    <tr><td>Translation</td><td>Every chat shows in the reader's language, across 10 Indian languages.</td></tr>
+    <tr><td>History, receipts, typing</td><td>Chat lists with unread counts, earlier messages, read receipts and typing indicators.</td></tr>
+    <tr><td>Webhooks</td><td>Let Claire reply, spot prices, and call the Trade Desk when a deal turns sour.</td></tr>
+    <tr><td>Call SDK</td><td>One tap voice and video calls from a deal or from the Trade Desk.</td></tr>
+  </table>
+</div>
+
+<h2><span class="n">5</span>Where it goes next</h2>
+<p>Garments are where we start, because that is where our story is. But the same three walls stand in front of almost every small manufacturing town in India. Each one is a cluster of small units that depend on each other and sell to buyers far away.</p>
+<div class="next">
+  <div class="cl now"><b>Tiruppur</b><span>knitwear (now)</span></div>
+  <div class="cl"><b>Ludhiana</b><span>hosiery, cycle parts</span></div>
+  <div class="cl"><b>Aligarh</b><span>locks, hardware</span></div>
+  <div class="cl"><b>Moradabad</b><span>brassware</span></div>
+  <div class="cl"><b>Rajkot</b><span>engineering parts</span></div>
+  <div class="cl"><b>Morbi</b><span>ceramic tiles</span></div>
+  <div class="cl"><b>Firozabad</b><span>glassware</span></div>
+  <div class="cl"><b>Agra</b><span>footwear</span></div>
+  <div class="cl"><b>Surat</b><span>textiles</span></div>
+  <div class="cl"><b>Jalandhar</b><span>sports goods</span></div>
+</div>
+<p>Our goal is simple: match supply with demand, so that a small maker anywhere in India can find buyers, work with partners in any language, and run production without losing track. Small units stay free to use it; larger makers pay for production tracking and reports; and a small fee applies to orders closed in the app.</p>
 
 </body>
 </html>
