@@ -33,3 +33,6 @@ services:
         sync: false
       - key: DEMO_OTP
         value: "123456"
+      # Supply-chain (Goods) module; each business also needs businesses.flags.sc (the demo businesses have it).
+      - key: SC_ENABLED
+        value: "1"
