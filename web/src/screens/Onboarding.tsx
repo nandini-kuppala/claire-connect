@@ -455,6 +455,7 @@ export default function Onboarding() {
       {/* Mic dock */}
       <div className="bg-page px-4 pt-2 pb-[max(16px,env(safe-area-inset-bottom))]">
         {typing ? (
+          <>
           <form
             className="flex items-center gap-2 rounded-[22px] border border-line bg-surface p-2"
             onSubmit={(e) => {
@@ -487,6 +488,31 @@ export default function Onboarding() {
               {busy ? <Loader2 size={20} className="animate-spin" aria-hidden /> : <Send size={20} aria-hidden />}
             </button>
           </form>
+          {/* Typing must not hide Skip (GST) or Review: without them a typist could only type "no". */}
+          {(question.key === 'gst' || filled >= 2) && (
+            <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
+              {question.key === 'gst' && (
+                <button
+                  type="button"
+                  className="inline-flex min-h-[44px] items-center rounded-full border border-line-strong bg-surface px-4 text-[14px] font-semibold text-ink-2 transition-colors hover:bg-sunken"
+                  onClick={skipGst}
+                  disabled={busy}
+                >
+                  {tx(t, 'onb_skip', 'Skip')}
+                </button>
+              )}
+              {filled >= 2 && (
+                <button
+                  type="button"
+                  className="inline-flex min-h-[44px] items-center gap-1 rounded-full px-3 text-[14px] font-medium text-meta transition-colors hover:bg-sunken"
+                  onClick={toReview}
+                >
+                  {tx(t, 'onb_review', 'Review profile')} <ArrowRight size={15} aria-hidden />
+                </button>
+              )}
+            </div>
+          )}
+          </>
         ) : (
           <div className="flex flex-col items-center">
             <div className="relative flex size-[128px] items-center justify-center">

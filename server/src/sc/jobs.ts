@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { col } from '../db/index.js';
 import { h, HttpError } from '../util.js';
 import type { Ctx, ScRequest } from './flag.js';
-import { holdingId, newId, post } from './repo.js';
+import { holdingId, lotForUntyped, newId, post } from './repo.js';
 import { me, qtyBase, specInfo } from './ledgerOps.js';
 import { lineLabel, partyNames } from './views.js';
 import { postOutput, pseudo, real, reverse, type Goods } from '../../../shared/sc/postings.js';
@@ -492,8 +492,12 @@ router.post(
       const info = await specInfo(l.spec_id);
       const q = qtyBase(l.qty, l.unit, info, l.factor).base;
       const goods: Goods = { spec: info.id, lot: l.lot || null, grade: 'A', dim: info.dim };
+      let have = Math.max(0, (await col('sc_holdings').findOne({ _id: holdingId(real(goods, self, self, { s: 'available' }, { place: from }), info.dim) } as any))?.qty_base ?? 0);
+      if (!goods.lot && have < q) {
+        const alt = await lotForUntyped(self, info.id, from, q);
+        if (alt) { goods.lot = alt.lot; have = alt.qty; }
+      }
       const stockKey = real(goods, self, self, { s: 'available' }, { place: from });
-      const have = Math.max(0, (await col('sc_holdings').findOne({ _id: holdingId(stockKey, info.dim) } as any))?.qty_base ?? 0);
       if (have < q) short.push({ index: i, available: have, needed: q, dim: info.dim });
       const fromStock = Math.min(have, q);
       if (fromStock) postings.push({ key: stockKey, delta: -fromStock, dim: info.dim });

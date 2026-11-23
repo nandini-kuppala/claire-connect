@@ -21,6 +21,27 @@ function canon(v: unknown): string {
 
 export const holdingId = (key: HoldingKey, dim: string) => `h_${crypto.createHash('sha1').update(`${dim}|${canon(key)}`).digest('base64url')}`;
 
+/**
+ * A retry of a record that already went through (same client id): checked before any stock check, so an offline
+ * re-send after a lost reply answers "duplicate" instead of "not enough stock" (the first send used that stock).
+ */
+export async function alreadyRecorded(ctx: Ctx, clientId: string | undefined): Promise<boolean> {
+  if (!clientId) return false;
+  return !!(await col('sc_events').findOne({ business_id: ctx.businessId, client_id: clientId } as any, { projection: { _id: 1 } }));
+}
+
+/**
+ * No lot typed: when the lot-less stock row is short, take the goods from one lot of the same material at the same
+ * place that covers the whole amount (the smallest such lot). Without this, stock bought with a lot reads as 0 and the
+ * owner's "record anyway" would add untracked stock beside it.
+ */
+export async function lotForUntyped(me: PartyRef, spec: string, place: string | null, need: number): Promise<{ lot: string; qty: number } | null> {
+  const row = (await col('sc_holdings')
+    .find({ t: 'real', 'key.spec': spec, 'key.grade': 'A', 'key.owner.k': me.k, 'key.owner.id': me.id, 'key.custodian.k': me.k, 'key.custodian.id': me.id, 'key.via': null, 'key.place': place, 'key.state.s': 'available', 'key.lot': { $type: 'string' }, qty_base: { $gte: need } } as any, { projection: { key: 1, qty_base: 1 } })
+    .sort({ qty_base: 1 }).limit(1).toArray()) as any[];
+  return row[0] ? { lot: row[0].key.lot as string, qty: row[0].qty_base as number } : null;
+}
+
 const bizOf = (p: PartyRef | null | undefined) => (p && p.k === 'b' ? [p.id] : []);
 
 /** Businesses allowed to see a holding row (owner, custodian, via). Contacts are seen through their owning business. */

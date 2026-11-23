@@ -240,8 +240,9 @@ function OrderRow({
               <span className="shrink-0 font-head text-[16px] font-bold tabular-nums text-ink">{inr(o.total)}</span>
             </span>
             <span className="mt-0.5 block truncate text-[14px] text-ink-2">{o.title}</span>
-            <span className="mt-0.5 flex items-center gap-1.5 text-[13px] text-meta">
-              <span className="truncate tabular-nums">{o.code} · {qtyText}</span>
+            {/* Wraps instead of truncating: the quantity must stay readable next to a long (Tamil) kind pill at 375 px. */}
+            <span className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[13px] text-meta">
+              <span className="min-w-0 break-words tabular-nums">{o.code} · {qtyText}</span>
               {kindText && <span className="shrink-0 rounded-full bg-sunken px-2 text-[11px] font-semibold leading-5 text-ink-2">{kindText}</span>}
             </span>
             {goodsText && <span className="mt-0.5 block text-[13px] font-semibold text-ink-2">{goodsText}</span>}

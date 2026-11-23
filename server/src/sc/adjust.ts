@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { col } from '../db/index.js';
 import { h, HttpError } from '../util.js';
 import type { Ctx, ScRequest } from './flag.js';
-import { holdingId, newId, post } from './repo.js';
+import { alreadyRecorded, holdingId, newId, post } from './repo.js';
 import { me, qtyBase, sameParty, specInfo } from './ledgerOps.js';
 import { enqueueCard } from './goodsChat.js';
 import { COUNT_THRESHOLD } from './staff.js';
@@ -46,6 +46,7 @@ router.post(
       req.body,
     );
     if (OWNER_ONLY.includes(b.op) && ctx.role !== 'owner') throw new HttpError(403, 'Only the owner can do this.');
+    if (await alreadyRecorded(ctx, b.client_id)) return res.json({ duplicate: true });
     const self = me(ctx);
     const businessDate = b.business_date ?? todayIST();
     const postings: Posting[] = [];

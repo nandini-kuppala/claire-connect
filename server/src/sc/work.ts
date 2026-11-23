@@ -57,8 +57,12 @@ interface WorkRow {
 }
 
 /** Jobs this business performs, grouped by whom it works for (`via ?? owner`, i.e. the job's client). */
-export async function workRows(ctx: Ctx): Promise<WorkRow[]> {
-  const jobs = await col('sc_jobs').find({ 'performer_party.k': 'b', 'performer_party.id': ctx.businessId, status: { $in: ['issued', 'in_progress', 'completed'] } } as any).sort({ expected_at: 1 }).limit(300).toArray();
+/**
+ * The performer's open jobs. The list is capped like Out with others (1,000; it was 300, which silently hid a busy
+ * unit's newest jobs); one job's page asks for that job alone, so it never depends on the cap.
+ */
+export async function workRows(ctx: Ctx, jobId?: string): Promise<WorkRow[]> {
+  const jobs = await col('sc_jobs').find({ 'performer_party.k': 'b', 'performer_party.id': ctx.businessId, status: { $in: ['issued', 'in_progress', 'completed'] }, ...(jobId ? { _id: jobId } : {}) } as any).sort({ expected_at: 1 }).limit(1000).toArray();
   if (!jobs.length) return [];
   const ids = jobs.map((j: any) => j._id);
   const movIds = [...new Set(jobs.flatMap((j: any) => [...j.inputs.map((i: any) => i.movement_id), ...(j.returns ?? [])]))].filter(Boolean);
@@ -134,7 +138,7 @@ router.get(
   '/sc/work/:id',
   h(async (req: ScRequest, res) => {
     const j = await myWork(req.ctx, req.params.id);
-    const row = (await workRows(req.ctx)).find((r) => r.id === j._id);
+    const row = (await workRows(req.ctx, j._id)).find((r) => r.id === j._id);
     const names = await partyNames(req.ctx, [j.client_party]);
     const proc = await col('sc_process_types').findOne({ key: j.process_key } as any, { projection: { labels: 1 } });
     const lastOut = (j.outputs as any[]).at(-1);

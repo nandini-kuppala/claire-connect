@@ -9,7 +9,7 @@ import { z } from 'zod';
 import { col } from '../db/index.js';
 import { h, HttpError } from '../util.js';
 import type { Ctx, ScRequest } from './flag.js';
-import { holdingId, newId, post } from './repo.js';
+import { alreadyRecorded, holdingId, newId, post } from './repo.js';
 import { UNDO_MS, assertion, me, qtyBase, sameParty, specInfo, termsFor, settleLine, settleCtxFor, goodsOf, discrepancyDoc } from './ledgerOps.js';
 import { bizIds, counterparty } from './records.js';
 import { enqueueCard } from './goodsChat.js';
@@ -76,6 +76,7 @@ export async function recordTrade(ctx: Ctx, raw: unknown, extra: { order_id?: st
     const self = me(ctx);
     const kind = b.kind;
     if (b.allow_untracked && ctx.role !== 'owner') return reply(403, { error: 'Only the owner can record stock you never entered.', code: 'needs_owner' });
+    if (await alreadyRecorded(ctx, b.client_id)) return reply(200, { duplicate: true });
     if (kind === 'move') {
       if (!b.to_place_id || b.to_place_id === (b.from_place_id ?? null)) throw new HttpError(400, 'Pick where the goods went.');
       if (!(await col('sc_places').findOne({ _id: b.to_place_id, business_id: ctx.businessId } as any))) throw new HttpError(404, 'Not found');
@@ -244,6 +245,7 @@ router.post(
     const ctx = req.ctx;
     if (ctx.role !== 'owner') throw new HttpError(403, 'Only the owner can sell goods.');
     const b = parse(z.object({ to: partyRef, lines: z.array(z.object({ spec_id: z.string(), qty: z.number().positive(), unit: z.string().max(10), lot: z.string().trim().max(30).optional() })).min(1).max(20), business_date: date.optional(), client_id: z.string().min(8).max(40), rate_paise: z.number().int().min(0).optional() }), req.body);
+    if (await alreadyRecorded(ctx, b.client_id)) return res.json({ duplicate: true });
     const j: any = await col('sc_jobs').findOne({ _id: req.params.id, 'owner_party.k': 'b', 'owner_party.id': ctx.businessId, 'client_party.k': 'b', 'client_party.id': ctx.businessId, status: { $in: ['issued', 'in_progress', 'completed'] } } as any);
     if (!j) throw new HttpError(404, 'Not found');
     const cp = await counterparty(ctx, b.to);

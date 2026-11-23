@@ -7,7 +7,7 @@ import { z } from 'zod';
 import { col } from '../db/index.js';
 import { h, HttpError } from '../util.js';
 import type { Ctx, ScRequest } from './flag.js';
-import { holdingId, newId, post } from './repo.js';
+import { alreadyRecorded, holdingId, lotForUntyped, newId, post } from './repo.js';
 import {
   UNDO_MS, applyReceipt, applySenderFigure, assertion, discrepancyDoc, goodsOf, me, qtyBase, sameParty, settleCtxFor, settleLine, specInfo, termsFor, unreturnedOutput,
 } from './ledgerOps.js';
@@ -83,6 +83,7 @@ export async function sendForWork(ctx: Ctx, raw: unknown, extra: { order_id?: st
     const now = Date.now();
     const visibleAt = now + UNDO_MS;
 
+    if (await alreadyRecorded(ctx, b.client_id)) return reply(200, { movement: await col('sc_movements').findOne({ recorder_business_id: ctx.businessId, client_id: b.client_id } as any), duplicate: true });
     const lines = [];
     const short: { index: number; available: number; needed: number; dim: Dimension }[] = [];
     for (const [i, l] of b.lines.entries()) {
@@ -90,7 +91,11 @@ export async function sendForWork(ctx: Ctx, raw: unknown, extra: { order_id?: st
       const q = qtyBase(l.qty, l.unit, info, l.factor);
       const goods: Goods = { spec: info.id, lot: l.lot || null, grade: 'A', dim: info.dim };
       const h0 = await col('sc_holdings').findOne({ _id: holdingId(real(goods, owner, owner, { s: 'available' }, { place }), info.dim) } as any);
-      const available = Math.max(0, h0?.qty_base ?? 0);
+      let available = Math.max(0, h0?.qty_base ?? 0);
+      if (!goods.lot && available < q.base) {
+        const alt = await lotForUntyped(owner, info.id, place, q.base);
+        if (alt) { goods.lot = alt.lot; available = alt.qty; }
+      }
       if (available < q.base) short.push({ index: i, available, needed: q.base, dim: info.dim });
       lines.push({ l, info, q, goods, available, theyGot: l.they_got !== undefined ? qtyBase(l.they_got, l.unit, info, l.factor).base : null });
     }
@@ -189,6 +194,7 @@ export async function gotBack(ctx: Ctx, raw: unknown, jobId: string): Promise<Re
     // The job's client records what came back: the owner for a direct job, the intermediary for a sub-contract.
     const job = await col('sc_jobs').findOne({ _id: jobId, 'client_party.k': 'b', 'client_party.id': ctx.businessId } as any);
     if (!job) throw new HttpError(404, 'Not found');
+    if (await alreadyRecorded(ctx, b.client_id)) return reply(200, { duplicate: true });
     if (['closed', 'cancelled'].includes(job.status)) throw new HttpError(409, 'This job is already closed.');
     // W: a receipt rate applies only to the owner, on a job billed per piece and not at an order's price. Otherwise it
     // is dropped (and said so in the reply) rather than refusing the receipt: the goods must still be recorded.

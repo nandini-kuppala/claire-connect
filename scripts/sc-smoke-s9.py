@@ -65,6 +65,21 @@ st = [x for x in call('GET','/api/sc/staff',tok=R)[1]['staff'] if x['phone']==kp
 if st: call('DELETE',f"/api/sc/staff/{st[0]['id']}",tok=R)
 twice('received for work (receiver first)', '/api/sc/movements/receive-first', {'from':{'k':'b','id':'b_ravi'},'process_key':'stitching','lines':[{'spec_id':kit,'qty':5,'unit':'pcs'}],'client_id':cid()}, tok=L)
 
+# Retries of records that used tracked stock (no override): the first send used the stock, so the retry must answer
+# "duplicate", never "not enough stock" (an offline re-send after a lost reply). And stock bought with a lot can be
+# sent or cut without typing the lot.
+lotc = 'RT-' + ''.join(random.choice('0123456789') for _ in range(6))
+fx = spec('mt_knit_fabric',{'state':'finished','structure':'single jersey','gsm':180,'colour':'olive'})
+supp = call('GET','/api/sc/contacts',tok=R)[1]['contacts'][0]['id']
+s, _ = call('POST','/api/sc/movements/trade',{'kind':'buy','party':{'k':'c','id':supp},'lines':[{'spec_id':fx,'qty':40,'unit':'kg','lot':lotc}],'client_id':cid()},R)
+check('bought 40 kg with a lot', s in (200,201), _)
+s, r = call('POST','/api/sc/movements/send',{'to':{'k':'b','id':'b_lakshmi'},'process_key':'dyeing','lines':[{'spec_id':fx,'qty':25,'unit':'kg'}],'client_id':cid()},R)
+check('send without typing the lot takes the goods from the lot', s==201 and r['movement']['lines'][0]['lot']==lotc and r['movement']['lines'][0]['from_untracked']==0, (s, r.get('code'), r.get('lines')))
+twice('send of tracked stock (no override)', '/api/sc/movements/send', {'to':{'k':'b','id':'b_lakshmi'},'process_key':'dyeing','lines':[{'spec_id':fx,'qty':10,'unit':'kg','lot':lotc}],'client_id':cid()})
+twice('made here from tracked stock (no lot typed)', '/api/sc/made', {'process_key':'checking','inputs':[{'spec_id':fx,'qty':5,'unit':'kg'}],'outputs':[{'spec_id':fx,'qty':5,'unit':'kg'}],'client_id':cid()})
+row3 = next(r for r in call('GET','/api/sc/stock',tok=R)[1]['rows'] if not r['with'] and r['spec'] and r['spec']['id']==fx and r['qty']>0)
+twice('write off all of a row', '/api/sc/adjust', {'op':'write_off','holding_id':row3['id'],'qty':row3['qty']/1000,'unit':'kg','reason':'retry test','client_id':cid()})
+
 # Budget and translations
 b = subprocess.run(['bash','-lc','cd /Users/dev/Desktop/claire && source ~/.nvm/nvm.sh >/dev/null && nvm use 24 >/dev/null && npm run build -w web >/dev/null 2>&1 && node scripts/sc-budget.mjs'], capture_output=True, text=True)
 check('every Goods route stays within 150 KB gz beyond the app shell', b.returncode==0, b.stdout.strip().splitlines()[-1:] )
