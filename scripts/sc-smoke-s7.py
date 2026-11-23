@@ -44,7 +44,11 @@ bad = [(m,p,s) for (m,p,b) in refused for s in [call(m,p,b,K)[0]] if s != 403]
 check(f'{len(refused)} existing routes refuse staff (deals, offers, orders, listings, catalog, desk, business, onboarding…)', not bad, bad)
 s, ki = call('GET','/api/conversations',tok=K); items = ki if isinstance(ki, list) else ki.get('conversations', ki.get('items', []))
 check('her inbox has Goods conversations only', all(c.get('kind')=='goods' for c in items), [c.get('kind') for c in items][:5])
-s, _ = call('PATCH','/api/me',{'language':'ta'},K); check('she can change her own language', s==200, s)
+biz_lang = lambda: (call('GET','/api/me',tok=R)[1].get('business') or {}).get('language')
+lang0 = biz_lang(); other = 'hi' if lang0 != 'hi' else 'ta'
+s, _ = call('PATCH','/api/me',{'language':other},K); check('she can change her own language', s==200, s)
+check("her language does not change the business's language (the owner's)", biz_lang() == lang0, f'{lang0} -> {biz_lang()}')
+call('PATCH','/api/me',{'language':'ta'},K)
 
 # ── Isolation: Goods routes ─────────────────────────────────────────────────────────────────────
 for m,p,b in [('GET','/api/sc/goods/out',None),('GET','/api/sc/goods/coming',None),('GET','/api/sc/goods/in',None),('GET','/api/sc/stock',None)]:

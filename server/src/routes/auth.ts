@@ -122,8 +122,10 @@ router.patch(
     if (Object.keys(set).length) {
       await update('users', req.uid, { ...set, updated_at: now() });
       const u = await byId<UserRow>('users', req.uid);
-      // Keep the business record's language in step so Claire and translation use it.
-      if (set.language && u?.business_id) await update('businesses', u.business_id, { language: set.language });
+      // Keep the business record's language in step so Claire and translation use it. Only the owner's choice:
+      // a staff member picking their own app language must not switch the business (chat partners read it as the
+      // business's language and stop translating; the owner's notices follow it too).
+      if (set.language && u?.business_id && (u.role ?? 'owner') === 'owner') await update('businesses', u.business_id, { language: set.language });
     }
     res.json({ user: publicUser(await getUser(req.uid)) });
   }),
