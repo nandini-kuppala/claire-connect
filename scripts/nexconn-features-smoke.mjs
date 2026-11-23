@@ -8,6 +8,7 @@
 //                     the messages sent here (masked one included, blocked one absent).
 //   4. Calls        - (optional, needs Playwright from demo-video/) two Chromium pages with fake media: ring,
 //                     accept, connect, hang up, and the CC:Call line; reports SKIP if the console's Call service is off.
+//                     Every other call path (decline, missed, cancel, video switch, ...): scripts/calls-smoke.mjs.
 // Usage: node scripts/nexconn-features-smoke.mjs [--calls] [phoneA=9400000001] [phoneB=9400000002]
 // Moderation words must be in Nexconn first: npm run chat:moderation -w server -- sync (takes up to ~15 min).
 import { fork } from 'node:child_process';
@@ -261,6 +262,7 @@ async function callChecks(conversationId, check) {
       check(off ? 'calls: Call service is off in the Nexconn console (80006); the caller sees the "not switched on" sheet' : `calls: caller got a notice (codes ${codes.join(',') || 'none'})`, off ? null : false);
       return;
     }
+    const linesBefore = await b.evaluate(() => document.querySelectorAll('[data-call-line]').length);
     check('calls: callee rings', inc === 'incoming', `caller ${pa0}, callee ${inc}`);
     if (inc !== 'incoming') return;
     await b.click('[data-call-action="accept"]');
@@ -271,8 +273,10 @@ async function callChecks(conversationId, check) {
     const [ea, eb] = [await waitPhase(a, ['ended', 'idle'], 15_000), await waitPhase(b, ['ended', 'idle'], 15_000)];
     check('calls: hang up ends both sides', ['ended', 'idle'].includes(ea) && ['ended', 'idle'].includes(eb), `${ea}/${eb}`);
     await b.waitForTimeout(5000);
-    const line = await b.evaluate(() => document.body.innerText.match(/[^\n]*(call|কল|కాల్)[^\n]*·\s*\d+:\d\d/i)?.[0] ?? null);
-    check('calls: CC:Call summary line in the chat', Boolean(line), line ?? 'none');
+    // The new CC:Call line (an older one from an earlier call does not count). Full matrix: scripts/calls-smoke.mjs.
+    const got = await b.evaluate(() => [...document.querySelectorAll('[data-call-line]')].map((e) => ({ outcome: e.getAttribute('data-call-line'), text: e.textContent })));
+    const line = got.length === linesBefore + 1 && got.at(-1)?.outcome === 'completed' ? got.at(-1).text : null;
+    check('calls: CC:Call summary line in the chat (exactly one)', Boolean(line), line ?? `${got.length - linesBefore} new line(s)`);
   } finally {
     await browser.close();
   }

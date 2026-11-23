@@ -262,6 +262,7 @@ function flash(text: string) {
 let endTimer: ReturnType<typeof setTimeout> | null = null;
 function toIdle(delay = 0) {
   if (endTimer) clearTimeout(endTimer);
+  stopWatch();
   const go = () => {
     endTimer = null;
     const { availability, outputs, cameras } = get();
@@ -391,11 +392,34 @@ export async function startCall(peer: CallPeer, media: CallMedia, context: CallC
     return;
   }
   set({ callId: r.callId ?? null });
+  if (r.callId) startRingGuard(r.callId);
+  // Busy line: Nexconn still alerts the callee (call waiting). If they really are on a call, their app turns this
+  // one away and we show "busy"; if the server's busy state is stale (e.g. after a reload mid-call) they can answer.
   if (r.busyLineUserList?.some((u) => u.userId === peer.userId)) {
-    stopRing();
-    void ce.endCall({ callId: r.callId }).catch(() => undefined);
-    finish('busy', 'busy');
+    peerWasBusy = r.callId ?? null;
+    console.info(`[call] ${peer.userId} is on a busy line · callId ${r.callId}`);
   }
+}
+
+/** Call id whose callee was reported on a busy line when it started. */
+let peerWasBusy: string | null = null;
+
+/**
+ * Ringing never outlives Nexconn's own timeout (60 s): if the cancel / timeout signal is lost, the ringing or
+ * calling screen closes by itself as a missed call / no answer.
+ */
+const RING_LIMIT_MS = 75_000;
+let ringGuard: ReturnType<typeof setTimeout> | null = null;
+function startRingGuard(callId: string) {
+  if (ringGuard) clearTimeout(ringGuard);
+  ringGuard = setTimeout(() => {
+    ringGuard = null;
+    const st = get();
+    if (st.callId !== callId || (st.phase !== 'incoming' && st.phase !== 'outgoing')) return;
+    console.warn(`[call] still ringing after ${RING_LIMIT_MS / 1000}s · callId ${callId}; ending here`);
+    void ce?.endCall({ callId }).catch(() => undefined);
+    if (sdk) endFromSdk(st.direction === 'out' ? sdk.NCCallEndReason.NO_ANSWER : sdk.NCCallEndReason.MISSED, st);
+  }, RING_LIMIT_MS);
 }
 
 function showNotice(notice: CallNotice, code?: number) {
@@ -531,9 +555,16 @@ export function endAllCalls() {
 if (typeof window !== 'undefined') window.addEventListener('pagehide', () => endAllCalls());
 
 // ── Ending and the chat summary ─────────────────────────────────────────────
+/** Last call that reached finish(): every end path funnels here, and only the first one counts. */
+let finishedCallId: string | null = null;
+
 function finish(result: CallResult, outcome: CallOutcome | null, reason?: EndReason) {
   const st = get();
+  if (st.phase === 'ended' || st.phase === 'idle') return;
+  if (st.callId && st.callId === finishedCallId) return;
+  finishedCallId = st.callId;
   stopRing();
+  stopWatch();
   const durationSec = st.startedAt ? Math.round((Date.now() - st.startedAt) / 1000) : 0;
   set({ phase: 'ended', result, durationSec, videoRequest: null });
   releaseViews(st.peer?.userId);
@@ -558,6 +589,8 @@ function endResult(reason: number, st: CallState): { result: CallResult; outcome
     if (reason >= 1105 && reason !== R.HANGUP_BY_OTHER_CLIENT) return { result: 'failed', outcome: 'completed' };
     return { result: 'ended', outcome: 'completed' };
   }
+  // The callee was on a busy line and their app turned this call away.
+  if (st.direction === 'out' && st.callId && st.callId === peerWasBusy && (reason === R.DECLINED || reason === R.ENDED)) return { result: 'busy', outcome: 'busy' };
   switch (reason) {
     case R.NO_ANSWER:
       return { result: 'no_answer', outcome: 'missed' };
@@ -578,6 +611,90 @@ function endResult(reason: number, st: CallState): { result: CallResult; outcome
     default:
       return reason >= 1105 ? { result: 'failed', outcome: 'missed' } : { result: 'ended', outcome: 'missed' };
   }
+}
+
+/** The SDK says the call is over (onCallEnded, or our fallbacks when that event is lost). */
+function endFromSdk(reason: number, st: CallState) {
+  if (st.phase === 'idle' || st.phase === 'ended') return; // already finished (e.g. by hangUp's fallback)
+  const R = sdk!.NCCallEndReason;
+  const mine = endedLocally != null && endedLocally === st.callId;
+  endedLocally = null;
+  // Another of my own devices answered or hung up: nothing happened on this one.
+  const otherDevice = reason === R.ACCEPT_BY_OTHER_CLIENT || reason === R.HANGUP_BY_OTHER_CLIENT || reason === R.OTHER_CLIENT_CALLING;
+  if (st.direction === 'in' && !st.startedAt) {
+    // I declined, or another device took it: no "ended" screen. The caller gave up / it timed out: "Missed".
+    if (mine || otherDevice) {
+      finishedCallId = st.callId;
+      stopRing();
+      releaseViews(st.peer?.userId);
+      toIdle();
+      return;
+    }
+    finish('missed', null, reason as EndReason);
+    return;
+  }
+  const { result, outcome } = endResult(reason, st);
+  finish(result, outcome, reason as EndReason);
+}
+
+/** The SDK still lists `peerId` as live in this call (a remote-left event for one of their other devices). */
+function peerStillInCall(callId: string, peerId: string): boolean {
+  if (!ce || !sdk) return false;
+  try {
+    const session = ce.getCurrentCallSession();
+    if (session?.getCallId() !== callId) return false;
+    const peer = session.getRemoteParticipants().find((u) => u.userId === peerId);
+    return !!peer && peer.userState > sdk.NCCallUserState.IDLE && peer.userState < sdk.NCCallUserState.ENDED;
+  } catch {
+    return false;
+  }
+}
+
+// Watchdog while connected: if the SDK no longer has this call (its end event was lost), end it here too.
+let watchTimer: ReturnType<typeof setInterval> | null = null;
+function startWatch(callId: string) {
+  stopWatch();
+  watchTimer = setInterval(() => {
+    const st = get();
+    if (!ce || !sdk || st.callId !== callId || st.phase !== 'active') return stopWatch();
+    let session: NCCallSession | null = null;
+    try {
+      session = ce.getCurrentCallSession();
+    } catch {
+      return;
+    }
+    const state = session?.getCallId() === callId ? session.getCallState() : null;
+    if (state != null && state < sdk.NCCallState.ENDED) return;
+    if (testDrop('all', true)) return;
+    console.warn(`[call] the SDK has no live session for callId ${callId} (state ${state ?? 'none'}); ending here`);
+    void ce.endCall({ callId }).catch(() => undefined);
+    endFromSdk(sdk.NCCallEndReason.ENDED, st);
+  }, 2000);
+}
+function stopWatch() {
+  if (watchTimer) clearInterval(watchTimer);
+  watchTimer = null;
+  if (ringGuard) clearTimeout(ringGuard);
+  ringGuard = null;
+}
+
+/**
+ * Dev-only test hook for scripts/calls-smoke.mjs: `window.__ccCallDrop = 'end'` swallows the next onCallEnded,
+ * 'all' also swallows the remote-left event, to prove the call still ends when Nexconn's end signal is lost.
+ */
+function testDrop(kind: 'end' | 'all', peek = false): boolean {
+  if (!import.meta.env.DEV || typeof window === 'undefined') return false;
+  const w = window as unknown as { __ccCallDrop?: 'end' | 'all' | null };
+  const drop = w.__ccCallDrop;
+  if (!drop || (kind === 'all' && drop !== 'all')) return false;
+  if (peek) {
+    w.__ccCallDrop = null; // the watchdog is the last line: stop dropping once it looks
+    return false;
+  }
+  if (kind === 'end' && drop === 'end') w.__ccCallDrop = null;
+  if (kind === 'end') console.info('[call] test: dropped onCallEnded');
+  else console.info('[call] test: dropped the remote-left event');
+  return true;
 }
 
 // ── SDK events ──────────────────────────────────────────────────────────────
@@ -605,12 +722,15 @@ const handler: CallSdkModule.NCCallEventHandler = {
       context: { channel: x?.ch ? { type: 'group', targetId: x.ch } : null, conversationId: x?.conv ?? null },
     });
     startRing('in');
+    startRingGuard(callId);
     console.info(`[call] incoming ${media} call from ${callerId} · callId ${callId}`);
   },
   onCallConnected({ session }) {
     stopRing();
     const st = get();
+    if (st.phase === 'ended' || st.phase === 'idle' || (st.callId && session.getCallId() !== st.callId)) return; // late event
     set({ phase: 'active', callId: session.getCallId(), startedAt: st.startedAt ?? Date.now(), media: mediaOf(session) });
+    startWatch(session.getCallId());
     void countDevices();
     console.info(`[call] connected · callId ${session.getCallId()}`);
   },
@@ -618,26 +738,32 @@ const handler: CallSdkModule.NCCallEventHandler = {
     if (startTime > 0 && get().phase === 'active') set({ startedAt: Math.min(startTime, Date.now()) });
   },
   onCallEnded({ session, reason }) {
+    if (testDrop('end')) return;
     const st = get();
     if (st.callId && session.getCallId() !== st.callId) return; // a turned-away second call
-    if (st.phase === 'idle') return;
     console.info(`[call] ended · callId ${session.getCallId()} · reason ${reason}`);
-    const { result, outcome } = endResult(reason, st);
-    const mine = endedLocally != null && endedLocally === st.callId;
-    endedLocally = null;
-    if (st.direction === 'in' && !st.startedAt) {
-      // I declined: no "ended" screen. The caller gave up / it timed out while ringing: "Missed".
-      if (mine) {
-        releaseViews(st.peer?.userId);
-        toIdle();
-        return;
+    endFromSdk(reason, st);
+  },
+  onRemoteUserStateChanged({ callId, userId, userState, reason }) {
+    console.info(`[call] remote ${userId} state ${userState}${reason != null ? ` · reason ${reason}` : ''} · callId ${callId}`);
+    if (sdk && userState >= sdk.NCCallUserState.ENDED) {
+      if (testDrop('all')) return;
+      // 1:1: the other side left, so the call is over for us too. onCallEnded normally follows within a moment;
+      // if it never arrives (a lost signal), end the call here so this screen does not stay "connected".
+      const st = get();
+      if (st.callId === callId && userId === st.peer?.userId) {
+        const end = typeof reason === 'number' && reason >= 1000 ? reason : sdk.NCCallEndReason.ENDED;
+        setTimeout(() => {
+          const now = get();
+          if (now.callId !== callId || now.phase === 'ended' || now.phase === 'idle') return;
+          if (peerStillInCall(callId, userId)) return; // e.g. one of their other devices left, they are still here
+          console.warn(`[call] no onCallEnded after the other side left · callId ${callId}; ending here`);
+          void ce?.endCall({ callId }).catch(() => undefined);
+          endFromSdk(end, now);
+        }, 1500);
       }
-      finish('missed', null, reason);
       return;
     }
-    finish(result, outcome, reason);
-  },
-  onRemoteUserStateChanged({ userState }) {
     if (sdk && userState === sdk.NCCallUserState.RINGING && get().phase === 'outgoing') set({ ringing: true });
     if (sdk && userState === sdk.NCCallUserState.CONNECTING && get().phase === 'outgoing') set({ phase: 'connecting' });
   },

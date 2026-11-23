@@ -160,7 +160,7 @@ export function CallLayer() {
   ];
 
   return (
-    <div data-call-phase={st.phase} className="fixed inset-0 z-[80] flex justify-center bg-ink/40" role="dialog" aria-modal="true" aria-label={peer?.name ?? s('voice_call')}>
+    <div data-call-phase={st.phase} data-call-media={st.media} data-call-result={st.result ?? undefined} className="fixed inset-0 z-[80] flex justify-center bg-ink/40" role="dialog" aria-modal="true" aria-label={peer?.name ?? s('voice_call')}>
       <div
         className={clsx(
           'relative flex h-dvh w-full max-w-[480px] flex-col overflow-hidden min-[481px]:shadow-[0_0_0_1px_var(--color-line)]',
@@ -232,10 +232,10 @@ export function CallLayer() {
           <div className="relative z-20 mx-4 mb-4 animate-fade-up rounded-[18px] border border-line bg-surface p-4 text-ink shadow-[var(--shadow-float)]">
             <p className="text-[15px] font-medium">{s('video_request', { name: peer?.name ?? '' })}</p>
             <div className="mt-3 flex gap-2">
-              <Button variant="secondary" size="sm" className="flex-1" onClick={() => void answerVideoRequest(false)}>
+              <Button variant="secondary" size="sm" className="flex-1" data-call-action="video-decline" onClick={() => void answerVideoRequest(false)}>
                 {s('not_now')}
               </Button>
-              <Button size="sm" className="flex-1" icon={Video} onClick={() => void answerVideoRequest(true)}>
+              <Button size="sm" className="flex-1" icon={Video} data-call-action="video-accept" onClick={() => void answerVideoRequest(true)}>
                 {s('switch')}
               </Button>
             </div>

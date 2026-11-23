@@ -1,30 +1,18 @@
 // Nexconn webhooks (production path). Locally the client notify endpoints do the same job;
 // both paths claim `msg:<messageId>` so a message is only ever answered once.
-import crypto from 'node:crypto';
 import { Router } from 'express';
 import { BOT, cfg } from '../config.js';
 import { bump, byId, claim } from '../db/index.js';
 import { claireTurn } from '../claire.js';
 import { archiveGroupMessage } from '../chat.js';
 import type { UserRow } from '../biz.js';
+import { describeCallEvent, verifySignature, webhookKind } from './webhookEvents.js';
 
 const router = Router();
 const DIRECT = 1; // Nexconn channelType for one-to-one chats
 const GROUP = 3; // Nexconn channelType for group chats
 /** Give the client notify path a head start so it (with its richer context) normally wins the claim. */
 const WEBHOOK_GRACE_MS = 1500;
-
-function verify(headers: Record<string, unknown>) {
-  const { appKey, appSecret } = cfg.nexconn;
-  if (!appSecret) return false;
-  const nonce = String(headers['nonce'] ?? '');
-  const timestamp = String(headers['timestamp'] ?? '');
-  const signature = String(headers['signature'] ?? '').toLowerCase();
-  const key = String(headers['appkey'] ?? '');
-  if (!nonce || !timestamp || !signature || (key && key !== appKey)) return false;
-  const expected = crypto.createHash('sha1').update(appSecret + nonce + timestamp).digest('hex');
-  return expected.length === signature.length && crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(signature));
-}
 
 interface MessageEvent {
   userId: string;
@@ -76,15 +64,23 @@ async function handleMessage(m: MessageEvent) {
 }
 
 router.post('/webhooks/nexconn', (req, res) => {
-  if (!verify(req.headers as Record<string, unknown>)) {
+  if (!verifySignature(req.headers as Record<string, unknown>, req.query as Record<string, unknown>, cfg.nexconn.appKey, cfg.nexconn.appSecret)) {
     console.warn('[webhook] rejected a request with a bad Nexconn signature');
     return res.status(401).json({ error: 'bad signature' });
   }
   res.status(200).json({ ok: true }); // ack inside Nexconn's 5 s window, work happens after
   const evt = req.body ?? {};
-  if (evt.type !== 'message:send' || !Array.isArray(evt.data)) return;
-  for (const m of evt.data as MessageEvent[]) {
-    handleMessage(m).catch((err) => console.error('[webhook] message handling failed', m?.messageId, err?.message ?? err));
+  try {
+    const kind = webhookKind(evt);
+    // Call events (subscribed in the console): logged only. The phones end the call and post the CC:Call
+    // summary themselves from the Call SDK, so nothing here may change call state or post a second line.
+    if (kind === 'call') console.info(`[webhook] call event ${describeCallEvent(evt)}`);
+    if (kind !== 'message') return;
+    for (const m of evt.data as MessageEvent[]) {
+      handleMessage(m).catch((err) => console.error('[webhook] message handling failed', m?.messageId, err?.message ?? err));
+    }
+  } catch (err) {
+    console.error('[webhook] could not read the callback', (err as Error)?.message ?? err);
   }
 });
 

@@ -40,6 +40,8 @@ export function CallLine({ payload }: { payload: Partial<CallPayload> }) {
   return (
     <div className="flex w-full animate-fade-up justify-center">
       <span
+        data-call-line={payload.outcome ?? 'missed'}
+        data-call-id={payload.callId}
         className={clsx(
           'inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[13px] font-medium tabular-nums',
           missed ? 'border-clay/25 bg-clay-tint text-clay' : 'border-line bg-surface text-ink-2',
